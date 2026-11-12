@@ -42,7 +42,6 @@ export const PALETTE = {
     bronze: '#b8794a',
     silver: '#aeb6c0',
     gold: '#e0b44c',
-    platinum: '#9fd0cf',
     diamond: '#b9c8ff',
   },
 } as const;

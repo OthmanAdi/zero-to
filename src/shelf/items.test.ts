@@ -4,6 +4,9 @@ import { resourcesFor } from '../roadmap/derive';
 import { sampleRoadmap } from '../roadmap/testing';
 import type { ResourceType } from '../roadmap/types';
 import { fixtureResource, fixtureResources, fixtureRoadmap } from './fixtures';
+/** Formatters keep a number and its unit together with a no-break space; compare as plain text. */
+const plain = (value: unknown): string => String(value).replace(/ /g, ' ');
+
 import {
   costSentence,
   dockHeader,
@@ -96,7 +99,7 @@ describe('toShelfItems', () => {
       'Could not be opened on 2026-11-13 (HTTP 403). Open it yourself before relying on it. Automated access was refused.',
     );
     const docs = items.find((item) => item.type === 'docs')!;
-    expect(docs.statusLine).toBe('Free · about 45 min · opened 2026-11-13');
+    expect(plain(docs.statusLine)).toBe('Free · about 45 min · opened 2026-11-13');
     expect(docs.why).toContain('made-up docs entry');
   });
 
@@ -117,21 +120,21 @@ describe('toShelfItems', () => {
     const stageEntries = resourcesFor(roadmap, roadmap.stages[0]!.id);
     const items = toShelfItems(stageEntries, null, 'en');
     expect(items.length).toBeGreaterThanOrEqual(3);
-    expect(items[0]!.statusLine).toMatch(/^Free · about \d+ min · opened 2026-11-13$/);
+    expect(plain(items[0]!.statusLine)).toMatch(/^Free · about \d+ min · opened 2026-11-13$/);
   });
 });
 
 describe('status and cost words', () => {
   it('prints a verified free volume as cost, time and the day it was opened', () => {
-    expect(statusLine(fixtureResource('docs'), 'en')).toBe('Free · about 45 min · opened 2026-11-13');
-    expect(statusLine(fixtureResource('docs', { minutes: 90 }), 'en')).toBe('Free · about 1.5 h · opened 2026-11-13');
-    expect(statusLine(fixtureResource('docs'), 'de')).toBe('Kostenlos · ca. 45 Min. · geöffnet 2026-11-13');
+    expect(plain(statusLine(fixtureResource('docs'), 'en'))).toBe('Free · about 45 min · opened 2026-11-13');
+    expect(plain(statusLine(fixtureResource('docs', { minutes: 90 }), 'en'))).toBe('Free · about 1.5 h · opened 2026-11-13');
+    expect(plain(statusLine(fixtureResource('docs'), 'de'))).toBe('Kostenlos · ca. 45 Min. · geöffnet 2026-11-13');
   });
 
   it('prints the price of a paid volume, and the day the price was seen in the reader', () => {
     const paid = fixtureResource('course', { cost: 'paid', price: { amount: 29, currency: 'EUR', per: 'month', seenOn: '2026-11-12' } });
-    expect(statusLine(paid, 'en')).toBe('€29 a month · about 45 min · opened 2026-11-13');
-    expect(costSentence(paid, 'en')).toBe('Paid: €29 a month, price seen on 2026-11-12.');
+    expect(plain(statusLine(paid, 'en'))).toBe('€29 a month · about 45 min · opened 2026-11-13');
+    expect(plain(costSentence(paid, 'en'))).toBe('Paid: €29 a month, price seen on 2026-11-12.');
     expect(costSentence(fixtureResource('docs'), 'en')).toBe('Free.');
     expect(costSentence(fixtureResource('tool', { cost: 'freemium' }), 'de')).toBe('Kostenlos, mit Bezahlteilen.');
   });

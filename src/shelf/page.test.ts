@@ -7,6 +7,9 @@ import { fixtureResource, fixtureRoadmap } from './fixtures';
 import { pageText, prose, readerDoc, readerLabels, taskFor } from './page';
 import { SHELF_STRINGS } from './strings';
 
+/** Formatters keep a number and its unit together with a no-break space; compare as plain text. */
+const plain = (value: unknown): string => String(value).replace(/ /g, ' ');
+
 type Block = ReturnType<typeof parseMarkdownLite>[number];
 
 const hasLink = (blocks: Block[]): boolean => JSON.stringify(blocks).includes('"t":"link"');
@@ -47,14 +50,14 @@ describe('the generated reader page', () => {
     expect(text).toContain('## What it is');
     expect(text).toContain('Course · Silver level · in English');
     expect(text).toContain('## What it costs');
-    expect(text).toContain('Paid: €29 a month, price seen on 2026-11-12.');
+    expect(plain(text)).toContain('Paid: €29 a month, price seen on 2026-11-12.');
     expect(text).toContain('## How it was checked');
     expect(text).toContain('behind a login or paywall');
     expect(text).toContain('Only the syllabus is public.');
     expect(text).toContain('## Your task at this step');
     expect(text).toContain('### Fixture step 2');
     expect(text).toContain('Run `fixture --check` and read what it prints.');
-    expect(text).toContain('About 1 h, 40 min of it hands-on.');
+    expect(plain(text)).toContain('About 1 h, 40 min of it hands-on.');
   });
 
   it('parses into headings and paragraphs only, without a link from the roadmap text', () => {
@@ -81,7 +84,7 @@ describe('the generated reader page', () => {
 
   it('prints the source time, not the time it takes to read this page, and words the check day by status', () => {
     const labels = readerLabels(byType('docs'), 'en');
-    expect(labels.minutes?.(1)).toBe('about 45 min');
+    expect(plain(labels.minutes?.(1))).toBe('about 45 min');
     expect(labels.saved?.('13 Nov 2026')).toBe('Opened 13 Nov 2026');
     expect(labels.markRead).toBe('Mark as used');
     expect(readerLabels(byType('video'), 'en').saved?.('13 Nov 2026')).toBe('Tried 13 Nov 2026');

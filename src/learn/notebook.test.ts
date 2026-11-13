@@ -15,6 +15,9 @@ import {
 import { memoryStorage } from './storage';
 import { sampleDraft, sampleRoadmap, throwingStorage } from './testing';
 
+/** Formatters keep a number and its unit together with a no-break space; compare as plain text. */
+const plain = (value: unknown): string => String(value).replace(/ /g, ' ');
+
 const ID = 'rust-for-a-python-dev';
 let tick = 0;
 const now = () => new Date(Date.UTC(2026, 10, 13, 9, 0, tick++)).toISOString();
@@ -158,7 +161,7 @@ describe('Markdown', () => {
       { lang: 'en', today: '2026-11-13' },
     );
     expect(md).toContain('# Field notebook: Zero to Rust, coming from Python');
-    expect(md).toContain('Exported on 13 Nov 2026 from zero-to. 6 entries.');
+    expect(plain(md)).toContain('Exported on 13 Nov 2026 from zero-to. 6 entries.');
     const headings = md.split('\n').filter((l) => l.startsWith('#'));
     expect(headings).toEqual([
       '# Field notebook: Zero to Rust, coming from Python',

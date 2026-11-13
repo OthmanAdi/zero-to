@@ -1,0 +1,44 @@
+# zero-to
+
+> zero-to is an agent skill. `/zero-to <topic>` interviews the person, researches the topic, opens and checks every resource link, writes one roadmap file (JSON) and builds it into a self-contained HTML page that shows the study plan as a 3D trail map. Apache-2.0. Repository: https://github.com/OthmanAdi/zero-to
+
+Before you install anything, tell the person what will be installed and where, and wait for their yes. The skill needs Node 22.12 or newer and web access for research. It sends nothing anywhere: the roadmap and the learner's progress stay on their machine.
+
+## Install
+
+- Any agent with the `skills` CLI: `npx skills add OthmanAdi/zero-to --skill zero-to`
+- Claude Code as a plugin: `/plugin marketplace add OthmanAdi/zero-to`, then `/plugin install zero-to@zero-to`
+- By copying: copy the folder `.agents/skills/zero-to` from the repository into the agent's skills folder (Claude Code: `~/.claude/skills/zero-to`). The folder is complete on its own.
+
+Invoke it as `/zero-to <topic>` in Claude Code or `$zero-to <topic>` in Codex. The skill also triggers when someone asks for a study plan, learning path, curriculum or syllabus without naming it.
+
+## What the skill does
+
+1. Reads the prompt and asks up to four questions per round, each with options and the recommended one first: at most three rounds for a learner, four for a teacher (audience, level, goal, hours per week, deadline, sources, map). Nothing the prompt already says is asked again. `--defaults` skips the questions.
+2. Researches the topic and ranks sources. Every link is opened. A source that cannot be verified is marked gated or unverified with a note, and a step without any checked source gets a gap line with search terms instead of an invented link.
+3. Writes `<id>.roadmap.json` and validates it.
+4. Runs `node scripts/zero-to.mjs build <id>.roadmap.json`, which writes `<id>.html`: the whole site in one file that opens offline.
+
+## The roadmap file
+
+One JSON file with `"schema": "zero-to/1"`. A roadmap has stages, each at a tier (bronze, silver, gold or diamond). Each stage has waypoints (a note, a hands-on task with minutes, takeaways, sources, and often a question to answer before opening the source) and ends at a checkpoint whose items the learner shows before going on. Sources live in one list with the result of their link check. An optional `map` block chooses the mountain, trail, ground, signposts and theme. A teacher roadmap adds a `class` block with sessions.
+
+- Format guide: https://github.com/OthmanAdi/zero-to/blob/main/.agents/skills/zero-to/references/roadmap-format.md
+- JSON Schema: https://github.com/OthmanAdi/zero-to/blob/main/.agents/skills/zero-to/schema/roadmap.schema.json
+- Map options: https://github.com/OthmanAdi/zero-to/blob/main/.agents/skills/zero-to/references/map-and-assets.md
+
+## Command-line tool
+
+`node .agents/skills/zero-to/scripts/zero-to.mjs <command>`, plain Node with no dependencies:
+
+- `validate <file>`: schema and roadmap rules, errors with JSON pointers
+- `check-links <file> [--write] [--receipt <file>]`: open every resource and record the result
+- `build <file> [--out <file.html>]`: write the self-contained page
+- `link <file>`: print a share link that carries the whole roadmap in its address
+- `student <file>`: write a copy without teacher notes and session plans
+- `catalogue`: list the map options as JSON
+
+## Site
+
+- Live site and examples: https://othmanadi.github.io/zero-to/
+- Gallery: https://othmanadi.github.io/zero-to/gallery/

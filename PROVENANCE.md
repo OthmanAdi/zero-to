@@ -2,6 +2,22 @@
 
 Where code and material in this repository come from when they were not written for zero-to.
 
+## The 3D experience
+
+The table of maps, the dive into a map and the walk along a trail were designed after studying how an existing public interactive map site looks and moves. That site carries no licence, and nothing of it was copied.
+
+The work was split in two. One group read the site's public source and took screenshots of it in a normal browser, and wrote notes in its own words: what objects appear, how the camera and the light move, in what order, and how long each move takes. Some notes describe a motion as short pseudocode with the timings and spring values read from the source; none of them contain the site's code. The notes and the screenshots stay outside this repository. A second group built zero-to from the notes and screenshots alone and never opened the site's scripts, markup or style sheets.
+
+No code, text, artwork, model, texture, font, sound or brand element of that site is in this repository. The scene is drawn with three.js from geometry written for zero-to: the compass, the table, the paper mountains, the trail, the signposts, the walker and the props are all generated in code. The icons in `public/` were drawn for zero-to, and the other images in `public/` and `docs/media/` were recorded from zero-to itself. The site's typefaces, three.js and Vite's preload helper are listed with their licences in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Learning resources in the examples
+
+The six example roadmaps in `src/roadmap/samples/` link to third-party pages. They link only: no text of those pages is copied beyond titles, and each link carries the date and result of its check. The titles, notes, tasks, questions and takeaways were written for zero-to.
+
+## Development tools
+
+Vite, TypeScript, Vitest, happy-dom and Playwright build and test the project and are not shipped. Exact versions are pinned in `package.json`.
+
 ## Bookmark Bookshelf modules
 
 The resource shelf is built on modules from Bookmark Bookshelf, a project by the same author under the same licence.

@@ -1,0 +1,1697 @@
+{
+  "schema": "zero-to/1",
+  "id": "deutsch-a1-von-null",
+  "title": "Deutsch A1 von null",
+  "topic": "Deutsch A1 von null",
+  "summary": "Acht Stufen von der Begrüßung bis zur Prüfung Start Deutsch 1: Alphabet, Vorstellen, Artikel, Wohnen, Uhrzeit, Einkaufen, Modalverben, Wegbeschreibung. Mit sprechen und schreiben in jeder Stufe.",
+  "lang": "de",
+  "checkedOn": "2026-11-13",
+  "freshness": "slow",
+  "brief": {
+    "audience": "self",
+    "goal": "Mich auf Deutsch vorstellen, einkaufen, nach dem Weg fragen und die Prüfung Start Deutsch 1 (A1) bestehen.",
+    "startLevel": "zero",
+    "targetTier": "gold",
+    "hoursPerWeek": 6,
+    "startDate": "2027-01-11",
+    "deadline": "2027-04-04",
+    "style": "course",
+    "budget": {
+      "max": 0,
+      "currency": "EUR"
+    },
+    "resourceLangs": [
+      "de",
+      "en"
+    ],
+    "projects": "per-stage",
+    "gating": "guided"
+  },
+  "map": {
+    "terrain": "massif",
+    "trail": "valley-first",
+    "surfaces": "auto"
+  },
+  "stages": [
+    {
+      "id": "hallo-und-zahlen",
+      "title": "Hallo, Alphabet und Zahlen",
+      "tier": "bronze",
+      "summary": "Begrüßen, Buchstabieren und Zählen: die ersten Sätze, die du sofort brauchst.",
+      "waypoints": [
+        {
+          "id": "begruessung",
+          "title": "Begrüßen und verabschieden",
+          "note": "Nach diesem Schritt begrüßt du Menschen, fragst, wie es ihnen geht, und verabschiedest dich, formell und informell.",
+          "predict": "Du triffst deine Lehrerin und deinen besten Freund. Sagst du zu beiden dasselbe?",
+          "do": "Sieh dir die Folge „Hallo!“ an und sprich jeden Satz laut nach. Spiele dann zwei kurze Dialoge mit einem Lernpartner oder allein: einen mit „du“ und einen mit „Sie“.",
+          "takeaways": [
+            "Informell sagst du „Hallo“ und „Wie geht’s?“, formell „Guten Tag“ und „Wie geht es Ihnen?“.",
+            "Mit Freunden sagst du „du“, mit Fremden und Erwachsenen im Amt sagst du „Sie“.",
+            "„Tschüss“ ist informell, „Auf Wiedersehen“ ist formell."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "dw-hallo"
+          ],
+          "checks": [
+            {
+              "q": "Was sagst du morgens zu deiner Lehrerin?",
+              "kind": "apply",
+              "options": [
+                "Hallo, wie geht’s?",
+                "Guten Morgen, wie geht es Ihnen?"
+              ],
+              "correct": 1,
+              "answer": "Die formelle Variante: „Guten Morgen, wie geht es Ihnen?“ Zu Lehrerinnen und Lehrern sagt man „Sie“."
+            }
+          ]
+        },
+        {
+          "id": "alphabet",
+          "title": "Das Alphabet und Buchstabieren",
+          "note": "Du buchstabierst deinen Namen und bittest um Wiederholung, wenn du etwas nicht verstanden hast.",
+          "predict": "Wie spricht man im Deutschen den Buchstaben „W“ aus, und wie das „V“?",
+          "do": "Höre das Alphabet in der Folge und sprich es nach. Buchstabiere dann laut deinen Vor- und Nachnamen, deine Straße und deine Stadt. Nimm dich auf und höre es dir an.",
+          "takeaways": [
+            "Das deutsche Alphabet hat 26 Buchstaben, dazu kommen ä, ö, ü und ß (Eszett).",
+            "„W“ spricht man „weh“, „V“ spricht man „fau“.",
+            "Du bittest um Wiederholung mit „Wie bitte?“ oder „Noch einmal, bitte.“"
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "dw-abc"
+          ]
+        },
+        {
+          "id": "zahlen",
+          "title": "Zahlen von 0 bis 100",
+          "note": "Zahlen brauchst du für Telefonnummern, Preise, Adressen und die Uhrzeit.",
+          "predict": "Im Deutschen heißt 21 „einundzwanzig“. In welcher Reihenfolge kommen Einer und Zehner?",
+          "do": "Zähle laut von 0 bis 20 und dann in Zehnerschritten bis 100. Diktiere dir dann drei Telefonnummern und schreibe sie als Ziffern auf. Spielt zu zweit Bingo mit den Zahlen von 1 bis 50.",
+          "takeaways": [
+            "Ab 21 sagt man zuerst die Einer: 21 = einundzwanzig, 35 = fünfunddreißig.",
+            "Zehner enden auf -zig: zwanzig, vierzig, fünfzig. Ausnahme: 30 = dreißig.",
+            "Bei 16 und 17 fällt etwas weg: sechzehn (nicht sechszehn), siebzehn (nicht siebenzehn).",
+            "Zahlen bis 100 schreibt man als ein Wort: 99 = neunundneunzig."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "dw-zahlen"
+          ],
+          "checks": [
+            {
+              "q": "Wie schreibst du 45 in Buchstaben?",
+              "kind": "apply",
+              "answer": "fünfundvierzig. Die Einer (fünf) kommen zuerst, dann „und“, dann der Zehner (vierzig)."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Basislager",
+        "show": [
+          "Begrüße und verabschiede dich formell und informell in zwei kurzen Dialogen.",
+          "Buchstabiere deinen Namen und deine Adresse ohne Zögern.",
+          "Sage drei Telefonnummern laut vor und schreibe drei auf, die du hörst."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "sich-vorstellen",
+      "title": "Sich vorstellen",
+      "tier": "bronze",
+      "summary": "Name, Herkunft, Wohnort und Fragen: dein erster Text über dich selbst.",
+      "waypoints": [
+        {
+          "id": "vorstellen",
+          "title": "Name und Herkunft",
+          "note": "Du sagst, wie du heißt, woher du kommst und wo du wohnst, und fragst andere danach.",
+          "predict": "Wie fragst du einen Fremden höflich nach dem Namen? Und wie fragst du einen Freund?",
+          "do": "Sieh dir die Folgen „Ich heiße Emma“ und „Woher kommst du?“ an. Schreibe fünf Sätze über dich: Name, Herkunft, Wohnort, Sprachen und Alter. Sprich sie in ein Mikrofon und höre dich ab.",
+          "takeaways": [
+            "Mit „Ich heiße …“ oder „Ich bin …“ stellst du dich vor. Mit „Wie heißt du?“ fragst du nach dem Namen.",
+            "„Woher kommst du?“ – „Ich komme aus …“. Den Wohnort nennst du mit „Ich wohne in …“.",
+            "Das Verb ändert sich mit der Person: ich komme, du kommst.",
+            "Im Aussagesatz steht das Verb an zweiter Stelle: Ich komme aus Syrien."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-emma",
+            "dw-woher"
+          ],
+          "checks": [
+            {
+              "q": "Wie fragst du einen Fremden nach dem Namen?",
+              "kind": "apply",
+              "options": [
+                "Wie heißt du?",
+                "Wie heißen Sie?"
+              ],
+              "correct": 1,
+              "answer": "Mit „Sie“: „Wie heißen Sie?“ Zu Freunden sagst du „Wie heißt du?“."
+            }
+          ]
+        },
+        {
+          "id": "praesens",
+          "title": "Verben im Präsens",
+          "note": "Regelmäßige Verben haben feste Endungen. Du lernst, sie selbst zu bilden.",
+          "predict": "Im Englischen sagt man „I come, you come“. Was ändert sich im Deutschen am Verb?",
+          "do": "Schreibe die Formen von kommen, wohnen, heißen, machen und lernen für ich, du, er/sie/es, wir, ihr und sie/Sie. Prüfe sie bei Verbformen und sprich die Tabelle laut.",
+          "takeaways": [
+            "Endungen im Präsens: ich -e, du -st, er/sie/es -t, wir -en, ihr -t, sie/Sie -en.",
+            "Der Stamm bleibt gleich: wohnen → ich wohne, du wohnst.",
+            "Bei Stämmen auf -t oder -d kommt ein -e dazu: arbeiten → du arbeitest, er arbeitet."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "ling-pres",
+            "verbformen"
+          ],
+          "checks": [
+            {
+              "q": "Konjugiere „lernen“ für „du“ und „wir“.",
+              "kind": "apply",
+              "answer": "du lernst, wir lernen."
+            }
+          ]
+        },
+        {
+          "id": "sein-haben",
+          "title": "sein und haben",
+          "note": "Zwei unregelmäßige Verben, die du in fast jedem Gespräch brauchst.",
+          "predict": "Welches Verb brauchst du für „Ich … Student“ und welches für „Ich … eine Schwester“?",
+          "do": "Lerne die Formen von sein und haben auswendig. Schreibe zehn Sätze über dich und deine Familie, fünf mit sein und fünf mit haben.",
+          "takeaways": [
+            "sein: ich bin, du bist, er/sie/es ist, wir sind, ihr seid, sie/Sie sind.",
+            "haben: ich habe, du hast, er/sie/es hat, wir haben, ihr habt, sie/Sie haben.",
+            "Das Alter sagt man mit sein: Ich bin 20 Jahre alt. Die Familie mit haben: Ich habe eine Schwester.",
+            "Beide Verben sind unregelmäßig, deshalb lernst du die Formen auswendig."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "ling-sein"
+          ],
+          "checks": [
+            {
+              "q": "Welche Form fehlt? „Wir ___ Kollegen.“",
+              "kind": "recall",
+              "options": [
+                "haben",
+                "sind",
+                "seid"
+              ],
+              "correct": 1,
+              "answer": "„sind“, die wir-Form von sein."
+            }
+          ]
+        },
+        {
+          "id": "fragen",
+          "title": "Fragen stellen",
+          "note": "Mit W-Fragen holst du Informationen. Mit Ja/Nein-Fragen bekommst du eine kurze Antwort.",
+          "predict": "In „Woher kommst du?“ steht das Verb an zweiter Stelle. Wo steht es in „Kommst du aus Berlin?“",
+          "do": "Sieh dir die Folge „Adressen“ an. Schreibe zu den Fragewörtern wer, was, wo, woher, wann und wie je eine Frage und eine Antwort. Interviewe dann einen Partner: Name, Alter, Herkunft, Wohnort, Telefonnummer.",
+          "takeaways": [
+            "W-Fragen beginnen mit einem Fragewort (wer, was, wo, woher, wann, wie). Das Verb steht an zweiter Stelle.",
+            "Ja/Nein-Fragen haben das Verb an erster Stelle: Kommst du aus Berlin?",
+            "Nach dem Alter fragst du „Wie alt bist du?“, nach dem Wohnort „Wo wohnst du?“."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-adressen",
+            "ling-q"
+          ],
+          "checks": [
+            {
+              "q": "Mache aus „Du kommst aus Polen.“ eine Ja/Nein-Frage.",
+              "kind": "apply",
+              "answer": "Kommst du aus Polen? Das Verb rückt an die erste Stelle."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Vorstellung",
+        "show": [
+          "Stelle dich in fünf Sätzen vor: Name, Herkunft, Wohnort, Alter und Sprache.",
+          "Konjugiere „wohnen“ und „sein“ ohne Vorlage.",
+          "Stelle einem Partner fünf Fragen und notiere die Antworten."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Selbstvorstellung als Sprachnachricht",
+        "brief": "Du nimmst auf, wie du dich vorstellst, und hörst dir selbst zu.",
+        "minutes": 30,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Sprich die fünf Sätze aus dem Schritt „Name und Herkunft“ als Sprachnachricht von 30 Sekunden und höre dich ab."
+          },
+          {
+            "level": "changed",
+            "task": "Füge Alter, Beruf und zwei Sprachen hinzu und nimm sie noch einmal auf, ohne abzulesen."
+          },
+          {
+            "level": "own",
+            "task": "Nimm eine Vorstellung von einer Minute auf, die du für einen Deutschkurs schicken könntest, frei gesprochen."
+          }
+        ],
+        "criteria": [
+          "Du sprichst frei, ohne abzulesen",
+          "Jedes Verb hat die richtige Endung",
+          "Man versteht jedes Wort"
+        ]
+      }
+    },
+    {
+      "id": "dinge-benennen",
+      "title": "Dinge benennen",
+      "tier": "bronze",
+      "summary": "Artikel, Plural und Verneinung: die Grundlage für jeden Satz mit einem Nomen.",
+      "waypoints": [
+        {
+          "id": "artikel",
+          "title": "der, die, das",
+          "note": "Jedes Nomen hat ein Geschlecht. Lerne es immer mit dem Artikel zusammen.",
+          "predict": "Im Englischen heißt es immer „the“. Wie viele Wörter für „the“ erwartest du im Deutschen?",
+          "do": "Sieh dir die Folge „Was ist das?“ an. Schreibe eine Liste mit 20 Dingen aus deinem Zimmer, jeweils mit Artikel (der Tisch, die Lampe, das Bett). Übe zehn Minuten mit dem Artikeltrainer.",
+          "takeaways": [
+            "Im Singular gibt es drei Artikel: der (maskulin), die (feminin), das (neutral). Im Plural heißt es immer „die“.",
+            "Lerne jedes Nomen mit seinem Artikel: nicht „Tisch“, sondern „der Tisch“.",
+            "Nomen schreibt man im Deutschen immer groß.",
+            "Das Geschlecht folgt nicht immer der Logik: das Mädchen ist neutral."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 60,
+          "resources": [
+            "dw-wasistdas",
+            "ling-art",
+            "dw-artikeltrainer"
+          ],
+          "checks": [
+            {
+              "q": "Welchen Artikel hat „Lampe“?",
+              "kind": "recall",
+              "options": [
+                "der",
+                "die",
+                "das"
+              ],
+              "correct": 1,
+              "answer": "„die Lampe“, feminin. Lerne Nomen immer mit ihrem Artikel."
+            }
+          ]
+        },
+        {
+          "id": "ein-kein",
+          "title": "ein, eine und kein",
+          "note": "Der unbestimmte Artikel nennt etwas Neues. Mit „kein“ sagst du, dass etwas fehlt.",
+          "predict": "Wie verneinst du den Satz „Ich habe ein Auto“?",
+          "do": "Sieh dir die Folgen „Wem gehört das?“ und „Ich habe kein …“ an. Schreibe zehn Sätze: fünf mit ein/eine („Ich habe ein Handy.“) und fünf mit kein/keine („Ich habe kein Auto.“).",
+          "takeaways": [
+            "Unbestimmter Artikel: ein (der/das), eine (die). Im Plural gibt es keinen: ein Auto, Autos.",
+            "„kein“ verneint ein Nomen mit „ein/eine“ oder ohne Artikel: Ich habe ein Auto → Ich habe kein Auto.",
+            "„nicht“ verneint Verben und Adjektive: Ich komme nicht. Das Auto ist nicht rot.",
+            "Die Endung von „kein“ folgt dem Nomen: kein Auto, keine Katze."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 60,
+          "resources": [
+            "dw-wemgehoert",
+            "dw-kein",
+            "ling-neg"
+          ],
+          "checks": [
+            {
+              "q": "Verneine: „Ich habe eine Katze.“",
+              "kind": "apply",
+              "answer": "Ich habe keine Katze. Vor einem Nomen mit „eine“ steht „keine“."
+            }
+          ]
+        },
+        {
+          "id": "plural",
+          "title": "Die Mehrzahl",
+          "note": "Der Plural wird auf mehrere Arten gebildet. Lerne ihn gleich mit dem Nomen.",
+          "predict": "Wie bildet man im Englischen den Plural? Welche Wege erwartest du im Deutschen?",
+          "do": "Schreibe zu den 20 Nomen aus deiner Liste den Plural (der Tisch – die Tische). Sortiere sie nach der Endung: -e, -n/-en, -er, ohne Endung, mit Umlaut. Prüfe jedes Wort im DWDS.",
+          "takeaways": [
+            "Im Plural heißt der Artikel immer „die“: die Tische, die Lampen, die Betten.",
+            "Pluralendungen sind zum Beispiel -e, -n/-en, -er, -s oder keine. Manchmal kommt ein Umlaut dazu: der Apfel → die Äpfel.",
+            "Feminine Nomen auf -e bilden den Plural meist mit -n: die Lampe → die Lampen.",
+            "Lerne den Plural zusammen mit dem Nomen: der Tisch, die Tische."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "ling-plural",
+            "dwds"
+          ],
+          "checks": [
+            {
+              "q": "Wie heißt der Plural von „der Apfel“?",
+              "kind": "recall",
+              "answer": "die Äpfel, mit Umlaut."
+            }
+          ]
+        },
+        {
+          "id": "getraenke",
+          "title": "Was trinkst du?",
+          "note": "Du bietest Getränke an und bestellst sie. Dabei benutzt du Artikel und Verben in einem echten Dialog.",
+          "do": "Sieh dir die Folge „Was trinkst du?“ an. Schreibe einen Dialog mit sechs Sätzen: Du bietest einem Gast ein Getränk an und er antwortet. Führe ihn mit einem Partner, dann ohne Zettel.",
+          "takeaways": [
+            "Mit „Was trinkst du?“ fragst du, mit „Ich trinke …“ antwortest du.",
+            "Der Artikel hängt vom Geschlecht ab: der Tee, die Milch, das Wasser.",
+            "Mit „Ja, gern.“ nimmst du etwas an, mit „Nein, danke.“ lehnst du ab.",
+            "trinken ist regelmäßig: ich trinke, du trinkst, er trinkt."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-trinkst"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Dinge",
+        "show": [
+          "Nenne 20 Nomen aus deinem Zimmer mit Artikel und Plural.",
+          "Verneine fünf Sätze richtig mit „nicht“ oder „kein“.",
+          "Führe einen Getränke-Dialog mit sechs Sätzen ohne Zettel."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "wohnen",
+      "title": "Wohnen",
+      "tier": "silver",
+      "summary": "Zimmer, Besitz, Pronomen und die Wortstellung: du beschreibst, wo und wie du wohnst.",
+      "waypoints": [
+        {
+          "id": "zimmer",
+          "title": "Meine Wohnung",
+          "note": "Du benennst die Zimmer und sagst, wie du wohnst.",
+          "predict": "Wie viele Zimmer deiner Wohnung kannst du schon auf Deutsch nennen?",
+          "do": "Sieh dir die Folge „Meine Wohnung“ an. Zeichne den Grundriss deiner Wohnung und beschrifte jedes Zimmer mit Artikel. Beschreibe die Wohnung dann in sechs Sätzen: „Ich wohne in … Meine Wohnung hat …“",
+          "takeaways": [
+            "Zimmer: das Wohnzimmer, das Schlafzimmer, die Küche, das Bad, der Flur.",
+            "Mit „Ich habe … Zimmer“ sagst du, wie viele Zimmer du hast.",
+            "Mit „nicht“ verneinst du eine Aussage: Das Bad ist nicht groß."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-wohnung"
+          ]
+        },
+        {
+          "id": "possessiv",
+          "title": "mein, dein, unser",
+          "note": "Possessivartikel sagen, wem etwas gehört. Ihre Endungen sind fast wie bei ein/eine.",
+          "predict": "Wie sagst du „meine Küche“ und „mein Flur“? Warum ändert sich das Wort?",
+          "do": "Sieh dir die Folge „Unser Haus“ an. Schreibe zehn Sätze über deine Wohnung und deine Familie mit mein, dein, sein, ihr oder unser und prüfe bei jedem Nomen die Endung.",
+          "takeaways": [
+            "Die Possessivartikel: mein, dein, sein/ihr, unser, euer, ihr/Ihr.",
+            "Sie richten sich nach der Person: mein = ich, dein = du, unser = wir.",
+            "Die Endung folgt dem Nomen wie bei ein/eine: mein Bruder, meine Schwester, meine Eltern.",
+            "sein gehört zu er (sein Bruder), ihr zu sie (ihre Schwester)."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-haus",
+            "ling-poss"
+          ],
+          "checks": [
+            {
+              "q": "Ergänze: „Das ist ___ Schwester.“ (ich)",
+              "kind": "apply",
+              "options": [
+                "mein",
+                "meine",
+                "meiner"
+              ],
+              "correct": 1,
+              "answer": "meine Schwester. „Schwester“ ist feminin, deshalb mit -e."
+            }
+          ]
+        },
+        {
+          "id": "pronomen",
+          "title": "Personalpronomen",
+          "note": "Die kleinen Wörter ich, du, er, sie, es, wir, ihr, sie und Sie ersetzen Nomen und bestimmen die Verbform.",
+          "predict": "Welches Pronomen steht für „der Tisch“, welches für „die Lampe“ und welches für „das Bett“?",
+          "do": "Ersetze in zehn Sätzen über deine Wohnung das Nomen durch ein Pronomen (Der Tisch ist groß → Er ist groß). Schreibe dann eine Tabelle aller Pronomen mit der Form von „wohnen“.",
+          "takeaways": [
+            "Singular: ich, du, er/sie/es. Plural: wir, ihr, sie. Höflich: Sie.",
+            "Das Pronomen folgt dem Artikel: der Tisch → er, die Lampe → sie, das Bett → es.",
+            "„sie“ kann „she“ oder „they“ bedeuten. Das Verb zeigt den Unterschied: sie kommt, sie kommen."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "ling-pers"
+          ]
+        },
+        {
+          "id": "satzbau",
+          "title": "Das Verb auf Position 2",
+          "note": "Im Aussagesatz steht das konjugierte Verb immer an zweiter Stelle, egal, was an erster Stelle steht.",
+          "predict": "„Ich wohne in Köln.“ Wie sagst du denselben Satz mit „In Köln“ am Anfang?",
+          "do": "Schreibe fünf Sätze und stelle jeweils ein anderes Satzglied an den Anfang (Heute lerne ich Deutsch. / Ich lerne heute Deutsch.). Markiere das Verb mit einer Farbe und prüfe, ob es immer an Position 2 steht.",
+          "takeaways": [
+            "Im Aussagesatz steht das konjugierte Verb an Position 2.",
+            "Position 1 kann das Subjekt sein oder eine Zeit- oder Ortsangabe: Heute lerne ich Deutsch.",
+            "Steht etwas anderes als das Subjekt vorn, folgt das Subjekt nach dem Verb: In Köln wohne ich."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "ling-main"
+          ],
+          "checks": [
+            {
+              "q": "Beginne mit „Morgen“: „Ich fahre nach Berlin.“",
+              "kind": "apply",
+              "answer": "Morgen fahre ich nach Berlin. Das Verb bleibt an Position 2, das Subjekt folgt."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Zuhause",
+        "show": [
+          "Beschreibe deine Wohnung in acht Sätzen mit mein/meine und richtigen Artikeln.",
+          "Ersetze fünf Nomen durch das richtige Pronomen.",
+          "Bilde zu einem Satz zwei Varianten mit anderer Position 1 und erkläre, wo das Verb steht."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Meine Wohnung beschreiben",
+        "brief": "Du schreibst und sprichst über deine Wohnung, erst nach einem Muster, dann frei.",
+        "minutes": 45,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Schreibe einen Text von acht Sätzen über deine Wohnung nach dem Muster aus der Folge."
+          },
+          {
+            "level": "changed",
+            "task": "Beschreibe die Wohnung einer erfundenen Person. Benutze Pronomen und zwei Sätze mit anderer Position 1."
+          },
+          {
+            "level": "own",
+            "task": "Nimm ein Video von zwei Minuten auf, in dem du deine Wohnung zeigst und beschreibst."
+          }
+        ],
+        "criteria": [
+          "Jedes Nomen hat den richtigen Artikel",
+          "Das Verb steht im Aussagesatz an Position 2",
+          "Du benutzt mindestens drei Possessivartikel"
+        ]
+      }
+    },
+    {
+      "id": "tag-und-uhrzeit",
+      "title": "Tag und Uhrzeit",
+      "tier": "silver",
+      "summary": "Uhrzeit, Tagesablauf und Termine: du sprichst über deinen Tag.",
+      "waypoints": [
+        {
+          "id": "uhrzeit",
+          "title": "Die Uhrzeit",
+          "note": "Informell sagst du „Viertel nach drei“, formell „fünfzehn Uhr fünfzehn“. Beides brauchst du.",
+          "predict": "Wie spät ist 14:45 im Alltag, und wie sagt man es auf einem Bahnhof?",
+          "do": "Sieh dir „Emmas Tag“ und „Wie spät ist es?“ an. Stelle eine Uhr auf zehn Zeiten und sage jede informell und formell. Schreibe dann Emmas Tagesablauf mit Uhrzeiten auf.",
+          "takeaways": [
+            "Informell: halb vier = 15:30, Viertel nach drei = 15:15, Viertel vor vier = 15:45.",
+            "Formell nennst du Stunden und Minuten: 15:45 = fünfzehn Uhr fünfundvierzig.",
+            "„Wie spät ist es?“ und „Wie viel Uhr ist es?“ fragen nach der Uhrzeit.",
+            "Mit „um“ nennst du den Zeitpunkt: Der Kurs beginnt um acht Uhr."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-tag",
+            "dw-spaet"
+          ],
+          "checks": [
+            {
+              "q": "Welche Uhrzeit ist „halb acht“?",
+              "kind": "recall",
+              "options": [
+                "7:30",
+                "8:30",
+                "8:00"
+              ],
+              "correct": 0,
+              "answer": "7:30. „Halb acht“ heißt eine halbe Stunde vor acht."
+            }
+          ]
+        },
+        {
+          "id": "trennbare",
+          "title": "Trennbare Verben",
+          "note": "Viele Alltagsverben trennen sich im Satz: aufstehen → Ich stehe um sieben Uhr auf.",
+          "predict": "„aufstehen“ besteht aus „auf“ und „stehen“. Wohin kommt „auf“ im Satz „Ich … um sieben Uhr …“?",
+          "do": "Sieh dir „Tageszeiten“ an. Schreibe deinen Tagesablauf in acht Sätzen mit mindestens vier trennbaren Verben (aufstehen, einkaufen, anrufen, fernsehen, aufräumen) und markiere beide Teile.",
+          "takeaways": [
+            "Bei trennbaren Verben steht der Stamm an Position 2 und die Vorsilbe am Satzende: Ich stehe um sieben Uhr auf.",
+            "Im Infinitiv bleibt das Verb zusammen: aufstehen, einkaufen.",
+            "Typische Vorsilben sind auf-, an-, ein-, aus-, mit- und zurück-."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-tageszeiten",
+            "ling-sep"
+          ],
+          "checks": [
+            {
+              "q": "Bilde einen Satz mit „anrufen“: ich / dich / heute Abend.",
+              "kind": "apply",
+              "answer": "Ich rufe dich heute Abend an. Die Vorsilbe „an“ geht ans Satzende."
+            }
+          ]
+        },
+        {
+          "id": "datum",
+          "title": "Datum und Termine",
+          "note": "Du nennst Wochentage, Monate und das Datum und machst einen Termin aus.",
+          "predict": "Wie viele Wochentage und Monate kannst du schon ohne Hilfe nennen?",
+          "do": "Sieh dir „Hast du morgen Zeit?“ an. Lerne die Wochentage und die Monate. Schreibe fünf Termine aus deinem Kalender als Sätze („Am Montag um 18 Uhr habe ich Kurs.“) und mache mit einem Partner einen Termin aus.",
+          "takeaways": [
+            "Alle Wochentage sind maskulin: der Montag, der Samstag. Mit „am“ nennst du den Tag: am Montag.",
+            "Mit „um“ nennst du die Uhrzeit (um acht Uhr), mit „im“ den Monat (im Mai).",
+            "Das Datum nennst du mit Ordnungszahlen: der erste, der zweite, der dritte, der siebte.",
+            "Ordnungszahlen bis 19 enden auf -te, ab 20 auf -ste: der siebzehnte, der zwanzigste."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-zeit"
+          ],
+          "checks": [
+            {
+              "q": "Wie sagst du „am 3. Mai“?",
+              "kind": "apply",
+              "answer": "am dritten Mai. Die Ordnungszahl 3 heißt „dritte“, nach „am“ mit der Endung -en."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Tagesablauf",
+        "show": [
+          "Sage die Uhrzeit auf einer Uhr zehnmal informell und formell richtig.",
+          "Beschreibe deinen Tag in acht Sätzen mit vier trennbaren Verben.",
+          "Mache mit einem Partner einen Termin aus (Tag, Datum, Uhrzeit)."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "essen-einkaufen",
+      "title": "Essen und Einkaufen",
+      "tier": "silver",
+      "summary": "Lebensmittel, Akkusativ, Preise und Bestellen: Situationen aus dem Alltag.",
+      "waypoints": [
+        {
+          "id": "lebensmittel",
+          "title": "Lebensmittel und Mahlzeiten",
+          "note": "Du sprichst über Essen, über das, was du magst, und darüber, was du zu welcher Tageszeit isst.",
+          "predict": "„Ich habe keinen Hunger“ oder „Ich habe nicht Hunger“: Welche Form erwartest du?",
+          "do": "Sieh dir die Folge „Lebensmittel“ an. Schreibe eine Tabelle mit Frühstück, Mittagessen und Abendessen und je drei Lebensmitteln mit Artikel. Sage dann in sechs Sätzen, was du isst und was du nicht isst.",
+          "takeaways": [
+            "Mahlzeiten: das Frühstück, das Mittagessen, das Abendessen.",
+            "essen ist unregelmäßig: ich esse, du isst, er isst.",
+            "Verneinung: Ich esse kein Fleisch (kein + Nomen). Ich esse nicht gern Fisch (nicht + gern)."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-lebensmittel",
+            "ling-neg"
+          ]
+        },
+        {
+          "id": "akkusativ",
+          "title": "Der Akkusativ",
+          "note": "Nach vielen Verben steht das Objekt im Akkusativ. Nur beim maskulinen Artikel ändert sich etwas.",
+          "predict": "„Ich esse der Apfel“ oder „Ich esse den Apfel“: Welcher Satz klingt richtig, und warum?",
+          "do": "Lies auf der Lingolia-Seite nur Nominativ und Akkusativ. Schreibe zehn Sätze mit essen, trinken, kaufen, haben und brauchen, jeweils mit einem maskulinen, einem femininen und einem neutralen Objekt.",
+          "takeaways": [
+            "Das Objekt steht im Akkusativ. Du fragst: Wen oder was esse ich?",
+            "Nur der maskuline Artikel ändert sich: der → den, ein → einen, kein → keinen.",
+            "Feminin, neutral und Plural bleiben gleich: die Milch, das Brot, die Eier.",
+            "Beispiel: Ich esse einen Apfel, eine Banane und ein Brot."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 60,
+          "resources": [
+            "ling-decl"
+          ],
+          "checks": [
+            {
+              "q": "Ergänze: „Ich kaufe ___ Tisch.“ (der Tisch)",
+              "kind": "apply",
+              "options": [
+                "der",
+                "den",
+                "dem"
+              ],
+              "correct": 1,
+              "answer": "den Tisch. „Tisch“ ist maskulin, im Akkusativ wird aus „der“ „den“."
+            }
+          ]
+        },
+        {
+          "id": "einkaufen",
+          "title": "Einkaufen",
+          "note": "Du kaufst Lebensmittel ein, fragst nach Preisen und schreibst einen Einkaufszettel.",
+          "predict": "Wie fragst du nach dem Preis: „Wie viel kostet …?“ oder „Was kostet …?“",
+          "do": "Sieh dir „Mengen und Preise“ und „Was darf es sein?“ an. Schreibe einen Einkaufszettel mit Mengen. Spiele mit einem Partner einen Marktdialog mit zehn Zeilen und Preisen, danach mit getauschten Rollen.",
+          "takeaways": [
+            "Nach dem Preis fragst du: Was kostet …? Wie viel kostet …?",
+            "Mengen: ein Kilo Äpfel, ein Liter Milch, eine Packung Nudeln, zwei Flaschen Wasser.",
+            "Im Laden hörst du: Was darf es sein? Sonst noch etwas?",
+            "Preise sagst du so: 2,50 € = zwei Euro fünfzig."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-preise",
+            "dw-darfes"
+          ]
+        },
+        {
+          "id": "restaurant",
+          "title": "Im Restaurant bestellen",
+          "note": "Du bestellst Essen und Getränke höflich und bezahlst.",
+          "predict": "„Ich will eine Pizza“ oder „Ich möchte eine Pizza“: Welcher Satz ist höflicher?",
+          "do": "Sieh dir „Eine Pizza, bitte!“ an. Schreibe eine Speisekarte mit sechs Gerichten und Preisen. Spiele einen Restaurantdialog: begrüßen, bestellen, nach der Rechnung fragen, bezahlen. Tausche dann die Rollen.",
+          "takeaways": [
+            "Höflich bestellst du mit „Ich möchte …“ oder „Ich hätte gern …“.",
+            "Du bittest um die Rechnung mit „Die Rechnung, bitte.“ oder „Zahlen, bitte!“.",
+            "Die Bedienung fragt oft: „Zusammen oder getrennt?“"
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-pizza"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Einkauf",
+        "show": [
+          "Schreibe sechs Sätze mit Akkusativ und markiere jedes Objekt.",
+          "Führe einen Marktdialog mit zehn Zeilen ohne Zettel.",
+          "Bestelle in einem Rollenspiel ein Essen und ein Getränk und bezahle."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Einkaufsdialog",
+        "brief": "Du führst einen Dialog auf dem Markt, erst mit Text, dann frei.",
+        "minutes": 40,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Spiele den Dialog „Was darf es sein?“ mit einem Partner nach, mit Text."
+          },
+          {
+            "level": "changed",
+            "task": "Ändere Produkte, Mengen und Preise und füge eine Frage nach dem Preis hinzu."
+          },
+          {
+            "level": "own",
+            "task": "Nimm einen Dialog auf, in dem du für ein Essen mit drei Gästen einkaufst, ohne Text."
+          }
+        ],
+        "criteria": [
+          "Du benutzt mindestens zwei Akkusativobjekte",
+          "Preise und Mengen sind richtig gesagt",
+          "Der Dialog ist höflich"
+        ]
+      }
+    },
+    {
+      "id": "verabreden-weg",
+      "title": "Verabreden, Beruf und Weg",
+      "tier": "gold",
+      "summary": "Modalverben, Berufe und Wegbeschreibungen: du planst, arbeitest und findest dich zurecht.",
+      "waypoints": [
+        {
+          "id": "modalverben",
+          "title": "können, müssen, wollen",
+          "note": "Modalverben sagen, was du kannst, musst oder willst. Das zweite Verb steht als Infinitiv am Satzende.",
+          "predict": "„Ich kann Deutsch sprechen.“ Wo steht „sprechen“ und in welcher Form?",
+          "do": "Sieh dir „Wann spielen wir?“ an. Schreibe je drei Sätze mit können, müssen, wollen und möchten. Sage einem Partner, was du am Wochenende kannst, musst und willst und was du nicht kannst.",
+          "takeaways": [
+            "Das Modalverb steht an Position 2, das andere Verb als Infinitiv am Ende: Ich kann heute nicht kommen.",
+            "können: ich kann, du kannst, er kann. Bei ich und er/sie/es gibt es keine Endung.",
+            "müssen: ich muss, du musst. wollen: ich will, du willst.",
+            "Mit „Hast du Zeit?“ und „Ich habe keine Zeit.“ verabredest du dich."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "dw-spielen",
+            "ling-modal"
+          ],
+          "checks": [
+            {
+              "q": "Bilde den Satz: ich / heute / nicht / kommen / können.",
+              "kind": "apply",
+              "answer": "Ich kann heute nicht kommen. „kann“ an Position 2, „kommen“ am Ende."
+            }
+          ]
+        },
+        {
+          "id": "beruf",
+          "title": "Beruf und Arbeit",
+          "note": "Du sprichst über Berufe und sagst, was jemand tun muss oder kann.",
+          "predict": "Wie fragst du jemanden nach seinem Beruf?",
+          "do": "Sieh dir „Mein Beruf“ an. Schreibe zu fünf Berufen aus deiner Familie je zwei Sätze: Was ist sie oder er von Beruf, was muss und was kann sie oder er? Stelle dann deinen Wunschberuf in vier Sätzen vor.",
+          "takeaways": [
+            "Nach dem Beruf fragst du: Was bist du von Beruf? Die Antwort: Ich bin Lehrerin.",
+            "Viele Berufe haben eine männliche und eine weibliche Form: der Lehrer, die Lehrerin.",
+            "Nach „sein“ steht der Beruf ohne Artikel: Ich bin Arzt."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-beruf"
+          ]
+        },
+        {
+          "id": "weg",
+          "title": "Nach dem Weg fragen",
+          "note": "Du fragst nach dem Weg und verstehst einfache Wegbeschreibungen.",
+          "predict": "Wie sagst du auf Deutsch: „Turn left at the traffic lights“?",
+          "do": "Sieh dir „An der Ampel links“ an. Zeichne eine einfache Karte mit Bahnhof, Bank, Supermarkt und Schule. Frage und erkläre mit einem Partner drei Wege, nur auf Deutsch, mit geradeaus, links, rechts, an der Ampel und an der Kreuzung.",
+          "takeaways": [
+            "Du fragst: Entschuldigung, wo ist der Bahnhof? oder Wie komme ich zum Bahnhof?",
+            "Wegwörter: geradeaus, links, rechts, an der Ampel, an der Kreuzung.",
+            "Du sagst: Gehen Sie geradeaus, dann links.",
+            "Mit „Entschuldigung“ sprichst du Fremde höflich an."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "dw-ampel"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Lager Alltag",
+        "show": [
+          "Schreibe sechs Sätze mit Modalverben und Infinitiv am Satzende.",
+          "Frage nach dem Weg und erkläre einen Weg ohne Zettel.",
+          "Stelle deinen Wunschberuf in vier Sätzen vor."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "pruefung-a1",
+      "title": "Start Deutsch 1",
+      "tier": "gold",
+      "summary": "Wortschatz, ein Abschlusstest und das Prüfungsformat: du bereitest die A1-Prüfung vor.",
+      "waypoints": [
+        {
+          "id": "wortschatz",
+          "title": "Der Prüfungswortschatz",
+          "note": "Die Wortliste zeigt, welche rund 650 Wörter in der Prüfung vorkommen können. Du lernst sie mit Karteikarten.",
+          "predict": "Wie viele der Wörter auf den ersten Seiten der Liste kennst du schon?",
+          "do": "Öffne die Wortliste und markiere pro Thema zehn Wörter, die du noch nicht kennst. Lege damit Karteikarten in Anki an, mit Artikel, Plural und einem Beispielsatz. Lerne täglich 15 Minuten und prüfe Wörter im DWDS.",
+          "takeaways": [
+            "Die Liste enthält rund 650 Wörter. Etwa die Hälfte davon sollst du aktiv benutzen können.",
+            "Lerne Nomen immer mit Artikel und Plural.",
+            "Karteikarten mit Wiederholung in wachsenden Abständen helfen, Wörter zu behalten."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "wortliste",
+            "anki",
+            "dwds"
+          ]
+        },
+        {
+          "id": "abschlusstest",
+          "title": "Der Abschlusstest",
+          "note": "Du testest dein Wissen mit dem Abschlusstest von Nicos Weg und notierst, welche Themen du wiederholen musst.",
+          "predict": "Welche drei Themen aus diesem Kurs fallen dir am schwersten?",
+          "do": "Mache den Abschlusstest A1 ohne Hilfe. Notiere jeden Fehler mit dem Thema, gehe zur passenden Folge zurück und wiederhole sie. Mache den Test nach einer Woche noch einmal.",
+          "takeaways": [
+            "Ein Fehlerprotokoll zeigt dir, welche Themen du wiederholen musst.",
+            "Wiederhole zuerst die Themen mit den meisten Fehlern.",
+            "Wiederhole den Test nach einer Woche und vergleiche die Ergebnisse."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 50,
+          "resources": [
+            "dw-test"
+          ],
+          "checks": [
+            {
+              "q": "Ergänze: „Ich esse ___ Apfel.“",
+              "kind": "apply",
+              "options": [
+                "ein",
+                "einen",
+                "einem"
+              ],
+              "correct": 1,
+              "answer": "einen Apfel. Maskulin im Akkusativ: ein → einen.",
+              "onMiss": "akkusativ"
+            },
+            {
+              "q": "Bilde den Satz: ich / um sieben Uhr / aufstehen.",
+              "kind": "apply",
+              "answer": "Ich stehe um sieben Uhr auf. Die Vorsilbe „auf“ steht am Satzende.",
+              "onMiss": "trennbare"
+            }
+          ]
+        },
+        {
+          "id": "pruefung",
+          "title": "Das Prüfungsformat",
+          "note": "Du siehst dir an, wie die Prüfung Start Deutsch 1 aufgebaut ist, und planst deinen Termin.",
+          "predict": "Welche Fertigkeiten, glaubst du, werden in einer A1-Prüfung geprüft?",
+          "do": "Lies die Beschreibung der Prüfung. Notiere Teile, Dauer und Aufgabentypen. Suche das nächste Prüfungszentrum, Kosten und einen Termin. Übe mit einem Partner einen Sprechteil von drei Aufgaben.",
+          "takeaways": [
+            "Geprüft werden Hören (3 Teile, ca. 20 Minuten), Lesen und Schreiben (45 Minuten) und Sprechen (3 Teile, ca. 15 Minuten).",
+            "Die telc-Prüfung kann nicht als Teilprüfung abgelegt werden.",
+            "Die telc-Seite bietet einen kostenlosen Übungstest mit Lösungen und Audiodateien zum Herunterladen."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 40,
+          "resources": [
+            "telc",
+            "goethe-sd1"
+          ]
+        },
+        {
+          "id": "schreiben",
+          "title": "Eine kurze E-Mail schreiben",
+          "note": "Im Prüfungsteil Schreiben musst du einfache Texte schreiben, zum Beispiel einen Formular- oder E-Mail-Text.",
+          "do": "Schreibe eine E-Mail an einen Freund mit 30 bis 40 Wörtern: Du lädst ihn zum Essen ein, nennst Tag und Uhrzeit und fragst, ob er etwas mitbringen kann. Lies sie laut und prüfe jedes Verb.",
+          "takeaways": [
+            "Beantworte in einer Nachricht alle Punkte der Aufgabe: Anlass, Tag, Uhrzeit, Frage.",
+            "Beginne mit „Hallo …“ und schließe mit „Viele Grüße“ und deinem Namen."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 40,
+          "resources": [],
+          "gap": "Keine geprüfte Quelle mit Musterlösungen gefunden. Der Übungstest auf der telc-Seite enthält Schreibaufgaben, der Download wurde nicht geöffnet. Suchbegriffe: „Start Deutsch 1 Schreiben Musterlösung“, „A1 E-Mail schreiben Beispiel“."
+        }
+      ],
+      "checkpoint": {
+        "title": "Gipfel A1",
+        "show": [
+          "Löse den Abschlusstest A1 mit höchstens zehn Prozent Fehlern.",
+          "Stelle dich frei in einer Minute vor und beantworte drei Fragen.",
+          "Schreibe eine kurze E-Mail mit allen geforderten Punkten und ohne Verbfehler."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Prüfungsprobe",
+        "brief": "Du übst die Prüfung als Ganzes: Hören, Lesen, Schreiben, Sprechen.",
+        "minutes": 120,
+        "resources": [
+          "dw-test"
+        ],
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Mache den Abschlusstest A1 und korrigiere jeden Fehler mit der passenden Folge."
+          },
+          {
+            "level": "changed",
+            "task": "Mache den Übungstest von der telc-Seite unter Prüfungsbedingungen und zähle die Punkte."
+          },
+          {
+            "level": "own",
+            "task": "Verabrede mit einem Partner eine mündliche Prüfungsprobe von 15 Minuten, ohne Notizen."
+          }
+        ],
+        "criteria": [
+          "Du hast einen Zeitplan eingehalten",
+          "Du kennst deine drei schwächsten Themen",
+          "Du hast ohne Notizen gesprochen"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "dw-hallo",
+      "title": "Nicos Weg A1: Hallo!",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/hallo/l-40322767",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Die erste Folge: Begrüßungen, die Frage nach dem Befinden und der Unterschied zwischen formell und informell.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-abc",
+      "title": "Nicos Weg A1: Von A bis Z",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/von-a-bis-z/l-40331182",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Das deutsche Alphabet, Buchstabieren und die Bitte um Wiederholung, mit Hörbeispielen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-zahlen",
+      "title": "Nicos Weg A1: Zahlen von 1 bis 100",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/zahlen-von-1-bis-100/l-40368845",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Zählen bis 100 und Zahlen in verschiedenen Situationen, mit Aufgaben zum Hören.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-emma",
+      "title": "Nicos Weg A1: Ich heiße Emma",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/ich-hei%C3%9Fe-emma/l-40364699",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Sich vorstellen und nach dem Namen fragen, mit den Personalpronomen ich und du.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-woher",
+      "title": "Nicos Weg A1: Woher kommst du?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/woher-kommst-du/l-40368715",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Name, Herkunft und Wohnort nennen. Die Folge führt auch die Konjugation im Präsens ein.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-adressen",
+      "title": "Nicos Weg A1: Adressen",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/adressen/l-40375386",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Persönliche Angaben machen (Name, Alter, Herkunft, Wohnort, Telefonnummer) und W-Fragen stellen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-wasistdas",
+      "title": "Nicos Weg A1: Was ist das?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/was-ist-das/l-40393598",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Gegenstände benennen und nach ihrem deutschen Namen fragen, mit bestimmten Artikeln.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-wemgehoert",
+      "title": "Nicos Weg A1: Wem gehört das?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/wem-geh%C3%B6rt-das/l-40393806",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Nach Gegenständen fragen und sagen, wem etwas gehört. Hier kommen die unbestimmten Artikel vor.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-kein",
+      "title": "Nicos Weg A1: Ich habe kein …",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/ich-habe-kein/l-40402575",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Sagen, was man hat oder nicht hat, und was man sucht. Die Folge zeigt auch den Satzbau mit Subjekt.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-trinkst",
+      "title": "Nicos Weg A1: Was trinkst du?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/was-trinkst-du/l-40378760",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Über Getränke sprechen und sie anbieten. Dazu das Geschlecht der Nomen (Genus).",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-wohnung",
+      "title": "Nicos Weg A1: Meine Wohnung",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/meine-wohnung/l-40401371",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Die Zimmer einer Wohnung benennen, über die eigene Wohnung sprechen, mit der Verneinung durch nicht.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-haus",
+      "title": "Nicos Weg A1: Unser Haus",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/unser-haus/l-40471950",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Sagen, was einem (nicht) gehört und wem etwas gehört, mit den Possessivartikeln.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-tag",
+      "title": "Nicos Weg A1: Emmas Tag",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/emmas-tag/l-40403195",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Zeitangaben auf die Frage „Wann?“, nach der Uhrzeit fragen und sie sagen, über den Tagesablauf sprechen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-tageszeiten",
+      "title": "Nicos Weg A1: Tageszeiten",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/tageszeiten/l-40406333",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Aktivitäten des Tages benennen und sagen, wie oft man etwas tut, mit trennbaren Verben.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-spaet",
+      "title": "Nicos Weg A1: Wie spät ist es?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/wie-sp%C3%A4t-ist-es/l-40443235",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Die informelle und die formelle Uhrzeit sagen und Zeitangaben machen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-zeit",
+      "title": "Nicos Weg A1: Hast du morgen Zeit?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/hast-du-morgen-zeit/l-40443451",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Termine ausmachen, das Datum und die Namen der Monate sagen, mit Ordnungszahlen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-lebensmittel",
+      "title": "Nicos Weg A1: Lebensmittel",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/lebensmittel/l-40465283",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Über Lebensmittel sprechen und sagen, was man zu verschiedenen Tageszeiten isst und trinkt. Dazu die Verneinung nicht/kein.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-preise",
+      "title": "Nicos Weg A1: Mengen und Preise",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/mengen-und-preise/l-40468738",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Sagen, wo man was einkauft, was fehlt und was man braucht, und einen Einkaufszettel schreiben.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-darfes",
+      "title": "Nicos Weg A1: Was darf es sein?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/was-darf-es-sein/l-40478489",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Nach dem Preis fragen und einen Einkaufsdialog führen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-pizza",
+      "title": "Nicos Weg A1: Eine Pizza, bitte!",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/eine-pizza-bitte/l-40378860",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Essen beim Lieferservice und im Restaurant bestellen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-spielen",
+      "title": "Nicos Weg A1: Wann spielen wir?",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/wann-spielen-wir/l-40446324",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 25,
+      "why": "Sich verabreden und sagen, dass man keine Zeit hat, mit der Konjugation von können.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-beruf",
+      "title": "Nicos Weg A1: Mein Beruf",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/mein-beruf/l-40449209",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 25,
+      "why": "Berufe kennenlernen, Tätigkeiten beschreiben und sagen, was jemand tun muss oder kann, mit Modalverben.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-ampel",
+      "title": "Nicos Weg A1: An der Ampel links",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/an-der-ampel-links/l-40461211",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 25,
+      "why": "Nach dem Weg fragen und den Weg beschreiben, mit lokalen Präpositionen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-test",
+      "title": "Nicos Weg A1: Abschlusstest A1",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/abschlusstest-a1/l-43546310",
+      "type": "course",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 40,
+      "why": "Ein Test zum ganzen Kurs, mit dem man das eigene Wissen überprüft.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dw-artikeltrainer",
+      "title": "Deutsche Welle: Artikeltrainer",
+      "by": "Deutsche Welle",
+      "url": "https://learngerman.dw.com/de/artikeltrainer",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Ein Trainer, mit dem man der, die und das für häufige Nomen übt.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-art",
+      "title": "Lingolia: Articles in German Grammar",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/nouns-and-articles/articles-noun-markers",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "Erklärt auf Englisch der, die, das und ein, eine. Gut zum Nachschlagen, wenn die Folge zu schnell war.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-plural",
+      "title": "Lingolia: Plural Nouns in German Grammar",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/nouns-and-articles/plural",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "Zeigt die Pluralendungen und den Umlaut mit Beispielen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-decl",
+      "title": "Lingolia: Noun Cases in German Grammar",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/nouns-and-articles/declension",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Erklärt auf Englisch Nominativ und Akkusativ. Für A1 genügen diese beiden Fälle.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-sein",
+      "title": "Lingolia: haben and sein",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/verbs/sein-haben",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Die Formen von sein und haben mit Beispielsätzen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-pres",
+      "title": "Lingolia: Präsens: Present Tense",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/tenses/present-tense",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "Die Endungen der regelmäßigen Verben im Präsens, mit Beispielen und Übungen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-q",
+      "title": "Lingolia: Questions in German Grammar",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/sentence-structure/questions",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "W-Fragen und Ja/Nein-Fragen mit der Stellung des Verbs. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-neg",
+      "title": "Lingolia: Nicht and Kein: Negation",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/sentence-structure/negation",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Wann man nicht und wann man kein benutzt, mit Beispielen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-main",
+      "title": "Lingolia: Main Clauses",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/sentence-structure/main-clauses",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Die Stellung des Verbs im Aussagesatz, mit Beispielen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-pers",
+      "title": "Lingolia: Personal Pronouns",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/pronouns/personal-pronouns",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Alle Personalpronomen mit Beispielen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-poss",
+      "title": "Lingolia: Possessive Articles",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/pronouns/possessive-pronouns",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "mein, dein, sein, ihr, unser und ihre Endungen, mit Beispielen. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-sep",
+      "title": "Lingolia: Separable and Inseparable Verbs",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/verbs/separable-verbs",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Trennbare Verben mit der Stellung der Vorsilbe im Satz. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ling-modal",
+      "title": "Lingolia: Modal Verbs in German Grammar",
+      "by": "Lingolia",
+      "url": "https://deutsch.lingolia.com/en/grammar/verbs/modal-verbs",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 20,
+      "why": "können, müssen, wollen und die anderen Modalverben mit der Satzstellung. Erklärung auf Englisch.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "verbformen",
+      "title": "Verbformen.de: Flexion deutscher Verben",
+      "by": "Netzverb",
+      "url": "https://www.verbformen.de/",
+      "type": "tool",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 5,
+      "why": "Zeigt alle Formen eines Verbs. Damit prüft man die selbst geschriebene Konjugationstabelle.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dwds",
+      "title": "DWDS: Digitales Wörterbuch der deutschen Sprache",
+      "by": "DWDS",
+      "url": "https://www.dwds.de/",
+      "type": "reference",
+      "cost": "free",
+      "lang": "de",
+      "level": "bronze",
+      "minutes": 5,
+      "why": "Zeigt zu jedem Nomen Artikel, Geschlecht und Pluralform, zum Beispiel bei „Tisch“: der Tisch, Plural Tische.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "wortliste",
+      "title": "Goethe-Zertifikat A1: Start Deutsch 1, Wortliste",
+      "by": "Goethe-Institut",
+      "url": "https://www.goethe.de/pro/relaunch/prf/de/A1_SD1_Wortliste_02.pdf",
+      "type": "reference",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Die offizielle Wortliste zur Prüfung: Themen, 13 Wortgruppen und eine alphabetische Liste mit Beispielsätzen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "anki",
+      "title": "Anki: Karteikarten-Programm",
+      "by": "Anki",
+      "url": "https://apps.ankiweb.net/",
+      "type": "tool",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 10,
+      "why": "Ein Programm für Karteikarten mit Wiederholung in wachsenden Abständen, für die Wörter der Liste.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "telc",
+      "title": "telc: Start Deutsch 1 / telc Deutsch A1",
+      "by": "telc",
+      "url": "https://www.telc.net/sprachpruefungen/zertifikatspruefung/deutsch/start-deutsch-1-/-telc-deutsch-a1/",
+      "type": "docs",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "minutes": 15,
+      "why": "Zeigt Aufbau und Dauer der Prüfung und nennt einen kostenlosen Übungstest mit Lösungen zum Herunterladen.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "goethe-sd1",
+      "title": "Goethe-Institut: Start Deutsch 1",
+      "by": "Goethe-Institut",
+      "url": "https://www.goethe.de/de/spr/kup/prf/prf/sd1.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "de",
+      "level": "gold",
+      "why": "Die Seite des Goethe-Instituts zur Prüfung, mit Übungsmaterial. Konnte nicht automatisch geöffnet werden.",
+      "check": {
+        "status": "unverified",
+        "on": "2026-11-13",
+        "http": 403,
+        "note": "Am 2026-11-13 mit HTTP 403 abgewiesen (automatischer Zugriff). Öffne die Seite selbst, bevor du dich darauf verlässt."
+      }
+    }
+  ]
+}

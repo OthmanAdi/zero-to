@@ -1,0 +1,722 @@
+/*
+ * The resource shelf of zero-to: a small night shelf standing at the corner of the map table.
+ *
+ * Every selector starts at the dock (`.zt-dock`), at its reader layer (`.zt-shelf-layer`) or at a Bookshelf
+ * class, so nothing here reaches the rest of the page. Bookshelf's own looks are kept; these rules only set
+ * its tokens to the faces and colours of zero-to and draw the case around the row. Rule of the Bookshelf
+ * house, kept here: nothing between `.bb-shelf__row` and a book face sets overflow, filter or opacity.
+ */
+
+.zt-dock,
+.zt-shelf-layer {
+  --bb-font-serif: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --bb-font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --zt-dock-face: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --zt-dock-ground: var(--zt-night, #0b0f17);
+  --zt-dock-raised: #121925;
+  --zt-dock-text: var(--zt-text, #eef0f2);
+  --zt-dock-soft: var(--zt-text-soft, #a9b2bf);
+  --zt-dock-faint: var(--zt-text-faint, #8a94a3);
+  --zt-dock-lamp: var(--zt-lamp, #ffd9a0);
+  /* The two marked states, lifted for a dark ground: 7.4:1 and 8.2:1 on the case. Verified is unmarked. */
+  --zt-dock-gated: #d9a95e;
+  --zt-dock-unverified: #b4bccb;
+  --bb-focus-ring: var(--zt-dock-lamp);
+  --bb-focus-halo: var(--zt-dock-ground);
+  --bb-focus-width: 2px;
+  --bb-focus-offset: 2px;
+}
+
+/* ---------- the case ---------- */
+
+.zt-dock {
+  position: relative;
+  width: 380px;
+  height: 196px;
+  color: var(--zt-dock-text);
+  font-family: var(--zt-dock-face);
+  -webkit-font-smoothing: antialiased;
+}
+
+.zt-dock__panel {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  isolation: isolate;
+  background:
+    /* The lamp above the middle of the row warms the back wall; dimmer until the step's question is answered. */
+    radial-gradient(70% 85% at 50% 8%, rgb(255 217 160 / calc(0.13 * var(--zt-shelf-lit, 1))), rgb(255 217 160 / 0) 70%),
+    var(--bb-grain),
+    linear-gradient(180deg, #141c29 0%, #0e141e 58%, #0b1018 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 233 201 / 0.08),
+    inset 0 0 0 1px rgb(255 255 255 / 0.04),
+    inset 0 -18px 28px -22px rgb(0 0 0 / 0.9),
+    0 1px 0 rgb(255 255 255 / 0.03),
+    0 3px 8px rgb(0 0 0 / 0.45),
+    0 30px 50px -26px rgb(0 0 0 / 0.95);
+  overflow: hidden;
+}
+
+/* A routed edge round the inside of the case, the way a cabinet maker breaks a corner. */
+.zt-dock__panel::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 4px;
+  border: 1px solid rgb(0 0 0 / 0.45);
+  box-shadow: inset 0 1px 0 rgb(255 233 201 / 0.04);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.zt-dock__head {
+  position: absolute;
+  top: 7px;
+  left: 15px;
+  right: 9px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  z-index: 2;
+}
+
+.zt-dock__header {
+  min-width: 0;
+  display: grid;
+  color: var(--zt-dock-soft);
+  font-family: var(--bb-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+  line-height: 13px;
+  text-transform: uppercase;
+}
+
+.zt-dock__header-main,
+.zt-dock__header-flags {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The marked states get a line of their own, so the count of gated and unverified sources is never cut. */
+.zt-dock__header-flags {
+  color: var(--zt-dock-gated);
+}
+
+.zt-dock__nav {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.zt-dock__arrow,
+.zt-dock__close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgb(238 240 242 / 0.2);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.02);
+  color: var(--zt-dock-soft);
+  transition:
+    background-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+    scale 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zt-dock__arrow-glyph {
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: translateX(-1px) rotate(45deg);
+}
+
+.zt-dock__arrow--prev .zt-dock__arrow-glyph {
+  transform: translateX(1px) rotate(-135deg);
+}
+
+.zt-dock__close-glyph {
+  position: relative;
+  width: 12px;
+  height: 12px;
+}
+
+.zt-dock__close-glyph::before,
+.zt-dock__close-glyph::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1.5px;
+  height: 100%;
+  background: currentColor;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.zt-dock__close-glyph::after {
+  transform: translateX(-50%) rotate(-45deg);
+}
+
+@media (hover: hover) {
+  .zt-dock__arrow:hover,
+  .zt-dock__close:hover {
+    border-color: rgb(255 217 160 / 0.55);
+    background: rgb(255 217 160 / 0.08);
+    color: var(--zt-dock-text);
+  }
+}
+
+.zt-dock__arrow:active,
+.zt-dock__close:active {
+  scale: 0.94;
+}
+
+.zt-dock__arrow[aria-disabled='true'] {
+  border-color: rgb(238 240 242 / 0.08);
+  background: transparent;
+  color: rgb(169 178 191 / 0.4);
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ---------- the row on its plank ---------- */
+
+.zt-dock__stage {
+  position: absolute;
+  top: 38px;
+  left: 12px;
+  right: 12px;
+  height: 124px;
+  /*
+   * The row is cut off just below the top of the plank. The shelf lays each contact shadow on a floor that
+   * runs toward the viewer, and in a scene this small that floor would reach over the caption. The cut sits
+   * outside the 3D context (the scene is the perspective element), so the volumes keep their depth.
+   */
+  clip-path: inset(-40px -12px 27px -12px);
+}
+
+.zt-dock__shelf {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.zt-dock .bb-shelf {
+  --bb-shelf-height: 124px;
+  column-gap: 0;
+}
+
+/* Night Study paints its own dark room; in the dock the case is the room. */
+.zt-dock .bb-shelf[data-variant='night'] {
+  --bb-focus-ring: var(--zt-dock-lamp);
+  background: transparent;
+}
+
+.zt-dock .bb-shelf__empty {
+  display: none;
+}
+
+/*
+ * A spine a few centimetres tall cannot carry a long title: the shelf would letter "The ..." on it. Such a
+ * spine keeps its cloth, its rules, its pasted label and its device, and drops the cut lettering; the full
+ * title is on the volume's button, on the cover and in the caption.
+ */
+.zt-dock .bb-spine__title.is-clipped,
+.zt-dock .bb-spine__title.is-clipped .bb-spine__label {
+  color: transparent;
+  text-shadow: none;
+}
+
+/*
+ * The board the volumes stand on: its top catches the lamp, its front is walnut, and its foot throws a shadow
+ * down the back of the case. Its top edge is the shelf's floor line, 30 px above the bottom of the scene
+ * (38 + 124 - 30 = 132 in the case).
+ */
+.zt-dock__plank {
+  position: absolute;
+  top: 132px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  z-index: 0;
+  background:
+    /* The top of the board, seen from a little above and lit by the lamp; then its walnut front edge. */
+    linear-gradient(180deg, rgb(255 226 178 / calc(0.05 + 0.1 * var(--zt-shelf-lit, 1))) 0, rgb(255 226 178 / 0.02) 3px, rgb(0 0 0 / 0) 3px),
+    linear-gradient(180deg, #4a3829 0, #2d2219 3px, var(--zt-walnut, #5a4532) 3px, #3b2c20 5px, var(--zt-walnut-deep, #1c140e) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 226 178 / calc(0.08 + 0.12 * var(--zt-shelf-lit, 1))),
+    0 1px 0 rgb(0 0 0 / 0.6),
+    0 9px 14px -6px rgb(0 0 0 / 0.75);
+}
+
+/* The light falls off with the predict question unanswered: six tenths of full light, then all of it. */
+.zt-dock__dim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: var(--zt-void, #05070b);
+  opacity: calc((1 - var(--zt-shelf-lit, 1)) * 0.4);
+  pointer-events: none;
+  transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- the caption ---------- */
+
+.zt-dock__caption {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 8px;
+  display: grid;
+  gap: 0;
+  z-index: 2;
+  opacity: calc(0.62 + 0.38 * var(--zt-shelf-lit, 1));
+  transition: opacity 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zt-dock__title,
+.zt-dock__why,
+.zt-dock__status {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zt-dock__title {
+  color: var(--zt-dock-text);
+  font-family: var(--bb-font-serif);
+  font-size: 14.5px;
+  font-weight: 560;
+  font-variation-settings: 'opsz' 14;
+  line-height: 18px;
+  letter-spacing: -0.003em;
+}
+
+.zt-dock__why {
+  color: var(--zt-dock-soft);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.zt-dock__status {
+  color: var(--zt-dock-faint);
+  font-family: var(--bb-font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+
+/* A marked volume carries a short band before its status, the colour of its state. */
+.zt-dock__status[data-status='gated'],
+.zt-dock__status[data-status='unverified'] {
+  color: var(--zt-dock-gated);
+}
+
+.zt-dock__status[data-status='unverified'] {
+  color: var(--zt-dock-unverified);
+}
+
+.zt-dock__status[data-status='gated']::before,
+.zt-dock__status[data-status='unverified']::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 9px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  background: currentColor;
+}
+
+.zt-dock__status[data-status='unverified']::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.zt-dock[data-empty='1'] .zt-dock__status {
+  color: var(--zt-dock-soft);
+}
+
+/* Focus came back from the reader after a tap or a click: no ring until a key is pressed. */
+.zt-dock .bb-shelf[data-pointer] .bb-book:has(.bb-book__control:focus-visible) .bb-book__ring {
+  display: none;
+}
+
+/* ---------- phone: a round button and a bottom sheet ---------- */
+
+.zt-dock__toggle,
+.zt-dock__scrim {
+  display: none;
+}
+
+.zt-dock[data-mode='phone'] {
+  width: 52px;
+  height: 52px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__toggle {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+  width: 52px;
+  height: 52px;
+  padding: 0 0 15px;
+  border: 1px solid rgb(255 233 201 / 0.12);
+  border-radius: 50%;
+  background:
+    radial-gradient(80% 70% at 50% 20%, rgb(255 217 160 / 0.16), rgb(255 217 160 / 0) 70%),
+    linear-gradient(180deg, #172030, #0d131d);
+  box-shadow:
+    inset 0 1px 0 rgb(255 233 201 / 0.1),
+    0 2px 6px rgb(0 0 0 / 0.5),
+    0 14px 24px -12px rgb(0 0 0 / 0.9);
+  color: var(--zt-dock-text);
+}
+
+/* Three small spines on a plank: the shelf, folded into a button. */
+.zt-dock__toggle-spines {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-bottom: 2px;
+  border-bottom: 2px solid var(--zt-walnut, #5a4532);
+}
+
+.zt-dock__toggle-spine {
+  width: 5px;
+  height: 17px;
+  border-radius: 1px 1px 0 0;
+  background: #6c2716;
+}
+
+.zt-dock__toggle-spine:nth-child(2) {
+  height: 20px;
+  background: #313b46;
+}
+
+.zt-dock__toggle-spine:nth-child(3) {
+  width: 6px;
+  height: 15px;
+  background: #2a3825;
+}
+
+.zt-dock__toggle-count {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--zt-paper, #f3ece0);
+  color: var(--zt-ink, #1f2a3d);
+  font-family: var(--bb-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 18px;
+  text-align: center;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: block;
+  background: rgb(5 7 11 / 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.zt-dock[data-mode='phone'][data-sheet='open'] .zt-dock__scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__panel {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 41;
+  height: 300px;
+  border-radius: 14px 14px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(calc(100% + 32px));
+  visibility: hidden;
+  transition:
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s linear 380ms;
+}
+
+.zt-dock[data-mode='phone'][data-sheet='open'] .zt-dock__panel {
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+
+/* A grip at the top edge, so the sheet reads as something lifted from the table. */
+.zt-dock[data-mode='phone'] .zt-dock__panel::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(238 240 242 / 0.18);
+  transform: translateX(-50%);
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__head {
+  top: 16px;
+  left: 18px;
+  right: 12px;
+  height: 44px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__arrow,
+.zt-dock[data-mode='phone'] .zt-dock__close {
+  width: 44px;
+  height: 44px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__stage {
+  top: 62px;
+  left: 16px;
+  right: 16px;
+  height: 166px;
+  clip-path: inset(-40px -16px 26px -16px);
+}
+
+.zt-dock[data-mode='phone'] .bb-shelf {
+  --bb-shelf-height: 166px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__plank {
+  top: 198px;
+  height: 12px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__header {
+  letter-spacing: 0.06em;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__caption {
+  left: 18px;
+  right: 18px;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  gap: 2px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__title {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__why {
+  display: -webkit-box;
+  font-size: 13px;
+  line-height: 17px;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.zt-dock[data-mode='phone'] .zt-dock__status {
+  font-size: 10.5px;
+}
+
+/* ---------- the reader layer ---------- */
+
+/*
+ * The reader and the travelling cover, above everything on the map. The reader keeps Night Study's sheet,
+ * set to the colours of the zero-to room.
+ */
+.zt-shelf-layer {
+  position: relative;
+  z-index: 90;
+  --bb-paper: var(--zt-night, #0b0f17);
+  --bb-paper-raised: #1a2230;
+  --bb-sheet: var(--zt-night-soft, #141b27);
+  --bb-ink: var(--zt-text, #eef0f2);
+  --bb-ink-soft: var(--zt-text-soft, #a9b2bf);
+  --bb-ink-faint: var(--zt-text-faint, #8a94a3);
+  --bb-rule: rgb(238 240 242 / 0.14);
+  --bb-rule-strong: rgb(238 240 242 / 0.48);
+  --bb-accent: var(--zt-lamp, #ffd9a0);
+  --bb-accent-strong: #f2c27a;
+  --bb-accent-ink: #17140c;
+}
+
+/* The cover beside the page is a shelf cover with its own shadow: the slot adds none. */
+.zt-shelf-layer .bb-reader__cover-slot {
+  --bb-reader-cover-shadow: none;
+}
+
+/* The page was written from the roadmap entry; the line under the title says so and stays easy to find. */
+.zt-shelf-layer .bb-reader__example {
+  color: var(--zt-dock-faint);
+  font-family: var(--zt-dock-face);
+}
+
+.zt-shelf-layer .bb-reader__note {
+  color: var(--bb-ink);
+  border-left-color: var(--zt-dock-lamp);
+}
+
+.zt-shelf-layer .bb-reader__body {
+  font-family: var(--zt-dock-face);
+}
+
+.zt-shelf-layer .bb-reader__body :is(h2, h3) {
+  font-family: var(--bb-font-serif);
+}
+
+.zt-shelf-layer .bb-reader__body h2 {
+  color: var(--zt-dock-soft);
+  font-family: var(--bb-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.zt-shelf-layer .bb-reader__body h2:not(:first-child) {
+  margin-top: var(--bb-s-6);
+}
+
+.zt-shelf-layer .bb-reader__body h2 + * {
+  margin-top: var(--bb-s-2);
+}
+
+.zt-shelf-layer .bb-reader__actions {
+  flex-wrap: wrap;
+}
+
+/* "Pin to notebook": an outlined pin, filled once the volume is in the notebook. */
+.zt-reader__pin-glyph {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 0.62em;
+  height: 0.62em;
+  margin: -0.35em 0.15em 0 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.zt-reader__pin-glyph::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1.5px;
+  height: 0.42em;
+  background: currentColor;
+  transform: translateX(-50%);
+}
+
+.zt-reader__pin[aria-pressed='true'] .zt-reader__pin-glyph {
+  background: currentColor;
+}
+
+.zt-reader__pin[aria-pressed='true'] {
+  border-color: var(--bb-ink);
+}
+
+/* No page scrolling behind the open reader. */
+html.zt-reading {
+  overflow: hidden;
+}
+
+/*
+ * The travelling cover, from Bookmark Bookshelf's composition stylesheet: one cover above everything while
+ * a volume moves between the shelf and the page. Only its transform and two opacities change.
+ */
+.zt-shelf-layer .bb-flight {
+  position: fixed;
+  inset: 0;
+  z-index: var(--bb-z-flight);
+  pointer-events: none;
+  perspective: 2000px;
+}
+
+.zt-shelf-layer .bb-flight__book {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.zt-shelf-layer .bb-flight__shadow {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  box-shadow: 0 24px 48px -16px var(--bb-flight-shadow, rgb(0 0 0 / 0.75));
+  opacity: 0;
+}
+
+.zt-shelf-layer .bb-flight__spine {
+  position: absolute;
+  top: 0;
+  right: 100%;
+  bottom: 0;
+  transform-origin: 100% 50%;
+  background-color: var(--cloth);
+  background-image: linear-gradient(90deg, rgb(0 0 0 / 0.34), rgb(0 0 0 / 0.18));
+}
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .zt-dock *,
+  .zt-dock *::before,
+  .zt-dock *::after {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+  }
+
+  .zt-shelf-layer .bb-flight {
+    display: none;
+  }
+}
+
+.zt-dock[data-motion='reduced'] *,
+.zt-dock[data-motion='reduced'] *::before,
+.zt-dock[data-motion='reduced'] *::after {
+  transition-duration: 0.01s !important;
+  transition-delay: 0s !important;
+}
+
+@media (forced-colors: active) {
+  .zt-dock__panel,
+  .zt-dock__toggle {
+    border: 1px solid CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  .zt-dock__plank {
+    background: CanvasText;
+  }
+}

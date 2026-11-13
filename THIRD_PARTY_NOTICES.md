@@ -29,3 +29,10 @@ zero-to is licensed under Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE
 - Copyright 2017 IBM Corp. All rights reserved.
 - Licence: SIL Open Font License 1.1. Full text: [public/licenses/IBM-Plex-Mono-OFL-1.1.txt](public/licenses/IBM-Plex-Mono-OFL-1.1.txt).
 - Source: https://github.com/IBM/plex, packaged as `@fontsource/ibm-plex-mono` version 5.3.0 from npm.
+
+## Bookmark Bookshelf modules
+
+- Use: the resource shelf in the corner of the map and the reader page of each source (the shelf, motion and reader modules, the design tokens and the travelling cover), in `src/bookshelf/`, copied unchanged. A few rules of its base and composition stylesheets are in `src/shelf/`, scoped to the shelf. [PROVENANCE.md](PROVENANCE.md) lists every file.
+- Copyright 2026 Ahmad Othman Ammar Adi (OthmanAdi), the author of zero-to.
+- Licence: Apache-2.0, the licence of zero-to. Full text: [LICENSE](LICENSE).
+- Source: https://github.com/OthmanAdi/bookmark-bookshelf, tag v0.2.0, commit 498626dd44b0f676faa389fdbf558d0fd1a3672d.

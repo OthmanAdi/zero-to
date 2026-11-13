@@ -1,0 +1,192 @@
+/*
+ * Rules from Bookmark Bookshelf v0.2.0, `src/styles/base.css`: the reset its modules were drawn against,
+ * the focus ring, `.bb-label`, `.bb-visually-hidden` and the `.bb-button` family. The declarations are
+ * unchanged. Each selector is wrapped in `:where(.zt-dock, .zt-shelf-layer)` so nothing reaches the rest of
+ * the page, and `:where()` adds no specificity, so the module stylesheets that load after this one still
+ * win where they refine a button, exactly as they do in Bookshelf. The page ground, body font and the
+ * wordmark rules of that file are not taken.
+ */
+
+:where(.zt-dock, .zt-shelf-layer) :where(*, *::before, *::after),
+:where(.zt-dock, .zt-shelf-layer) {
+  box-sizing: border-box;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(h1, h2, h3, p, ul, ol, figure, blockquote) {
+  margin: 0;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(ul[role='list'], ol[role='list']) {
+  list-style: none;
+  padding: 0;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(h1, h2, h3) {
+  font-weight: var(--bb-weight-title);
+  line-height: var(--bb-leading-tight);
+  text-wrap: balance;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(h1) {
+  font-weight: var(--bb-weight-display);
+  letter-spacing: var(--bb-track-heading);
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(p) {
+  text-wrap: pretty;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(a) {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(button, input, textarea, select) {
+  font: inherit;
+  color: inherit;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(button) {
+  cursor: pointer;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :where(a, button, select, summary, label, [role='button']) {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(.zt-dock, .zt-shelf-layer) [hidden]:not([hidden='until-found']) {
+  display: none !important;
+}
+
+:where(.zt-dock, .zt-shelf-layer) :focus-visible {
+  outline: var(--bb-focus-width) solid var(--bb-focus-ring);
+  outline-offset: var(--bb-focus-offset);
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-label {
+  font-family: var(--bb-font-mono);
+  font-size: var(--bb-text-micro);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--bb-track-label);
+  text-transform: uppercase;
+  line-height: var(--bb-line-micro);
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bb-s-2);
+  min-width: var(--bb-control-h);
+  min-height: var(--bb-control-h);
+  padding: 0 var(--bb-s-4);
+  border: var(--bb-hairline) solid var(--bb-rule-strong);
+  border-radius: var(--bb-r-1);
+  background: transparent;
+  color: var(--bb-ink);
+  font-family: var(--bb-font-serif);
+  font-size: var(--bb-text-ui);
+  font-weight: var(--bb-weight-ui);
+  line-height: var(--bb-line-ui);
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition-property: background-color, color, border-color, scale;
+  transition-duration: var(--bb-dur-1);
+  transition-timing-function: var(--bb-ease-out);
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-button--solid {
+  background: var(--bb-accent);
+  border-color: var(--bb-accent);
+  color: var(--bb-accent-ink);
+  font-weight: var(--bb-weight-title);
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-button--quiet {
+  padding-inline: var(--bb-s-3);
+  border-color: transparent;
+}
+
+@media (hover: hover) {
+  :where(.zt-dock, .zt-shelf-layer) .bb-button:hover {
+    border-color: var(--bb-ink);
+    background: color-mix(in srgb, var(--bb-ink) 7%, transparent);
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button--solid:hover {
+    border-color: var(--bb-accent-strong);
+    background: var(--bb-accent-strong);
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button--quiet:hover {
+    border-color: transparent;
+    background: var(--bb-rule);
+  }
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-button:active {
+  scale: 0.97;
+}
+
+:where(.zt-dock, .zt-shelf-layer) .bb-button[disabled],
+:where(.zt-dock, .zt-shelf-layer) .bb-button[aria-disabled='true'] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(.zt-dock, .zt-shelf-layer) :where(*, *::before, *::after) {
+    scroll-behavior: auto !important;
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button {
+    transition: none;
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button:active {
+    scale: none;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(.zt-dock, .zt-shelf-layer) :focus-visible {
+    outline-color: Highlight;
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button {
+    border-color: ButtonText;
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) :where(button[aria-pressed='true']) {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  :where(.zt-dock, .zt-shelf-layer) .bb-button[disabled],
+  :where(.zt-dock, .zt-shelf-layer) .bb-button[aria-disabled='true'] {
+    border-color: GrayText;
+    color: GrayText;
+    opacity: 1;
+  }
+}

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: table</title>
+    <style>
+      /* The page is the void until the lamp comes on. */
+      html {
+        background: #05070b;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+      body {
+        color: var(--zt-text, #eef0f2);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        touch-action: pan-y;
+      }
+
+      /* A temporary overlay for this dev page only. The real one belongs to the overlay package. */
+      .dev {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 2;
+      }
+      .dev > * {
+        position: absolute;
+        transition:
+          opacity 0.7s ease,
+          transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+      .dev [data-in='0'] {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .dev-brand {
+        left: 48px;
+        top: 28px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+      }
+      .dev-copy {
+        left: 46px;
+        top: 190px;
+        max-width: 430px;
+      }
+      .dev-copy p {
+        margin: 24px 0 0;
+        max-width: 330px;
+        color: var(--zt-text-soft);
+      }
+      .dev-hint {
+        margin-top: 28px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--zt-text-faint);
+      }
+      .dev-hint::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--zt-signal);
+      }
+      .dev-card {
+        right: 46px;
+        top: 250px;
+        width: 360px;
+      }
+      .dev-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px 5px;
+        border-radius: 999px;
+        border: 1px solid color-mix(in srgb, var(--tier, #e0b44c) 55%, transparent);
+        background: color-mix(in srgb, var(--tier, #e0b44c) 14%, transparent);
+        color: color-mix(in srgb, var(--tier, #e0b44c) 70%, white);
+      }
+      .dev-chip::before {
+        content: '';
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--tier, #e0b44c);
+      }
+      .dev-meta {
+        margin-top: 16px;
+        color: var(--zt-text-faint);
+      }
+      .dev-card h2 {
+        margin-top: 8px;
+      }
+      .dev-goal {
+        margin: 8px 0 0;
+        color: var(--zt-text-soft);
+      }
+      .dev-hours {
+        margin-top: 22px;
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+      }
+      .dev-hours .zt-label {
+        color: var(--zt-text-faint);
+      }
+      .dev-line {
+        margin-top: 10px;
+        min-height: 2.6em;
+        color: var(--zt-text-soft);
+      }
+      .dev-stage {
+        margin-top: 2px;
+        color: var(--zt-text);
+        min-height: 1.5em;
+      }
+      .dev-pin {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        color: var(--zt-text-soft);
+      }
+      .dev-pin::before {
+        content: '';
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--zt-signal);
+      }
+      .dev-count {
+        left: 46px;
+        bottom: 48px;
+        color: var(--zt-text-faint);
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        pointer-events: auto;
+      }
+      .dev-count b {
+        color: var(--zt-text);
+        font-weight: 500;
+      }
+      .dev-blaze {
+        width: 16px;
+        height: 34px;
+        padding: 0;
+        border: 0;
+        border-radius: 2px 2px 1px 1px;
+        background: var(--tier);
+        filter: brightness(0.62);
+        cursor: pointer;
+        transition:
+          transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+          filter 0.3s ease;
+      }
+      .dev-blaze[aria-current='true'] {
+        filter: none;
+        transform: translateY(-10px);
+      }
+      .dev-arrow,
+      .dev-enter {
+        left: 0;
+        top: 0;
+        pointer-events: auto;
+        transition: opacity 0.7s ease;
+      }
+      .dev-arrow {
+        width: 52px;
+        height: 52px;
+        margin: -26px 0 0 -26px;
+        border-radius: 50%;
+        border: 1px solid rgb(238 240 242 / 0.26);
+        background: rgb(5 7 11 / 0.5);
+        color: var(--zt-text);
+        font: 500 20px/1 var(--zt-font-label);
+        cursor: pointer;
+      }
+      .dev-arrow:hover {
+        border-color: var(--tier, #e0b44c);
+      }
+      .dev-enter {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin: -19px 0 0 -19px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        cursor: pointer;
+        text-align: left;
+      }
+      .dev-ball {
+        position: relative;
+        flex: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 34% 30%, #ff8f78, var(--zt-signal) 46%, var(--zt-signal-deep) 100%);
+        box-shadow: 0 8px 18px rgb(5 7 11 / 0.55);
+      }
+      .dev-ball::before,
+      .dev-ball::after {
+        content: '';
+        position: absolute;
+        inset: -7px;
+        border-radius: 50%;
+        border: 1px solid var(--zt-signal);
+        opacity: 0;
+        animation: dev-ring 2.6s linear infinite;
+      }
+      .dev-ball::after {
+        animation-delay: 1.3s;
+      }
+      @keyframes dev-ring {
+        0% {
+          transform: scale(0.8);
+          opacity: 0.7;
+        }
+        100% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
+      }
+      .dev-enter small {
+        display: block;
+        margin-top: 4px;
+        font: 400 13px/1 var(--zt-font-text);
+        color: var(--zt-text-soft);
+      }
+      body.still .dev > *,
+      body.still .dev-blaze {
+        transition: none;
+      }
+      body.still .dev-ball::before,
+      body.still .dev-ball::after {
+        animation: none;
+        opacity: 0.35;
+        transform: scale(1.1);
+      }
+      body.bare .dev,
+      body.bare .zt-overlays {
+        display: none;
+      }
+
+      @media (max-width: 760px) {
+        .dev-brand {
+          left: 16px;
+          top: 16px;
+        }
+        .dev-copy {
+          left: 16px;
+          top: 104px;
+          max-width: calc(100vw - 32px);
+        }
+        .dev-copy p {
+          margin-top: 14px;
+          max-width: 320px;
+          font-size: 14px;
+        }
+        .dev-hint {
+          display: none;
+        }
+        .dev-card {
+          left: 16px;
+          right: 84px;
+          top: auto;
+          bottom: 16px;
+          width: auto;
+        }
+        .dev-card .dev-chip,
+        .dev-card .dev-goal,
+        .dev-card .dev-line,
+        .dev-card .dev-pin,
+        .dev-card .dev-hours .zt-label {
+          display: none;
+        }
+        .dev-card h2 {
+          font-size: 18px;
+          margin-top: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .dev-meta {
+          margin-top: 0;
+        }
+        .dev-hours {
+          position: absolute;
+          right: -68px;
+          bottom: 0;
+          margin: 0;
+        }
+        .dev-hours .zt-number {
+          font-size: 30px;
+        }
+        .dev-stage {
+          display: none;
+        }
+        .dev-count {
+          left: 16px;
+          bottom: 76px;
+        }
+        .dev-blaze {
+          height: 26px;
+        }
+        .dev-arrow {
+          width: 44px;
+          height: 44px;
+          margin: -22px 0 0 -22px;
+        }
+        .dev-ball {
+          width: 32px;
+          height: 32px;
+        }
+        .dev-enter {
+          margin-left: -96px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <script type="module" src="./table.ts"></script>
+  </body>
+</html>

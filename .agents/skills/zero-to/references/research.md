@@ -34,6 +34,8 @@ All five, in the current run:
 4. Cost and language were seen on the page. A price carries `seenOn`. A paid item with no visible price gets `cost: "paid"` and no `price`.
 5. A video is checked through the platform's embed lookup, not the watch page. For YouTube: `https://www.youtube.com/oembed?url=<watch url>&format=json`. A video id that does not exist still returns 200 on the watch page, but 404 there.
 
+Some fetch tools return a summary of a long page instead of its text. When you read only part of a page, or only such a summary, write that into `check.note` ("Read the first half; the rest as a summary"), and let the `why` line claim only what you saw in the text itself.
+
 ## Statuses
 
 | `check.status` | When | What the learner sees |

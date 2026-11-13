@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: walk</title>
+    <style>
+      html {
+        background: #05070b;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        color: var(--zt-text, #eef0f2);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        touch-action: pan-y;
+      }
+      /* The page is as long as the walk: scrolling is walking. */
+      #stretch {
+        width: 1px;
+        pointer-events: none;
+      }
+      body.still {
+        overflow: hidden;
+      }
+
+      /* A stand-in for the floating note, for this dev page only. The real one belongs to the overlay package. */
+      .dev-note {
+        position: fixed;
+        top: 82px;
+        width: min(340px, 29vw);
+        padding: 18px 18px 16px;
+        box-sizing: border-box;
+        color: var(--zt-ink);
+        transform: rotate(-1.2deg);
+        transition:
+          left 1.4s cubic-bezier(0.65, 0, 0.35, 1),
+          opacity 0.4s ease;
+        z-index: 3;
+      }
+      .dev-note[data-side='left'] {
+        left: 40px;
+      }
+      .dev-note[data-side='right'] {
+        left: calc(100vw - 40px - min(340px, 29vw));
+      }
+      .dev-note[hidden] {
+        display: block;
+        opacity: 0;
+        pointer-events: none;
+      }
+      .dev-kicker {
+        display: inline-block;
+        padding: 5px 16px 4px 10px;
+        background: var(--zt-signal);
+        color: var(--zt-paper-hi);
+        clip-path: polygon(0 0, calc(100% - 9px) 0, 100% 50%, calc(100% - 9px) 100%, 0 100%);
+        transform: rotate(-1.5deg);
+      }
+      .dev-note h2 {
+        margin: 10px 0 8px;
+        color: var(--zt-ink);
+      }
+      .dev-note canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid rgb(31 42 61 / 0.18);
+      }
+      .dev-note p {
+        margin: 10px 0 0;
+        color: var(--zt-ink-soft);
+      }
+      .dev-read {
+        position: fixed;
+        left: 40px;
+        bottom: 28px;
+        color: var(--zt-text-faint);
+        z-index: 3;
+        white-space: pre;
+      }
+      body.bare .dev-note,
+      body.bare .dev-read,
+      body.bare .zt-overlays {
+        display: none;
+      }
+      body.still .dev-note {
+        transition: none;
+      }
+
+      @media (max-width: 760px) {
+        .dev-note {
+          top: auto;
+          bottom: 0;
+          left: 0 !important;
+          width: 100vw;
+          height: 96px;
+          overflow: hidden;
+          transform: none;
+          padding: 14px 16px;
+        }
+        .dev-note canvas,
+        .dev-note p {
+          display: none;
+        }
+        .dev-note h2 {
+          margin: 8px 0 0;
+          font-size: 19px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .dev-read {
+          left: 16px;
+          bottom: 104px;
+          font-size: 9px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <div id="stretch"></div>
+    <script type="module" src="./walk.ts"></script>
+  </body>
+</html>

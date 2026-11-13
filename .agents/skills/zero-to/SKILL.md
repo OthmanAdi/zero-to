@@ -5,7 +5,7 @@ description: Turns any topic into a researched learning roadmap that opens as a 
 
 # zero-to
 
-`/zero-to <topic>` interviews the person, researches the topic, writes one roadmap file and opens it as a 3D trail map. Every stage of the roadmap is a stretch of trail ending at a camp, every step is a waypoint with a note, a hands-on task and checked sources, and every checkpoint is a signpost the learner has to pass. The site keeps progress in the learner's browser. Nothing is sent anywhere.
+`/zero-to <topic>` interviews the person, researches the topic, writes one roadmap file and opens it as a 3D trail map. Every stage of the roadmap is a stretch of trail ending at a camp, every step is a waypoint with a note, a hands-on task and checked sources, and every checkpoint is a signpost the learner has to pass. Research and link checks use the web. The roadmap is saved as a local file, and the site stores progress in the learner's browser.
 
 This skill is the method. The tools are next to it:
 

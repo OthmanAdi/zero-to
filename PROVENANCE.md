@@ -51,9 +51,8 @@ Make changes to the copied modules in Bookmark Bookshelf and update the pinned c
 
 ### Written for zero-to after the Bookshelf composition
 
-`src/shelf/dock.ts` connects the shelf and reader to roadmap resources and gives focus back to the shelf when the reader closes. `src/shelf/adaptive-paint.ts` chooses the renderer for this dock. Studio paints the same volumes while the Classic shelf supplies the controls.
+`src/shelf/dock.ts` connects the shelf and reader to roadmap resources and gives focus back to the shelf when the reader closes. It supplies the volume labels, keyboard hint and status announcement in English or German. `src/shelf/adaptive-paint.ts` chooses the renderer for this dock. Studio paints the same volumes while the Classic shelf supplies the controls.
 
 ### Known gaps
 
 - The shelf cannot draw a status band on a spine without a change upstream (an optional `band` field on `ShelfItem`). Until then gated and unverified sources are named in the caption, the dock header and the reader page.
-- The shelf names each volume's button in English ("Volume 3 of 7", "Marked as read") and has no option for other words. A German interface therefore gets English names on the volume buttons until the shelf takes labels the way the reader does.

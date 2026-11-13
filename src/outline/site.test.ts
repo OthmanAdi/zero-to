@@ -53,7 +53,7 @@ describe('headTags', () => {
     const description = head.querySelector('meta[name="description"]')?.getAttribute('content') ?? '';
     expect(description.length).toBeGreaterThan(50);
     expect(description.length).toBeLessThanOrEqual(160);
-    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${BASE}/r/${roadmap.id}/`);
+    expect(head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(`${BASE}/roadmaps/${roadmap.id}/`);
     expect(head.querySelector('meta[name="robots"]')).toBeNull();
     expect(head.querySelector('meta[property="og:image"]')?.getAttribute('content')).toBe(`${BASE}/og/${roadmap.id}.png`);
     expect(head.querySelector('meta[property="og:image:width"]')?.getAttribute('content')).toBe('1200');
@@ -130,9 +130,9 @@ describe('gallery and home pages', () => {
     expect(firstSkip(headingLevels(page))).toBeNull();
     const hrefs = [...page.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     for (const r of all) {
-      expect(hrefs).toContain(`../r/${r.id}/`);
-      for (const s of r.stages) expect(hrefs).toContain(`../r/${r.id}/#s-${s.id}`);
-      for (const w of r.stages.flatMap((s) => s.waypoints)) expect(hrefs).toContain(`../r/${r.id}/#w-${w.id}`);
+      expect(hrefs).toContain(`../roadmaps/${r.id}/`);
+      for (const s of r.stages) expect(hrefs).toContain(`../roadmaps/${r.id}/#s-${s.id}`);
+      for (const w of r.stages.flatMap((s) => s.waypoints)) expect(hrefs).toContain(`../roadmaps/${r.id}/#w-${w.id}`);
     }
   });
 

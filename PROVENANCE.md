@@ -23,35 +23,35 @@ Vite, TypeScript, Vitest, happy-dom and Playwright build and test the project an
 The resource shelf is built on modules from Bookmark Bookshelf, a project by the same author under the same licence.
 
 - Source repository: https://github.com/OthmanAdi/bookmark-bookshelf
-- Release tag: `v0.2.0`
-- Commit: `498626dd44b0f676faa389fdbf558d0fd1a3672d`
+- Version: 0.3.0
+- Commit: `3c93653b477aa32f5190a8ac3ace93b2fd4475d1`
 - Licence: Apache-2.0. Copyright 2026 Ahmad Othman Ammar Adi (OthmanAdi).
-- Taken on: 2026-11-13, file by file from the tag with `git show v0.2.0:<path>`.
 
 ### Copied unchanged
 
-These 73 files are byte for byte the files at the tag, tests included. They live under `src/bookshelf/` with the folder layout of the source, so their relative imports still resolve.
+These 123 files match the pinned commit, including the tests. They live under `src/bookshelf/` and keep their relative imports.
 
-| Source path at the tag | Path here | Files |
+| Source path | Path here | Files |
 |---|---|---|
-| `src/shelf/` | `src/bookshelf/shelf/` | 27 (the 3D shelf: volumes, covers, layout, light, looks) |
+| `src/shelf/` | `src/bookshelf/shelf/` | 30 (the Classic shelf, its controls and layout) |
 | `src/motion/` | `src/bookshelf/motion/` | 11 (springs, drag, flick, open and close progress) |
 | `src/reader/` | `src/bookshelf/reader/` | 32 (the reader dialog, markdown-lite, reading position, notes) |
+| `src/studio/` | `src/bookshelf/studio/` | 47 (the WebGL renderer, book materials and page motion) |
 | `src/styles/tokens.css` | `src/bookshelf/styles/tokens.css` | 1 (the `--bb-*` design tokens) |
 | `src/app/flight.ts`, `src/app/flight.test.ts` | `src/bookshelf/app/` | 2 (the cover that travels between shelf and page) |
 
 The `store` module is not taken: progress and the field notebook belong to zero-to's roadmap and learning packages.
 
-Do not edit these files here. A change belongs in Bookmark Bookshelf first and comes in with a new tag; record the new tag and commit in this section when that happens.
+Make changes to the copied modules in Bookmark Bookshelf and update the pinned commit here.
 
 ### Taken in part and scoped
 
-- `src/shelf/bookshelf-base.css` holds the reset, the focus ring and the `.bb-label`, `.bb-visually-hidden` and `.bb-button` rules of `src/styles/base.css` at the tag. The declarations are unchanged; every selector is wrapped in `:where(.zt-dock, .zt-shelf-layer)` so the rules reach only the shelf and its reader.
-- The flight layer rules (`.bb-flight`, `.bb-flight__book`, `.bb-flight__shadow`, `.bb-flight__spine`) and the cover slot rule of `src/app/bookshelf.css` at the tag are in `src/shelf/dock.css`, scoped to `.zt-shelf-layer`. Its page rule `html.bb-reading` is written there as `html.zt-reading`, and its `body` rule is not taken.
+- `src/shelf/bookshelf-base.css` holds the reset, focus ring, `.bb-label`, `.bb-visually-hidden` and `.bb-button` rules of `src/styles/base.css` at v0.2.0. The declarations are unchanged. The selectors use `:where(.zt-dock, .zt-shelf-layer)` so the rules reach the shelf and its reader.
+- The flight layer and cover slot rules of `src/app/bookshelf.css` at v0.2.0 are in `src/shelf/dock.css`, scoped to `.zt-shelf-layer`. The dock uses `html.zt-reading` for the page state.
 
 ### Written for zero-to after the Bookshelf composition
 
-`src/shelf/dock.ts` wires shelf, motion, reader and flight the way `src/app/bookshelf.ts` at the tag does (intents to motion, the flight from `coverPlacement()` to `flightTarget()`, focus given back on close, Escape routed to the reader while it opens). It is new code for zero-to: it reads roadmap resources instead of a bookmark store and writes nothing itself.
+`src/shelf/dock.ts` connects the shelf and reader to roadmap resources and gives focus back to the shelf when the reader closes. `src/shelf/adaptive-paint.ts` chooses the renderer for this dock. Studio paints the same volumes while the Classic shelf supplies the controls.
 
 ### Known gaps
 

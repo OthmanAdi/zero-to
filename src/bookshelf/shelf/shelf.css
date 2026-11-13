@@ -123,7 +123,8 @@
   display: block;
   transform-style: preserve-3d;
   transform-origin: 50% 100%;
-  transition: transform var(--bb-dur-2) var(--bb-ease-spring);
+  /* The way back down: quick, and never past the rest, so a body does not dip under the floor line. */
+  transition: transform var(--bb-dur-settle) var(--bb-ease-settle);
 }
 
 /*
@@ -131,42 +132,60 @@
  * A resting spine reaches toward a mouse: it rises and tips its head forward, only while the row is
  * still. The presented volume lifts a little under the pointer or keyboard focus, and a press pushes
  * its cover back, the start of opening.
+ *
+ * A transition takes its timing from the state it is going to. The way up is written on the raised
+ * state: it waits for the pointer to stay, then goes a little past its place and comes back. The way
+ * down is the body's own transition above.
+ *
+ * A spine rises to a pointer that has come to it, not to one that is crossing the row. The shelf marks
+ * a mouse moving fast as passing (`data-passing`), and no spine rises meanwhile; the wait covers the
+ * moment between the pointer slowing down and its staying.
  */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):hover .bb-book__body {
+  .bb-shelf[data-open='0']:not([data-settled='0']):not([data-passing]) .bb-book:not(.is-centre):hover .bb-book__body {
     transform: translateY(-10px) rotateX(-2deg);
+    transition: transform var(--bb-dur-rise) var(--bb-ease-rise) var(--bb-dwell);
   }
 
   .bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):active .bb-book__body {
     transform: translateY(-6px) scale(0.985);
-    transition-duration: var(--bb-dur-1);
+    transition: transform var(--bb-dur-1) var(--bb-ease-settle);
   }
 
   .bb-shelf[data-open='0'] .bb-book.is-turned:hover .bb-book__body {
     transform: translateY(-6px);
+    transition: transform var(--bb-dur-rise) var(--bb-ease-rise);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .bb-shelf[data-open='0'] .bb-book.is-turned:has(.bb-book__control:focus-visible) .bb-book__body {
     transform: translateY(-6px);
+    transition: transform var(--bb-dur-rise) var(--bb-ease-rise);
   }
 
   /* The front board faces along the volume's own x axis, so pushing the cover away is a move along -x. */
   .bb-shelf[data-open='0'] .bb-book.is-turned:active .bb-book__body {
     transform: translateY(-3px) translateX(-3px);
-    transition-duration: var(--bb-dur-1);
+    transition: transform var(--bb-dur-1) var(--bb-ease-settle);
   }
 }
 
+/* The shadow under a spine darkens with the lift: after the same wait, and back as fast as the body. */
 .bb-book::after {
   opacity: 0.78;
-  transition: opacity var(--bb-dur-2) var(--bb-ease-out);
+  transition: opacity var(--bb-dur-settle) var(--bb-ease-settle);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bb-shelf[data-open='0']:not([data-settled='0']):not([data-passing]) .bb-book:not(.is-centre):hover::after {
+    transition: opacity var(--bb-dur-rise) var(--bb-ease-out) var(--bb-dwell);
+  }
 }
 
 .bb-shelf[data-open='0'] .bb-book.is-turned:hover::after,
 .bb-shelf[data-open='0'] .bb-book.is-turned:has(.bb-book__control:focus-visible)::after,
-.bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):hover::after {
+.bb-shelf[data-open='0']:not([data-settled='0']):not([data-passing]) .bb-book:not(.is-centre):hover::after {
   opacity: 1;
 }
 

@@ -20,7 +20,8 @@
     "check": "npm run typecheck && npm run test && npm run build",
     "prerender": "node --experimental-strip-types scripts/prerender.ts",
     "og-images": "node --experimental-strip-types scripts/og-images.ts",
-    "build:skill": "node scripts/build-skill.ts"
+    "build:skill": "node scripts/build-skill.ts",
+    "build:viewer": "node scripts/build-viewer.ts"
   },
   "dependencies": {
     "three": "0.187.0"

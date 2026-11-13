@@ -1,0 +1,12 @@
+{
+  "name": "zero-to",
+  "description": "The zero-to agent skill.",
+  "owner": { "name": "OthmanAdi" },
+  "plugins": [
+    {
+      "name": "zero-to",
+      "source": "./",
+      "description": "Turn any topic into a researched learning roadmap, opened as a 3D trail map."
+    }
+  ]
+}

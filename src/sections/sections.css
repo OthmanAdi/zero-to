@@ -1,0 +1,2090 @@
+/*
+ * The landing sections: the page under the hero. Every selector starts at `.zs-`. Colours and faces come from
+ * the --zt-* custom properties of the look.
+ *
+ * Three materials, as on the rest of the site: type on the room for what introduces a stop, paper for what is
+ * read closely, and the route colour for the thread, the walker's way and every "you are here". Small text in
+ * the route colour uses the deep tone, which reads on paper.
+ *
+ * Without the script the page is plain sections in order. The script adds `.zs-live`, and only then are stops
+ * pinned and things made to stand up. `.zs-still` (reduced motion) keeps everything standing.
+ */
+
+.zs-root {
+  --zs-pad-l: clamp(72px, 6.7vw, 96px);
+  --zs-pad-r: 46px;
+  --zs-gutter: 46px;
+  --zs-band: 54px;
+  --zs-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --zs-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --zs-rule: rgb(238 240 242 / 0.14);
+  --zs-ink-rule: rgb(31 42 61 / 0.16);
+
+  position: relative;
+  overflow-x: clip;
+  color: var(--zt-text);
+  font-family: var(--zt-font-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.zs-root *,
+.zs-root *::before,
+.zs-root *::after {
+  box-sizing: border-box;
+}
+
+.zs-root :where(h2, h3, h4, p, ul, ol, figure, fieldset, legend) {
+  margin: 0;
+  padding: 0;
+}
+
+.zs-root :where(ul, ol) {
+  list-style: none;
+}
+
+.zs-root :where(fieldset) {
+  min-width: 0;
+  border: 0;
+}
+
+.zs-root :where(input) {
+  font: inherit;
+  color: inherit;
+}
+
+.zs-root :where(button) {
+  color: inherit;
+}
+
+.zs-root [hidden] {
+  display: none !important;
+}
+
+.zs-root :where(code) {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgb(238 240 242 / 0.09);
+  font-family: var(--zt-font-label);
+  font-size: 0.86em;
+  white-space: nowrap;
+}
+
+.zs-root :where(.zt-paper, .zs-sheet, .zs-ticket) :where(code) {
+  background: rgb(31 42 61 / 0.08);
+}
+
+.zs-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- The frame of a stop -------------------------------------------------------------------------------- */
+
+.zs-gap {
+  position: relative;
+  height: calc(var(--zs-vh, 100vh) * var(--zs-gap, 0.3));
+}
+
+.zs-stop {
+  position: relative;
+}
+
+.zs-stop[data-pin] {
+  height: calc(var(--zs-vh, 100vh) * (1 + var(--zs-hold, 1.1)));
+}
+
+.zs-box {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, min(470px, 33vw)) minmax(0, 1fr);
+  column-gap: clamp(36px, 5vw, 84px);
+  align-items: start;
+  padding: clamp(108px, 15vh, 150px) var(--zs-pad-r) calc(var(--zs-band) + 88px) var(--zs-pad-l);
+}
+
+.zs-stop[data-pin] > .zs-box {
+  position: sticky;
+  top: 0;
+  height: var(--zs-vh, 100vh);
+  padding-bottom: calc(var(--zs-band) + 30px);
+}
+
+/* A pinned station sits in the middle of the room left to it. */
+.zs-stop[data-pin] .zs-station {
+  align-self: center;
+}
+
+.zs-box > :not(.zs-thread, .zs-walker) {
+  position: relative;
+  z-index: 1;
+}
+
+.zs-box {
+  grid-template-rows: auto 1fr;
+}
+
+.zs-copy {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.zs-station {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.zs-after {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+}
+
+.zs-after > :first-child {
+  margin-top: 22px;
+}
+
+/* The short dashed spur from the thread in the gutter to the tag of the stop. */
+.zs-copy::before {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: calc(var(--zs-gutter) - var(--zs-pad-l));
+  width: calc(var(--zs-pad-l) - var(--zs-gutter) + 6px);
+  border-top: 2px dashed var(--zs-rule);
+}
+
+.zs-centred .zs-copy::before {
+  content: none;
+}
+
+.zs-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 26px;
+  padding: 9px 24px 9px 20px;
+  transform: rotate(-2deg);
+  transform-origin: 0 50%;
+  background: var(--zt-signal-deep);
+  color: var(--zt-paper-hi);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 50%, calc(100% - 13px) 100%, 0 100%, 9px 50%);
+}
+
+.zs-tag-n {
+  padding-right: 10px;
+  border-right: 1px solid rgb(251 248 241 / 0.45);
+  font-family: var(--zt-font-display);
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.zs-title {
+  margin: 0 0 22px;
+  font-size: clamp(34px, 2.1vw + 21px, 52px);
+  line-height: 1.04;
+  outline: none;
+}
+
+.zs-lede {
+  max-width: 46ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--zt-text);
+}
+
+.zs-text {
+  max-width: 50ch;
+  margin-top: 14px;
+  color: var(--zt-text-soft);
+}
+
+.zs-sub {
+  margin-top: 26px;
+  font-family: var(--zt-font-display);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+}
+
+.zs-sub + .zs-text {
+  margin-top: 8px;
+}
+
+.zs-rule {
+  padding-top: 14px;
+  border-top: 1px solid var(--zs-rule);
+}
+
+.zs-station {
+  min-width: 0;
+}
+
+.zs-card {
+  padding: 16px 18px 18px;
+}
+
+.zs-card-title,
+.zs-item-title {
+  margin: 0 0 6px;
+  font-family: var(--zt-font-display);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.005em;
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+}
+
+.zs-item-title {
+  font-size: 16px;
+}
+
+/* A large sheet of paper that holds a list or a figure. */
+.zs-sheet {
+  position: relative;
+  isolation: isolate;
+  color: var(--zt-ink);
+}
+
+.zs-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 2px;
+  background:
+    linear-gradient(178deg, rgb(255 255 255 / 0.5), transparent 38%),
+    var(--zt-paper-grain, none),
+    var(--zt-paper);
+  background-blend-mode: normal, multiply, normal;
+  filter: url(#zt-paper-edge) drop-shadow(0 1px 0.5px rgb(5 7 11 / 0.3)) drop-shadow(0 22px 26px rgb(5 7 11 / 0.5));
+}
+
+/* A small card: the same paper with a lighter shadow. */
+.zs-card {
+  position: relative;
+  isolation: isolate;
+  color: var(--zt-ink);
+}
+
+.zs-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 2px;
+  background:
+    linear-gradient(178deg, rgb(255 255 255 / 0.55), transparent 42%),
+    var(--zt-paper-grain, none),
+    var(--zt-paper);
+  background-blend-mode: normal, multiply, normal;
+  filter: url(#zt-paper-edge) drop-shadow(0 1px 0.5px rgb(5 7 11 / 0.3)) drop-shadow(0 12px 14px rgb(5 7 11 / 0.42));
+}
+
+/* Things that rise as a station forms. Only when the script runs, so a page without it shows everything. */
+.zs-live .zs-rise {
+  transition:
+    transform 0.75s var(--zs-spring),
+    opacity 0.35s ease-out;
+}
+
+.zs-live .zs-rise:not(.is-up) {
+  opacity: 0;
+  transform: translateY(30px) rotate(-1.6deg);
+}
+
+.zs-live .zs-rise:nth-child(even):not(.is-up) {
+  transform: translateY(30px) rotate(1.4deg);
+}
+
+/* ---- The thread ----------------------------------------------------------------------------------------- */
+
+.zs-thread {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.zs-thread-ahead,
+.zs-thread-done {
+  fill: none;
+  stroke-linecap: round;
+  stroke-dasharray: 9 8;
+}
+
+.zs-thread-ahead {
+  stroke: rgb(238 240 242 / 0.14);
+  stroke-width: 2;
+}
+
+.zs-thread-done {
+  stroke: var(--zt-signal);
+  stroke-width: 2.6;
+}
+
+.zs-thread-head {
+  fill: var(--zt-signal);
+  stroke: var(--zt-paper);
+  stroke-width: 2;
+}
+
+.zs-thread-rings ellipse {
+  fill: none;
+  stroke: rgb(238 240 242 / 0.07);
+  stroke-width: 1;
+}
+
+.zs-walker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 42px;
+  height: 62px;
+  margin: -60px 0 0 -21px;
+  color: var(--zt-paper);
+  pointer-events: none;
+  will-change: transform;
+  filter: drop-shadow(0 2px 2px rgb(5 7 11 / 0.6));
+}
+
+.zs-walker svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: currentColor;
+}
+
+.zs-walker [fill='none'] {
+  stroke: currentColor;
+}
+
+/* ---- Index tabs ----------------------------------------------------------------------------------------- */
+
+.zs-nav {
+  position: relative;
+  z-index: 20;
+  font-family: var(--zt-font-text);
+}
+
+.zs-nav *,
+.zs-nav *::before {
+  box-sizing: border-box;
+}
+
+.zs-nav ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.zs-nav-fixed {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.zs-tabs {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.zs-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  height: 48px;
+  padding: 6px 13px 0;
+  border: 0;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, var(--zt-paper-shade), var(--zt-paper) 34%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.35) inset,
+    0 8px 14px rgb(5 7 11 / 0.5);
+  color: var(--zt-ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    height 0.32s var(--zs-spring),
+    background-color 0.2s ease-out,
+    color 0.2s ease-out;
+}
+
+.zs-tab-n {
+  font-family: var(--zt-font-display);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+
+.zs-tab[aria-current] {
+  height: 56px;
+  background: var(--zt-signal-deep);
+  color: var(--zt-paper-hi);
+}
+
+@media (hover: hover) {
+  .zs-tab:not([aria-current]):hover {
+    height: 52px;
+    color: var(--zt-ink);
+  }
+}
+
+.zs-nav-toggle {
+  display: none;
+  color: var(--zt-ink);
+}
+
+.zs-nav-toggle.is-current {
+  background: var(--zt-signal-deep);
+  color: var(--zt-paper-hi);
+}
+
+.zs-caret {
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
+  border: solid currentColor;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease-out;
+}
+
+.zs-nav-toggle[aria-expanded='true'] .zs-caret {
+  margin-top: 4px;
+  transform: rotate(225deg);
+}
+
+/* ---- 01 What it is: the paper theatre with four peaks --------------------------------------------------- */
+
+.zs-theatre {
+  perspective: 1500px;
+  perspective-origin: 50% 12%;
+  margin-top: -64px;
+  pointer-events: none;
+}
+
+.zs-ground {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 800 / 390;
+  transform: rotateX(57deg);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+}
+
+.zs-ground-paper {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background:
+    var(--zt-paper-grain, none),
+    linear-gradient(180deg, var(--zt-paper-shade), var(--zt-paper) 55%, var(--zt-paper-hi));
+  background-blend-mode: multiply, normal;
+  box-shadow:
+    0 2px 0 var(--zt-paper-shade),
+    0 40px 46px rgb(5 7 11 / 0.6);
+}
+
+.zs-ground-paper svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.zs-cut {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: var(--w);
+  transform: translate(-50%, -100%) rotateX(-90deg);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 0 0.6px rgb(31 42 61 / 0.55));
+}
+
+.zs-cut svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.zs-cut-shadow {
+  position: absolute;
+  top: var(--y);
+  left: var(--x);
+  width: calc(var(--w) * 1.15);
+  height: 26%;
+  transform: translate(-44%, -52%);
+  background: radial-gradient(closest-side, rgb(31 42 61 / 0.42), rgb(31 42 61 / 0) 100%);
+  border-radius: 50%;
+}
+
+.zs-live .zs-cut {
+  transition:
+    transform 0.9s var(--zs-spring),
+    opacity 0.25s ease-out,
+    filter 0.4s ease-out;
+}
+
+.zs-live .zs-cut-shadow {
+  transition: opacity 0.6s ease-out;
+}
+
+.zs-live .zs-peak:not(.is-up) {
+  opacity: 0;
+  transform: translate(-50%, -100%) rotateX(-2deg);
+}
+
+.zs-live .zs-cut-shadow:has(+ .zs-peak:not(.is-up)) {
+  opacity: 0;
+}
+
+/* The peak of the current step steps forward. The others lean back and dim. */
+.zs-stop[data-focus] .zs-peak.is-up:not(.is-on) {
+  transform: translate(-50%, -100%) rotateX(-68deg);
+  filter: drop-shadow(0 0 0.6px rgb(31 42 61 / 0.55)) brightness(0.66);
+}
+
+.zs-stop[data-focus] .zs-peak.is-on {
+  transform: translate(-50%, calc(-100% + 16px)) rotateX(-90deg) scale(1.06);
+}
+
+.zs-tiers {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.zs-tier {
+  padding-top: 14px;
+}
+
+.zs-blaze {
+  display: block;
+  width: 30px;
+  height: 14px;
+  margin-bottom: 10px;
+  border: 3px solid var(--zt-paper-hi);
+  border-width: 3px 0;
+  background: var(--zt-tier-bronze);
+  box-shadow: 0 0 0 1px var(--zs-ink-rule);
+}
+
+.zs-tier[data-tier='silver'] .zs-blaze {
+  background: var(--zt-tier-silver);
+}
+
+.zs-tier[data-tier='gold'] .zs-blaze {
+  background: var(--zt-tier-gold);
+}
+
+.zs-tier[data-tier='diamond'] .zs-blaze {
+  background: var(--zt-tier-diamond);
+}
+
+.zs-live .zs-tier.is-up {
+  transition:
+    transform 0.45s var(--zs-spring),
+    opacity 0.3s ease-out;
+}
+
+.zs-stop[data-focus] .zs-tier.is-up:not(.is-on) {
+  filter: brightness(0.84);
+}
+
+.zs-stop[data-focus] .zs-tier.is-on {
+  transform: translateY(-10px) rotate(-1deg);
+}
+
+/* ---- 02 How it works: four steps ------------------------------------------------------------------------ */
+
+.zs-slips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin-top: 22px;
+}
+
+.zs-slip {
+  padding: 4px 9px 5px;
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  border-left: 3px solid var(--zt-ink);
+}
+
+.zs-slip:nth-child(odd) {
+  transform: rotate(-1.5deg);
+}
+
+.zs-slipGated {
+  border-left-color: var(--zt-status-gated);
+  color: var(--zt-status-gated);
+}
+
+.zs-slipUnverified {
+  border-left-color: var(--zt-ink-soft);
+  color: var(--zt-ink-soft);
+}
+
+.zs-slipDead {
+  background: var(--zt-paper-shade);
+  color: var(--zt-ink-soft);
+  border-left-color: var(--zt-ink-soft);
+  text-decoration: line-through;
+}
+
+.zs-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+  counter-reset: none;
+}
+
+.zs-step {
+  padding: 18px 20px 20px;
+}
+
+.zs-step:nth-child(even) {
+  margin-top: 22px;
+}
+
+.zs-step-art {
+  float: right;
+  width: 92px;
+  margin: -4px -6px 4px 10px;
+}
+
+.zs-step-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.zs-step-n {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 38px;
+  color: var(--zt-ink-soft);
+  transition: color 0.25s ease-out;
+}
+
+.zs-step.is-on .zs-step-n {
+  color: var(--zt-signal);
+}
+
+.zs-live .zs-step.is-up {
+  transition:
+    transform 0.45s var(--zs-spring),
+    opacity 0.3s ease-out;
+}
+
+.zs-step.is-up.is-on {
+  transform: translateY(-8px) rotate(-0.6deg);
+}
+
+/* ---- 03 On the trail: the ring of cards and the list ---------------------------------------------------- */
+
+.zs-orbit {
+  position: relative;
+  height: 250px;
+  margin-top: -30px;
+  pointer-events: none;
+}
+
+.zs-orb-compass {
+  position: absolute;
+  top: 58%;
+  left: 50%;
+  width: 300px;
+  transform: translate(-50%, -50%) perspective(900px) rotateX(64deg);
+}
+
+.zs-orb-compass svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 16px 12px rgb(5 7 11 / 0.6));
+}
+
+.zs-orb-card {
+  position: absolute;
+  top: calc(47% + var(--oy, 0) * 56px);
+  left: calc(50% + var(--ox, 0) * 0.6%);
+  width: 92px;
+  aspect-ratio: 5 / 6;
+  transform: translate(-50%, -50%) scale(var(--os, 1));
+  filter: brightness(var(--od, 1));
+}
+
+.zs-orb-face {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(176deg, var(--zt-paper-hi), var(--zt-paper));
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.5) inset,
+    0 10px 14px rgb(5 7 11 / 0.5);
+}
+
+.zs-orb-face svg {
+  width: 70%;
+  height: auto;
+}
+
+.zs-live .zs-orb-face {
+  transition: transform 0.6s var(--zs-spring);
+}
+
+.zs-live .zs-orb-card:not(.is-up) .zs-orb-face {
+  transform: scale(0.001);
+}
+
+.zs-carry {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 18px;
+  padding: 14px 16px;
+}
+
+.zs-carry-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  padding: 9px 10px;
+  border-left: 3px solid transparent;
+  transition:
+    background-color 0.25s ease-out,
+    border-color 0.25s ease-out;
+}
+
+.zs-carry-item:last-child {
+  grid-column: 1 / -1;
+}
+
+.zs-carry-item.is-on {
+  border-left-color: var(--zt-signal);
+  background: rgb(31 42 61 / 0.06);
+}
+
+.zs-carry-art {
+  align-self: start;
+}
+
+.zs-carry-art svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+
+.zs-keep {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.zs-keep .zs-carry-item {
+  padding-left: 0;
+  border-left: 0;
+  color: var(--zt-text-soft);
+}
+
+.zs-keep .zs-item-title {
+  color: var(--zt-text);
+}
+
+.zs-keep .zs-carry-art {
+  padding: 4px;
+  border-radius: 3px;
+  background: var(--zt-paper);
+}
+
+.zs-keep .zs-carry-art svg {
+  width: 32px;
+  height: 32px;
+}
+
+.zs-keep .zs-carry-item.is-on {
+  background: none;
+}
+
+.zs-keep .zs-carry-item.is-on .zs-item-title {
+  color: var(--zt-lamp);
+}
+
+/* ---- 04 For a class: the weeks ruler -------------------------------------------------------------------- */
+
+.zs-plan {
+  padding: 22px 24px 16px;
+}
+
+.zs-plan-grid {
+  position: relative;
+  display: grid;
+  row-gap: 9px;
+  padding-bottom: 30px;
+}
+
+.zs-plan-row {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  column-gap: 4px;
+}
+
+.zs-week {
+  padding: 7px 0 6px;
+  border-bottom: 1px solid var(--zs-ink-rule);
+  background: var(--zt-paper-hi);
+  color: var(--zt-ink-soft);
+  text-align: center;
+}
+
+.zs-strip {
+  padding: 10px 12px 9px;
+  background: var(--zt-cover-bronze);
+  color: var(--zt-paper-hi);
+  clip-path: polygon(0 6%, 3% 0, 97% 3%, 100% 0, 99% 94%, 96% 100%, 4% 96%, 0 100%);
+}
+
+.zs-strip[data-tier='silver'] {
+  background: var(--zt-cover-silver);
+}
+
+.zs-strip[data-tier='gold'] {
+  background: var(--zt-cover-gold);
+}
+
+.zs-session {
+  padding: 5px 0;
+  border: 1px dashed rgb(31 42 61 / 0.4);
+  border-radius: 2px;
+  color: var(--zt-ink-soft);
+  text-align: center;
+}
+
+.zs-live .zs-plan-row:not(.zs-plan-weeks) > * {
+  transition:
+    transform 0.6s var(--zs-spring),
+    opacity 0.25s ease-out;
+}
+
+.zs-live .zs-plan-row:not(.zs-plan-weeks, .is-down) > * {
+  opacity: 0;
+  transform: translateY(-18px) rotate(-1.5deg);
+}
+
+.zs-today {
+  position: absolute;
+  top: 32px;
+  bottom: 22px;
+  left: var(--at);
+  border-left: 2px dashed var(--zt-signal-deep);
+}
+
+.zs-today-flag {
+  position: absolute;
+  top: 100%;
+  left: -2px;
+  padding: 4px 8px;
+  transform: translateX(-50%);
+  color: var(--zt-signal-deep);
+  white-space: nowrap;
+}
+
+.zs-live .zs-today {
+  transition:
+    opacity 0.3s ease-out,
+    clip-path 0.5s var(--zs-out);
+}
+
+.zs-live .zs-today:not(.is-down) {
+  opacity: 0;
+  clip-path: inset(0 -200px 100% -200px);
+}
+
+.zs-live .zs-today.is-down {
+  clip-path: inset(0 -200px -40px -200px);
+}
+
+.zs-plan figcaption {
+  padding-top: 12px;
+  border-top: 1px solid var(--zs-ink-rule);
+  color: var(--zt-ink-soft);
+}
+
+.zs-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 28px;
+  margin-top: 30px;
+}
+
+.zs-fact {
+  padding-top: 12px;
+  border-top: 1px solid var(--zs-rule);
+  color: var(--zt-text-soft);
+}
+
+.zs-fact .zs-item-title {
+  color: var(--zt-text);
+}
+
+/* ---- 05 The map: the folded sheet and its options ------------------------------------------------------- */
+
+.zs-fold-stage {
+  height: clamp(200px, 28vh, 262px);
+  perspective: 1300px;
+  perspective-origin: 50% 30%;
+  pointer-events: none;
+}
+
+.zs-print-source {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.zs-fold-sheet {
+  position: relative;
+  width: min(92%, 540px);
+  aspect-ratio: 3 / 2;
+  margin: 0 auto;
+  transform: translateY(-16%) rotateX(52deg) rotateZ(-8deg);
+  filter: drop-shadow(0 30px 22px rgb(5 7 11 / 0.55));
+  transform-style: preserve-3d;
+}
+
+.zs-panel {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 100%;
+  height: 100%;
+  transform: rotateY(0deg);
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+}
+
+.zs-fold-sheet > .zs-panel {
+  left: 0;
+  width: calc(100% / 6);
+}
+
+.zs-panel-face {
+  position: absolute;
+  inset: 0;
+  background:
+    var(--zt-paper-grain, none),
+    var(--zt-paper);
+  background-blend-mode: multiply, normal;
+  box-shadow: 0 0 0 0.5px rgb(31 42 61 / 0.14);
+}
+
+.zs-panel-face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(31 42 61 / 0.3), rgb(31 42 61 / 0.05));
+  opacity: 0;
+}
+
+.zs-panel-face svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.zs-live .zs-panel {
+  transition: transform 1.15s var(--zs-spring);
+  transition-delay: calc(var(--i) * 0.07s);
+}
+
+.zs-live .zs-panel-face::after {
+  transition: opacity 0.9s ease-out;
+}
+
+/* Folded like a road map: creases of 76 degrees, the first panel at half of that. */
+.zs-live .zs-fold-sheet:not(.is-open) > .zs-panel {
+  transform: rotateY(-38deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel .zs-panel {
+  transform: rotateY(76deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel .zs-panel .zs-panel {
+  transform: rotateY(-76deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel .zs-panel .zs-panel .zs-panel {
+  transform: rotateY(76deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel .zs-panel .zs-panel .zs-panel .zs-panel {
+  transform: rotateY(-76deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel .zs-panel .zs-panel .zs-panel .zs-panel .zs-panel {
+  transform: rotateY(76deg);
+}
+
+.zs-live .zs-fold-sheet:not(.is-open) .zs-panel-face::after {
+  opacity: 1;
+}
+
+.zs-print-caption {
+  position: relative;
+  margin-top: 26px;
+  color: var(--zt-text-faint);
+  text-align: center;
+}
+
+.zs-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 6px 30px;
+  margin-top: 18px;
+}
+
+.zs-group {
+  margin-bottom: 12px;
+}
+
+.zs-group-title {
+  margin-bottom: 7px;
+  color: var(--zt-text-faint);
+}
+
+.zs-chips,
+.zs-swatches,
+.zs-posts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.zs-chip {
+  min-height: 30px;
+  padding: 5px 10px 6px;
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-data);
+  letter-spacing: 0.02em;
+  border: 1px solid rgb(238 240 242 / 0.22);
+  border-radius: 2px;
+  background: none;
+  color: var(--zt-text-soft);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease-out,
+    color 0.18s ease-out,
+    transform 0.25s var(--zs-spring);
+}
+
+.zs-chip[aria-pressed='true'] {
+  border-color: var(--zt-paper);
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  transform: rotate(-1.5deg);
+}
+
+@media (hover: hover) {
+  .zs-chip:not([aria-pressed='true']):hover {
+    color: var(--zt-text);
+    border-color: rgb(238 240 242 / 0.5);
+  }
+}
+
+.zs-roll {
+  border-style: dashed;
+}
+
+.zs-swatch,
+.zs-post {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px 5px;
+  border: 1px solid rgb(238 240 242 / 0.1);
+  border-radius: 2px;
+  color: var(--zt-text-faint);
+}
+
+.zs-swatch.is-in,
+.zs-post.is-in {
+  border-color: rgb(238 240 242 / 0.4);
+  color: var(--zt-text);
+}
+
+.zs-swatch-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  background: var(--zt-surface-grass);
+}
+
+.zs-swatch[data-ground='water'] .zs-swatch-dot {
+  background: var(--zt-surface-water);
+}
+
+.zs-swatch[data-ground='sand'] .zs-swatch-dot {
+  background: var(--zt-surface-sand);
+}
+
+.zs-swatch[data-ground='forest'] .zs-swatch-dot {
+  background: var(--zt-surface-forest);
+}
+
+.zs-swatch[data-ground='dirt'] .zs-swatch-dot {
+  background: var(--zt-surface-dirt);
+}
+
+.zs-swatch[data-ground='scree'] .zs-swatch-dot {
+  background: var(--zt-surface-scree);
+}
+
+.zs-swatch[data-ground='rock'] .zs-swatch-dot {
+  background: var(--zt-surface-rock);
+}
+
+.zs-swatch[data-ground='snow'] .zs-swatch-dot {
+  background: var(--zt-surface-snow);
+}
+
+.zs-describe {
+  min-height: 3.1em;
+  padding-top: 10px;
+  border-top: 1px solid var(--zs-rule);
+  color: var(--zt-text-soft);
+}
+
+.zs-describe strong {
+  color: var(--zt-text);
+  font-weight: 600;
+}
+
+/* ---- 06 Install ----------------------------------------------------------------------------------------- */
+
+.zs-agents {
+  display: grid;
+  gap: 16px;
+}
+
+.zs-agent-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zs-state {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px dashed var(--zt-status-gated);
+  border-radius: 2px;
+  color: var(--zt-status-gated);
+}
+
+.zs-state.is-run {
+  border: 1px solid var(--zt-ink-soft);
+  color: var(--zt-ink);
+}
+
+.zs-agent > p {
+  max-width: 62ch;
+}
+
+.zs-or {
+  margin-top: 10px;
+  color: var(--zt-ink-soft);
+}
+
+.zs-cmd {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-top: 8px;
+  border-radius: 3px;
+  background: var(--zt-night);
+  color: var(--zt-text);
+}
+
+.zs-cmd code {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  background: none;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.zs-copy-btn {
+  flex: none;
+  min-width: 78px;
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid rgb(238 240 242 / 0.16);
+  border-radius: 0 3px 3px 0;
+  background: none;
+  color: var(--zt-text-soft);
+  cursor: pointer;
+  transition: color 0.18s ease-out;
+}
+
+.zs-copy-btn.is-done {
+  color: var(--zt-lamp);
+}
+
+@media (hover: hover) {
+  .zs-copy-btn:hover {
+    color: var(--zt-text);
+  }
+}
+
+/* The ring of a control that sits on a dark command line inside a sheet of paper. */
+.zs-root .zs-cmd .zs-copy-btn:focus-visible {
+  outline-color: var(--zt-lamp);
+  outline-offset: -3px;
+  box-shadow: none;
+}
+
+.zs-then .zs-cmd {
+  border: 1px solid rgb(238 240 242 / 0.14);
+}
+
+.zs-examples {
+  display: grid;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+/* ---- 07 Questions --------------------------------------------------------------------------------------- */
+
+.zs-faq {
+  padding: 8px 24px 12px;
+}
+
+.zs-q {
+  border-bottom: 1px solid var(--zs-ink-rule);
+}
+
+.zs-q:last-child {
+  border-bottom: 0;
+}
+
+.zs-q summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  padding: 10px 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.zs-q summary::-webkit-details-marker {
+  display: none;
+}
+
+.zs-q .zs-item-title {
+  margin: 0;
+  font-size: 17px;
+}
+
+.zs-q-mark {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.zs-q-mark::before,
+.zs-q-mark::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 14px;
+  height: 2px;
+  background: var(--zt-ink);
+  transition: transform 0.3s var(--zs-spring);
+}
+
+.zs-q-mark::after {
+  transform: rotate(90deg);
+}
+
+.zs-q[open] .zs-q-mark::after {
+  transform: rotate(0deg);
+}
+
+.zs-q > p {
+  max-width: 66ch;
+  padding: 0 30px 16px 0;
+  color: var(--zt-ink);
+}
+
+.zs-post-art {
+  position: relative;
+  top: auto;
+  left: auto;
+  display: block;
+  width: 132px;
+  margin-top: 34px;
+  transform: none;
+  transform-origin: 50% 100%;
+}
+
+.zs-live .zs-post-art:not(.is-up) {
+  opacity: 0;
+  transform: perspective(600px) rotateX(-80deg);
+}
+
+/* ---- 08 Start: the ticket ------------------------------------------------------------------------------- */
+
+.zs-centred > .zs-box {
+  display: block;
+  min-height: var(--zs-vh, 100vh);
+  padding-top: clamp(150px, 21vh, 196px);
+  padding-right: var(--zs-pad-r);
+  padding-left: var(--zs-pad-r);
+  text-align: center;
+}
+
+.zs-centred .zs-copy {
+  display: grid;
+  justify-items: center;
+}
+
+.zs-centred .zs-tag {
+  transform-origin: 50% 50%;
+}
+
+.zs-centred .zs-lede {
+  max-width: 56ch;
+  margin-inline: auto;
+}
+
+.zs-ticket-wrap {
+  width: min(1060px, 100%);
+  margin: 40px auto 0;
+  text-align: left;
+}
+
+.zs-ticket-rise {
+  padding: 0 10px;
+  clip-path: inset(-60px -60px 0 -60px);
+}
+
+.zs-slot {
+  position: relative;
+  z-index: 2;
+  height: 12px;
+  margin-top: -1px;
+  border-radius: 7px;
+  background: var(--zt-void);
+  box-shadow:
+    0 3px 4px rgb(0 0 0 / 0.8) inset,
+    0 1px 0 rgb(238 240 242 / 0.14);
+}
+
+.zs-ticket-wrap {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.zs-ticket {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 300px);
+  color: var(--zt-ink);
+}
+
+.zs-live .zs-ticket {
+  transition: transform 1s var(--zs-out);
+}
+
+.zs-live .zs-ticket-wrap:not(.is-up) .zs-ticket {
+  transform: translateY(104%);
+}
+
+.zs-live .zs-ticket-wrap.zs-rise:not(.is-up) {
+  opacity: 1;
+  transform: none;
+}
+
+.zs-ticket-main,
+.zs-stub {
+  position: relative;
+  background:
+    linear-gradient(178deg, rgb(255 255 255 / 0.5), transparent 40%),
+    var(--zt-paper-grain, none),
+    var(--zt-paper);
+  background-blend-mode: normal, multiply, normal;
+}
+
+.zs-ticket-main {
+  display: grid;
+  gap: 20px;
+  padding: 24px 30px 28px;
+  mask-image: radial-gradient(circle 9px at 100% 0, transparent 98%, #000), radial-gradient(circle 9px at 100% 100%, transparent 98%, #000);
+  mask-composite: intersect;
+}
+
+/* The perforation: a dashed line and a notch punched at each end. */
+.zs-stub {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 24px 22px 20px 24px;
+  border-left: 2px dashed rgb(31 42 61 / 0.35);
+  background-color: var(--zt-card);
+  mask-image: radial-gradient(circle 9px at 0 0, transparent 98%, #000), radial-gradient(circle 9px at 0 100%, transparent 98%, #000);
+  mask-composite: intersect;
+  transform-origin: 0 100%;
+  transition: transform 0.7s var(--zs-spring);
+}
+
+.zs-stub.is-torn {
+  transform: translate(16px, 10px) rotate(3.2deg);
+}
+
+.zs-ticket-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--zt-ink);
+  color: var(--zt-ink);
+}
+
+.zs-ticket-mark {
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.zs-ticket-no {
+  color: var(--zt-signal-deep);
+}
+
+.zs-row {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.zs-row > legend {
+  float: left;
+  width: 132px;
+  padding-top: 11px;
+}
+
+.zs-row > .zt-label,
+.zs-row > legend {
+  color: var(--zt-ink-soft);
+}
+
+fieldset.zs-row {
+  display: block;
+}
+
+fieldset.zs-row > .zs-punches,
+fieldset.zs-row > .zs-ticket-note {
+  margin-left: 146px;
+}
+
+.zs-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-bottom: 2px solid var(--zt-ink);
+  border-radius: 2px 2px 0 0;
+  background: rgb(31 42 61 / 0.07);
+  font-size: 17px;
+}
+
+.zs-input::placeholder {
+  color: var(--zt-ink-soft);
+  opacity: 1;
+}
+
+.zs-punches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zs-punch {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.zs-punch-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.zs-punch-face {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid rgb(31 42 61 / 0.4);
+  border-radius: 2px;
+  font-size: 15px;
+  transition:
+    background-color 0.18s ease-out,
+    color 0.18s ease-out,
+    transform 0.3s var(--zs-spring);
+}
+
+/* The punch hole: empty until the choice is made. */
+.zs-punch-face::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+.zs-punch-input:checked + .zs-punch-face {
+  border-color: var(--zt-ink);
+  background: var(--zt-ink);
+  color: var(--zt-paper-hi);
+  transform: rotate(-1.2deg);
+}
+
+.zs-punch-input:checked + .zs-punch-face::before {
+  border-color: var(--zt-night);
+  background: var(--zt-night);
+  box-shadow: 0 1px 0 rgb(251 248 241 / 0.35);
+}
+
+.zs-punch-input:focus-visible + .zs-punch-face {
+  outline: var(--zt-focus-width, 2px) solid var(--zt-focus-paper, #1f2a3d);
+  outline-offset: var(--zt-focus-offset, 2px);
+  box-shadow: var(--zt-focus-halo, 0 0 0 4px #ffd9a0);
+}
+
+.zs-punch-check .zs-punch-face {
+  border-style: dashed;
+}
+
+.zs-punch-check .zs-punch-face::before {
+  border-radius: 2px;
+}
+
+.zs-ticket-note {
+  display: none;
+  margin-top: 8px;
+  color: var(--zt-ink-soft);
+}
+
+.zs-row.is-off .zs-punch {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.zs-row.is-off .zs-ticket-note {
+  display: block;
+}
+
+.zs-stub-title {
+  color: var(--zt-ink-soft);
+}
+
+.zs-command {
+  display: block;
+  min-height: 4.5em;
+  padding: 0;
+  background: none !important;
+  color: var(--zt-ink);
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.zs-ticket:not(.is-ready) .zs-command {
+  color: var(--zt-ink-soft);
+}
+
+.zs-bars {
+  display: block;
+  width: 100%;
+  height: 40px;
+  fill: var(--zt-ink);
+}
+
+.zs-tear {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--zt-signal-deep);
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.zs-scissors {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  transition: transform 0.3s var(--zs-spring);
+}
+
+@media (hover: hover) {
+  .zs-tear:hover .zs-scissors {
+    transform: rotate(-18deg) scale(1.12);
+  }
+}
+
+.zs-status {
+  min-height: 1.5em;
+  color: var(--zt-ink);
+}
+
+.zs-ticket-foot {
+  max-width: none;
+  margin-top: 26px;
+  text-align: center;
+}
+
+/* ---- Footer --------------------------------------------------------------------------------------------- */
+
+.zs-foot {
+  position: relative;
+  padding: 12vh var(--zs-pad-r) 44px;
+  overflow: hidden;
+}
+
+.zs-camp {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  color: var(--zt-text);
+  text-align: center;
+}
+
+.zs-camp svg {
+  width: 220px;
+  height: auto;
+  overflow: visible;
+}
+
+.zs-fire {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: zs-flicker 1.4s ease-in-out infinite alternate;
+}
+
+.zs-fire + .zs-fire {
+  animation-duration: 0.9s;
+}
+
+@keyframes zs-flicker {
+  from {
+    transform: scale(1, 1);
+  }
+  to {
+    transform: scale(0.9, 1.22);
+  }
+}
+
+.zs-ages {
+  width: min(1060px, 100%);
+  margin: 56px auto 0;
+}
+
+.zs-ages h2 {
+  margin-bottom: 12px;
+  color: var(--zt-text-faint);
+}
+
+.zs-ages ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0 28px;
+}
+
+.zs-age {
+  display: grid;
+  gap: 3px;
+  padding: 12px 0;
+  border-top: 1px solid var(--zs-rule);
+}
+
+.zs-age-title {
+  color: var(--zt-text);
+  font-family: var(--zt-font-display);
+  font-size: 16px;
+  line-height: 1.25;
+  text-decoration: none;
+}
+
+a.zs-age-title:hover {
+  text-decoration: underline;
+}
+
+.zs-age-line {
+  color: var(--zt-text-faint);
+}
+
+.zs-foot-word {
+  margin: 7vh 0 4vh;
+  color: var(--zt-text);
+  font-size: clamp(84px, 19.5vw, 290px);
+  line-height: 0.86;
+  text-align: center;
+}
+
+.zs-foot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px 32px;
+  padding-top: 22px;
+  border-top: 1px solid var(--zs-rule);
+}
+
+.zs-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* A stamp: paper with a printed frame. */
+.zs-stamp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  transform: rotate(var(--tilt, 0deg));
+  border: 3px solid var(--zt-paper);
+  outline: 1px dashed rgb(31 42 61 / 0.45);
+  outline-offset: -5px;
+  background: var(--zt-paper);
+  box-shadow: 0 6px 10px rgb(5 7 11 / 0.45);
+  color: var(--zt-ink);
+  text-decoration: none;
+  transition: transform 0.3s var(--zs-spring);
+}
+
+.zs-stamp:focus-visible {
+  outline: var(--zt-focus-width, 2px) solid var(--zt-focus-room, #ffd9a0);
+  outline-offset: var(--zt-focus-offset, 2px);
+  box-shadow: none;
+}
+
+@media (hover: hover) {
+  .zs-stamp:hover {
+    transform: rotate(0deg) translateY(-3px);
+  }
+}
+
+.zs-foot-note {
+  color: var(--zt-text-faint);
+}
+
+.zs-top {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--zt-text);
+  text-decoration: none;
+}
+
+.zs-top:hover {
+  color: var(--zt-lamp);
+}
+
+/* ---- Narrow windows ------------------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .zs-tiers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .zs-carry {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zs-steps {
+    gap: 14px;
+  }
+
+  .zs-step-art {
+    width: 70px;
+  }
+}
+
+@media (max-width: 899px) {
+  .zs-root {
+    --zs-pad-l: 44px;
+    --zs-pad-r: 16px;
+    --zs-gutter: 18px;
+    --zs-band: 30px;
+  }
+
+  .zs-box {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    row-gap: 30px;
+    padding-top: 84px;
+    padding-bottom: calc(var(--zs-band) + 76px);
+  }
+
+  .zs-copy,
+  .zs-station,
+  .zs-after {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .zs-after > :first-child {
+    margin-top: 0;
+  }
+
+  .zs-orb-card {
+    transform: translate(-50%, -50%) scale(calc(var(--os, 1) * 0.82));
+  }
+
+  .zs-title {
+    font-size: clamp(31px, 8.6vw, 44px);
+  }
+
+  .zs-walker {
+    width: 31px;
+    height: 46px;
+    margin: -44px 0 0 -15px;
+  }
+
+  .zs-nav-fixed {
+    left: 50%;
+  }
+
+  .zs-nav-toggle {
+    display: flex;
+  }
+
+  .zs-tabs {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding-top: 4px;
+    transform: translateX(-50%);
+  }
+
+  .zs-nav.is-open .zs-tabs {
+    display: flex;
+  }
+
+  .zs-tabs .zs-tab,
+  .zs-tabs .zs-tab[aria-current] {
+    height: 44px;
+    padding-top: 0;
+    border-radius: 3px;
+  }
+
+  .zs-theatre {
+    margin-top: -20px;
+  }
+
+  .zs-steps,
+  .zs-facts,
+  .zs-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zs-step:nth-child(even) {
+    margin-top: 0;
+  }
+
+  .zs-orbit {
+    height: 200px;
+    margin-top: -10px;
+  }
+
+  .zs-orb-card {
+    width: 68px;
+  }
+
+  .zs-orb-compass {
+    width: 150px;
+  }
+
+  .zs-fold {
+    margin-top: 0;
+  }
+
+  .zs-fold-stage {
+    height: 170px;
+  }
+
+  .zs-plan {
+    padding: 16px 12px 12px;
+  }
+
+  .zs-plan-row {
+    column-gap: 2px;
+  }
+
+  .zs-strip {
+    padding: 9px 6px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .zs-faq {
+    padding: 4px 16px 8px;
+  }
+
+  .zs-centred > .zs-box {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .zs-ticket {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zs-ticket-main {
+    padding: 20px 18px 22px;
+    mask-image: radial-gradient(circle 9px at 0 100%, transparent 98%, #000), radial-gradient(circle 9px at 100% 100%, transparent 98%, #000);
+  }
+
+  .zs-centred > .zs-box {
+    padding-top: 150px;
+  }
+
+  .zs-stub {
+    padding: 20px 18px;
+    border-top: 2px dashed rgb(31 42 61 / 0.35);
+    border-left: 0;
+    mask-image: radial-gradient(circle 9px at 0 0, transparent 98%, #000), radial-gradient(circle 9px at 100% 0, transparent 98%, #000);
+    transform-origin: 0 0;
+  }
+
+  .zs-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zs-row > legend {
+    float: none;
+    width: auto;
+    padding: 0 0 8px;
+  }
+
+  fieldset.zs-row > .zs-punches,
+  fieldset.zs-row > .zs-ticket-note {
+    margin-left: 0;
+  }
+
+  .zs-ticket-head span:nth-child(2) {
+    display: none;
+  }
+
+  .zs-foot-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---- Reduced motion ------------------------------------------------------------------------------------- */
+
+.zs-still *,
+.zs-still *::before,
+.zs-still *::after {
+  transition-duration: 0.01s !important;
+  transition-delay: 0s !important;
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zs-root *,
+  .zs-root *::before,
+  .zs-root *::after {
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+    animation: none !important;
+  }
+}
+
+@media print {
+  .zs-nav,
+  .zs-thread,
+  .zs-walker,
+  .zs-gap {
+    display: none;
+  }
+
+  .zs-stop[data-pin] {
+    height: auto;
+  }
+
+  .zs-stop[data-pin] > .zs-box {
+    position: relative;
+    height: auto;
+  }
+}

@@ -1,0 +1,185 @@
+/*
+ * The look in CSS: type roles, DOM paper, the room overlays and the focus ring. Colours and font stacks come
+ * from the --zt-* custom properties that injectTokens() writes. Every rule has low specificity, so a component
+ * can override it with a single class.
+ */
+
+/* ---- Type roles -------------------------------------------------------------------------------------- */
+
+:where(.zt-headline, .zt-title, .zt-number, .zt-wordmark) {
+  font-family: var(--zt-font-display);
+  font-synthesis: none;
+  font-kerning: normal;
+}
+
+:where(.zt-headline) {
+  margin: 0;
+  font-size: var(--zt-size-headline);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  /* The display cut of the optical size axis, a little softened: high contrast, tight joins, no hard corners. */
+  font-variation-settings: 'opsz' 144, 'SOFT' 40, 'WONK' 0;
+  text-wrap: balance;
+}
+
+/* The one emphasised word of a headline: the goal, in the colour of the route. */
+:where(.zt-headline) :where(em) {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--zt-signal);
+}
+
+:where(.zt-title) {
+  margin: 0;
+  font-size: var(--zt-size-title);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+  text-wrap: balance;
+}
+
+:where(.zt-number) {
+  font-size: var(--zt-size-number);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 144, 'SOFT' 40, 'WONK' 0;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+:where(.zt-wordmark) {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'SOFT' 60, 'WONK' 0;
+  white-space: nowrap;
+}
+
+:where(.zt-body, .zt-small) {
+  font-family: var(--zt-font-text);
+  font-size: var(--zt-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+  font-synthesis: none;
+  text-wrap: pretty;
+}
+
+:where(.zt-small) {
+  font-size: var(--zt-size-small);
+  line-height: 1.45;
+}
+
+/* Interface labels only: upper case and widely tracked. Roadmap text never gets this class. */
+:where(.zt-label) {
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-label);
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  font-synthesis: none;
+}
+
+/* Roadmap text in the label face: as written, barely tracked. */
+:where(.zt-data) {
+  font-family: var(--zt-font-label);
+  font-size: var(--zt-size-data);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  font-synthesis: none;
+}
+
+/* ---- Focus --------------------------------------------------------------------------------------------- */
+
+/* On the room: a 2 px ring in the lamp colour, 2 px off the control. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--zt-focus-width, 2px) solid var(--zt-focus-room, #ffd9a0);
+  outline-offset: var(--zt-focus-offset, 2px);
+}
+
+/*
+ * On paper: a 2 px ring of ink, with the lamp as a halo round it. The lamp colour alone is too faint on paper.
+ * It applies to every control inside .zt-paper or .zt-on-paper, and to a control that is itself .zt-on-paper.
+ * Give .zt-on-paper to any surface with a paper ground that is not a .zt-paper sheet.
+ */
+:where(.zt-paper, .zt-on-paper) :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+:where(a, button, input, select, textarea, summary, [tabindex]):where(.zt-on-paper):focus-visible {
+  outline-color: var(--zt-focus-paper, #1f2a3d);
+  box-shadow: var(--zt-focus-halo, 0 0 0 4px #ffd9a0);
+}
+
+/* ---- DOM paper ------------------------------------------------------------------------------------------ */
+
+/*
+ * A sheet of paper in the DOM: a note, a card, a ticket. The paper is a layer behind the content with a chewed
+ * edge and its shadows, so the text on top stays crisp. Needs ensurePaperEdge() once per document.
+ */
+:where(.zt-paper) {
+  position: relative;
+  isolation: isolate;
+  color: var(--zt-ink);
+}
+
+:where(.zt-paper)::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 2px;
+  background:
+    linear-gradient(178deg, rgb(255 255 255 / 0.5), transparent 38%),
+    var(--zt-paper-grain, none),
+    var(--zt-paper);
+  background-blend-mode: normal, multiply, normal;
+  filter: url(#zt-paper-edge) drop-shadow(0 1px 0.5px rgb(5 7 11 / 0.3)) drop-shadow(0 20px 24px rgb(5 7 11 / 0.5));
+}
+
+/* Tape on a note. Put an empty element with this class inside a .zt-paper. */
+:where(.zt-tape) {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 70px;
+  height: 20px;
+  margin-left: -35px;
+  transform: rotate(-3deg);
+  background: var(--zt-tape);
+  box-shadow: 0 1px 2px rgb(5 7 11 / 0.18);
+  -webkit-backdrop-filter: blur(1px);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+
+/* ---- Room overlays -------------------------------------------------------------------------------------- */
+
+:where(.zt-overlays) {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+:where(.zt-overlays) > * {
+  position: absolute;
+  inset: 0;
+}
+
+/* Hides the banding that tone mapping leaves in dark gradients. Over the room only, never over paper cards. */
+:where(.zt-grain) {
+  background-image: var(--zt-grain);
+  background-size: 160px 160px;
+  mix-blend-mode: soft-light;
+  opacity: 0.05;
+}
+
+:where(.zt-vignette) {
+  background: radial-gradient(ellipse at 50% 50%, rgb(5 7 11 / 0) 55%, rgb(5 7 11 / 0.55) 100%);
+}
+
+/* Behind the hero text on the left. */
+:where(.zt-scrim) {
+  background: linear-gradient(90deg, rgb(5 7 11 / 0.5), rgb(5 7 11 / 0) 46%);
+}

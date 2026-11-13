@@ -1,0 +1,1542 @@
+{
+  "schema": "zero-to/1",
+  "id": "music-theory-for-a-class",
+  "title": "Music theory for a class of 14-year-olds",
+  "topic": "music theory for my class of 14-year-olds",
+  "summary": "Sixteen 45-minute lessons over eight weeks: rhythm, the staff and keyboard, scales and keys, intervals and chords, then an eight-bar song every student performs.",
+  "lang": "en",
+  "checkedOn": "2026-11-13",
+  "freshness": "slow",
+  "brief": {
+    "audience": "teacher",
+    "goal": "Students read and write basic notation, build major and minor scales and triads, and perform an eight-bar song of their own.",
+    "startLevel": "zero",
+    "targetTier": "gold",
+    "hoursPerWeek": 1.5,
+    "startDate": "2027-01-11",
+    "deadline": "2027-03-05",
+    "style": "build",
+    "budget": {
+      "max": 0,
+      "currency": "EUR"
+    },
+    "resourceLangs": [
+      "en"
+    ],
+    "projects": "capstone",
+    "gating": "guided"
+  },
+  "capstone": {
+    "title": "Our class song",
+    "brief": "One eight-bar song grows across the unit: a groove, then a melody in C major, then chords and form, then a performance."
+  },
+  "map": {
+    "terrain": "volcano",
+    "trail": "spiral",
+    "surfaces": [
+      "sand",
+      "grass",
+      "forest",
+      "rock",
+      "snow"
+    ]
+  },
+  "stages": [
+    {
+      "id": "pulse-rhythm",
+      "title": "Pulse and rhythm",
+      "tier": "bronze",
+      "summary": "Feel a steady beat, read note lengths and bars, and clap what is written.",
+      "waypoints": [
+        {
+          "id": "pulse",
+          "title": "Find the pulse",
+          "note": "Everything in rhythm hangs on a steady pulse. Feel it, tap it and change its speed.",
+          "predict": "A song runs at 120 beats per minute. How many beats happen in one second?",
+          "do": "In pairs, one student claps a steady pulse and the other speaks a song they know over it. Then set the beat pattern in the lesson to 60, 90 and 120 BPM and tap along. Write down which speed feels like walking and which like running.",
+          "takeaways": [
+            "The beat is the regular, repeating pulse under the music. People tap a foot to it.",
+            "Tempo is the speed of the beat, measured in beats per minute (BPM).",
+            "120 BPM is 120 beats in a minute, so 2 beats every second.",
+            "In everyday talk \"a beat\" can also mean a drum pattern. In this course it means the pulse."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 33,
+          "resources": [
+            "ab-beat"
+          ],
+          "checks": [
+            {
+              "q": "How long is one beat at 60 BPM, and how long at 120 BPM?",
+              "kind": "apply",
+              "answer": "One second at 60 BPM and half a second at 120 BPM. Doubling the tempo halves the length of a beat."
+            }
+          ],
+          "teacherNote": "Common mix-up: pulse and rhythm. Have the class walk the pulse while one group claps the rhythm of a known song, so they can feel that the two are different things."
+        },
+        {
+          "id": "note-values",
+          "title": "Note values",
+          "note": "Each note type is half as long as the one before. Learn to see and clap the lengths.",
+          "predict": "A quarter note is one beat. How many eighth notes fit into one beat?",
+          "do": "Make a set of cards: whole, half, quarter, eighth, sixteenth. In groups of four, lay out cards that fill exactly four beats in three different ways, then clap each one with the teacher's pulse.",
+          "takeaways": [
+            "Each note type is half as long as the one before: whole, half, quarter, eighth, sixteenth.",
+            "Two half notes, four quarter notes or eight eighth notes each fill the time of one whole note.",
+            "Each flag on a note halves its length: an eighth has one flag, a sixteenth has two."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 33,
+          "resources": [
+            "mt-duration"
+          ],
+          "checks": [
+            {
+              "q": "One bar holds four beats. A half note takes two of them. How many eighth notes fill the rest?",
+              "kind": "apply",
+              "answer": "Four. The remaining two beats hold two eighth notes per beat."
+            }
+          ],
+          "teacherNote": "Answer for the card task: any combination that sums to four quarter-note beats, for example half+quarter+quarter or four quarters or eight eighths. Watch for students who count the note names instead of the beats."
+        },
+        {
+          "id": "bars-meter",
+          "title": "Bars and time signatures",
+          "note": "Bar lines cut the music into equal groups of beats. The time signature says how big each group is.",
+          "predict": "A bar of 3/4 holds three quarter notes. What does a bar of 4/4 hold?",
+          "do": "Clap the same pulse twice: once in groups of four and once in groups of three, with a stamp on the first beat of each group. Then write one bar for 4/4 and one for 3/4 using the note cards so each adds up exactly.",
+          "takeaways": [
+            "Bar lines divide the staff into measures, also called bars.",
+            "A time signature says how many notes of which type fit in each bar: 4/4 holds four quarter notes, 3/4 holds three.",
+            "6/8 holds six eighth notes in each bar.",
+            "In the Ableton drum patterns a bar is a group of four beats."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 33,
+          "resources": [
+            "mt-measures",
+            "ab-bars"
+          ],
+          "checks": [
+            {
+              "q": "How many quarter notes fit in a bar of 3/4?",
+              "kind": "recall",
+              "options": [
+                "Two",
+                "Three",
+                "Four"
+              ],
+              "correct": 1,
+              "answer": "Three quarter notes. The top number counts the notes, the bottom number says which note type."
+            }
+          ],
+          "teacherNote": "Misconception: the bottom number is a \"fraction of the bar\". Reframe it as the note type that counts one beat. Collect the bars and check the sums before the next session."
+        },
+        {
+          "id": "rests-ties",
+          "title": "Rests, dots and ties",
+          "note": "Silence counts too. A dot lengthens a note by half, and a tie joins two notes into one sound.",
+          "predict": "A dot adds half of a note's length. How many eighth notes long is a dotted quarter note?",
+          "do": "Write an eight-beat rhythm that uses at least one rest, one dotted note and one tie. Swap with a neighbour, who claps it back and checks that every bar adds up.",
+          "takeaways": [
+            "A rest is silence with the same length as the note of the same name.",
+            "A dot makes a note half as long again: a dotted quarter is a quarter plus an eighth, three eighths in all.",
+            "A tie joins two notes of the same pitch into one longer sound, even across a bar line."
+          ],
+          "minutes": 35,
+          "practiceMinutes": 28,
+          "resources": [
+            "mt-rests",
+            "mt-dots",
+            "teoria-ex"
+          ],
+          "checks": [
+            {
+              "q": "A dotted half note lasts how many quarter-note beats?",
+              "kind": "apply",
+              "options": [
+                "Two",
+                "Three",
+                "Four"
+              ],
+              "correct": 1,
+              "answer": "Three. A half note is two beats and the dot adds half of that, one beat."
+            }
+          ],
+          "teacherNote": "Keep ten minutes at the end of this session for the rhythm camp. Tie versus slur: only a tie joins the same pitch."
+        }
+      ],
+      "checkpoint": {
+        "title": "Rhythm camp",
+        "show": [
+          "Clap a four-bar rhythm in 4/4 from notation, including one rest.",
+          "Write a one-bar rhythm in 3/4 that adds up exactly.",
+          "Say how many beats a dotted half note lasts and why."
+        ],
+        "checks": [
+          {
+            "q": "A bar of 4/4 has a quarter note, a quarter rest and a half note. Does it add up?",
+            "kind": "apply",
+            "answer": "Yes: 1 + 1 + 2 = 4 beats."
+          }
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "A groove for our song",
+        "brief": "A four-bar body-percussion groove that later carries the class song.",
+        "minutes": 30,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Perform the teacher's four-bar groove in 4/4 with stamp, clap and snap, from notation."
+          },
+          {
+            "level": "changed",
+            "task": "Change one bar so it contains a rest and a tie, and perform the new groove."
+          },
+          {
+            "level": "own",
+            "task": "Write your own four-bar groove and teach it to a partner by ear."
+          }
+        ],
+        "criteria": [
+          "Every bar adds up",
+          "The pulse stays steady",
+          "A partner can repeat it"
+        ]
+      }
+    },
+    {
+      "id": "notes-keyboard",
+      "title": "Notes on the staff and keyboard",
+      "tier": "bronze",
+      "summary": "Name the white keys, read notes on the staff and find half steps.",
+      "waypoints": [
+        {
+          "id": "keyboard",
+          "title": "The keyboard and note names",
+          "note": "The keyboard repeats in a pattern of black keys. Use it to find every note name.",
+          "predict": "The black keys come in groups of two and three. How could that help you find C?",
+          "do": "At a keyboard or a printed keyboard strip, find every C, then every F. Say the white key names from C up to the next C. Then play \"Mary Had a Little Lamb\" starting on E (E D C D E E E).",
+          "takeaways": [
+            "White keys are named with the letters A to G, and then the pattern starts again.",
+            "Black keys come in groups of two and three. C is the white key just left of the group of two.",
+            "The note F is just left of the group of three black keys.",
+            "Two notes with the same letter name, one higher than the other, are an octave apart."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "omt-keyboard",
+            "ab-pitch"
+          ],
+          "checks": [
+            {
+              "q": "Which white key is just to the left of a group of two black keys?",
+              "kind": "recall",
+              "options": [
+                "C",
+                "F",
+                "A"
+              ],
+              "correct": 0,
+              "answer": "C. The note F is the one to the left of a group of three."
+            }
+          ],
+          "teacherNote": "Print a keyboard strip (two octaves) for each pair if devices are scarce. Students often start from A, because it is the first letter; start from C to build the pattern."
+        },
+        {
+          "id": "staff",
+          "title": "The staff and the clefs",
+          "note": "The staff has five lines and four spaces. A clef says which note sits on which line.",
+          "predict": "Every line and every space stands for one white key. How many lines and spaces are there in all?",
+          "do": "On blank staves write the treble clef line notes E G B D F and the space notes F A C E, and invent a short phrase for each set. Then name ten random notes with the note-identification exercise.",
+          "takeaways": [
+            "The staff has five lines and four spaces. Each line or space stands for a white key.",
+            "The treble clef curls around the G line. The treble and bass clefs are the two most used clefs.",
+            "The treble clef line notes are E G B D F, and its space notes spell F A C E.",
+            "Ledger lines extend the staff for notes above or below it."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "mt-staff",
+            "ex-note"
+          ],
+          "checks": [
+            {
+              "q": "How many lines and spaces does the staff have altogether?",
+              "kind": "recall",
+              "options": [
+                "Five",
+                "Nine",
+                "Eleven"
+              ],
+              "correct": 1,
+              "answer": "Nine: five lines and four spaces."
+            }
+          ],
+          "teacherNote": "Accept any memory phrase students invent, as long as the letters are right. A student who cannot name the notes after the exercise gets the optional note-reading drill as homework."
+        },
+        {
+          "id": "steps",
+          "title": "Half steps, whole steps, sharps and flats",
+          "note": "The distance between neighbouring keys is the building block of every scale.",
+          "predict": "Is there a black key between E and F?",
+          "do": "On a keyboard strip mark every half step between neighbouring keys, including E to F and B to C. Then find C-sharp and D-flat, play them, and explain why they sound the same.",
+          "takeaways": [
+            "A half step is the distance from one key to the next, black or white. A whole step is two half steps.",
+            "E to F and B to C are half steps with no black key between them.",
+            "A sharp raises a note by a half step. A flat lowers it by a half step.",
+            "C-sharp and D-flat are two names for the same black key."
+          ],
+          "minutes": 35,
+          "practiceMinutes": 28,
+          "resources": [
+            "mt-steps",
+            "omt-steps"
+          ],
+          "checks": [
+            {
+              "q": "Which pair is a half step: C to D, or E to F?",
+              "kind": "apply",
+              "options": [
+                "C to D",
+                "E to F"
+              ],
+              "correct": 1,
+              "answer": "E to F. They are neighbouring keys with no key between them. C to D has C-sharp in between, so it is a whole step."
+            }
+          ],
+          "teacherNote": "Keep ten minutes at the end for the pitch camp. If students claim \"sharp is up, flat is down, so they differ\", play C-sharp and D-flat one after the other."
+        },
+        {
+          "id": "note-drill",
+          "title": "Note-reading drill",
+          "note": "Ten minutes of practice a day makes the staff automatic.",
+          "do": "Do the note-identification exercise until you get ten in a row right. Note your best streak on your handout.",
+          "takeaways": [
+            "Short daily practice beats one long session for learning to read notes.",
+            "Say the line notes and the space notes as groups: E G B D F, and F A C E."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 30,
+          "optional": true,
+          "resources": [
+            "ex-note"
+          ],
+          "teacherNote": "Homework for students who need more reading practice, and a side trail for everyone else."
+        }
+      ],
+      "checkpoint": {
+        "title": "Pitch camp",
+        "show": [
+          "Name eight random notes on the treble staff in under a minute.",
+          "Point to every half step between C and the next C on a keyboard picture.",
+          "Write C-sharp and D-flat on a staff and say what they have in common."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "scales-keys",
+      "title": "Scales and keys",
+      "tier": "silver",
+      "summary": "Build major and minor scales from a step pattern and read key signatures.",
+      "waypoints": [
+        {
+          "id": "major-scale",
+          "title": "The major scale",
+          "note": "Every major scale follows one pattern of whole and half steps, starting on any note.",
+          "predict": "The pattern is whole, whole, half, whole, whole, whole, half. Starting on C, which note do you reach after the first two whole steps?",
+          "do": "Build C major and G major on a keyboard strip with the pattern whole, whole, half, whole, whole, whole, half. Find the one note you must sharpen in G major. Play both scales and sing them with the numbers 1 to 8.",
+          "takeaways": [
+            "The major scale is whole, whole, half, whole, whole, whole, half.",
+            "C major uses only white keys: C D E F G A B C.",
+            "Starting on another note forces black keys into the pattern: G major needs F-sharp.",
+            "The first note is the tonic, the home note of the scale. Most people hear major scales as bright or happy."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "mt-major",
+            "ab-keys",
+            "omt-major"
+          ],
+          "checks": [
+            {
+              "q": "Why does G major need an F-sharp?",
+              "kind": "explain",
+              "answer": "The sixth note E must be followed by a whole step. E to F is only a half step, so F is raised to F-sharp. That leaves a half step up to G, as the pattern needs."
+            }
+          ],
+          "teacherNote": "Answer key: G A B C D E F-sharp G. The OMT chapter on the shelf is for fast students; the others work from the musictheory.net lesson and the keyboard."
+        },
+        {
+          "id": "key-signatures",
+          "title": "Keys and key signatures",
+          "note": "A key signature saves writing the same sharps or flats again and again.",
+          "predict": "G major needs an F-sharp. Would you rather write a sharp sign beside every F, or once at the start?",
+          "do": "Do the key signature exercise for ten minutes. Then write the order of sharps (F C G D A E B) and of flats (B E A D G C F) on your handout and make up a saying for each.",
+          "takeaways": [
+            "A key signature collects every accidental of a scale and is written once at the start of each staff.",
+            "The sharps appear in the order F C G D A E B. The flats appear in the opposite order, B E A D G C F.",
+            "No sharps or flats means C major (or A minor).",
+            "One sharp (F-sharp) means G major. One flat (B-flat) means F major."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "mt-keysig",
+            "ex-keysig"
+          ],
+          "checks": [
+            {
+              "q": "A piece has a key signature with one flat. Which major key is it?",
+              "kind": "apply",
+              "options": [
+                "G major",
+                "F major",
+                "C major"
+              ],
+              "correct": 1,
+              "answer": "F major, whose only black key is B-flat."
+            }
+          ],
+          "teacherNote": "The musictheory.net lesson offers a saying for the flats: \"Battle Ends And Down Goes Charles' Father\". Let students invent their own for the sharps."
+        },
+        {
+          "id": "minor-scale",
+          "title": "The minor scale",
+          "note": "Minor scales sound darker because their step pattern is different.",
+          "predict": "Natural minor starting on A uses only white keys. Which seven notes is that?",
+          "do": "Build A natural minor on a keyboard strip with the pattern whole, half, whole, whole, half, whole, whole. Compare it with C major: which notes are the same? Then listen to C major and C minor in the lesson and describe the difference in one sentence.",
+          "takeaways": [
+            "The natural minor pattern is whole, half, whole, whole, half, whole, whole.",
+            "A natural minor has no sharps or flats. It uses the same white keys as C major, starting on A.",
+            "Most people hear minor scales as sad or dark.",
+            "There are three kinds of minor scale: natural, harmonic and melodic."
+          ],
+          "minutes": 35,
+          "practiceMinutes": 28,
+          "resources": [
+            "mt-minor",
+            "ab-minor"
+          ],
+          "checks": [
+            {
+              "q": "A natural minor and C major use the same notes. What is different?",
+              "kind": "explain",
+              "answer": "The starting note. Starting on A makes the tonic A, and the pattern of whole and half steps around it gives the darker sound."
+            }
+          ],
+          "teacherNote": "Keep ten minutes at the end for the scale camp. The relative minor idea (A minor and C major share a key signature) is a good extension for students who finish early."
+        },
+        {
+          "id": "scale-degrees",
+          "title": "Names of the scale degrees",
+          "note": "Every note of a scale has a name that says what job it does.",
+          "do": "Write the C major scale and label each note with its degree name: tonic, supertonic, mediant, subdominant, dominant, submediant, leading tone. Sing the tonic, then the dominant, then the tonic again.",
+          "takeaways": [
+            "The scale degrees are named tonic, supertonic, mediant, subdominant, dominant, submediant and leading tone.",
+            "The fifth degree is the dominant and the fourth is the subdominant."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 24,
+          "optional": true,
+          "resources": [
+            "omt-major"
+          ],
+          "teacherNote": "Homework or side trail. Not needed for the song project, but it prepares the Roman numerals of the chord stage."
+        }
+      ],
+      "checkpoint": {
+        "title": "Scale camp",
+        "show": [
+          "Write the G major scale with its key signature.",
+          "Play or sing C major and A minor and say how they differ in sound and in pattern.",
+          "Name the key of a piece whose signature has one flat."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "A melody in C major",
+        "brief": "The melody of the class song, written on the scale you just learned.",
+        "minutes": 40,
+        "capstone": true,
+        "resources": [
+          "song-maker"
+        ],
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Build a four-bar melody that uses only the notes C D E G and ends on C, following the teacher's example."
+          },
+          {
+            "level": "changed",
+            "task": "Extend it to eight bars with any notes of C major, and end on C or G."
+          },
+          {
+            "level": "own",
+            "task": "Write an eight-bar melody in a key of your choice and label its key signature."
+          }
+        ],
+        "criteria": [
+          "The melody stays in the key",
+          "It ends on the tonic",
+          "You can say which scale degrees it starts and ends on"
+        ]
+      }
+    },
+    {
+      "id": "intervals-chords",
+      "title": "Intervals and chords",
+      "tier": "silver",
+      "summary": "Measure the distance between notes, stack triads and play the most common progression.",
+      "waypoints": [
+        {
+          "id": "intervals",
+          "title": "Intervals",
+          "note": "An interval is the distance between two notes. Count it on the staff and in half steps.",
+          "predict": "C to E is a third. How many half steps do you think that is?",
+          "do": "On a keyboard strip count the half steps from C up to D, E, F, G and A. Fill in a table with the interval name and the half-step count, then check it with the interval exercise.",
+          "takeaways": [
+            "An interval measures the distance between two notes. Its generic size counts staff positions: C to E is a third.",
+            "Accidentals do not change the generic size: C to C-sharp is still a first.",
+            "In half steps: major second 2, major third 4, perfect fourth 5, perfect fifth 7, major sixth 9."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "mt-intervals",
+            "omt-intervals",
+            "ex-interval"
+          ],
+          "checks": [
+            {
+              "q": "How many half steps are in a perfect fifth, for example C up to G?",
+              "kind": "recall",
+              "options": [
+                "Five",
+                "Seven",
+                "Nine"
+              ],
+              "correct": 1,
+              "answer": "Seven half steps."
+            }
+          ],
+          "teacherNote": "Answer key for the table: C-D 2, C-E 4, C-F 5, C-G 7, C-A 9. Counting error to watch: students count the starting key as zero on the staff but as one on the keyboard."
+        },
+        {
+          "id": "triads",
+          "title": "Triads: three-note chords",
+          "note": "Stack a third and a fifth on any note and you have a chord.",
+          "predict": "A triad is a root, a third and a fifth. Which notes are those for C?",
+          "do": "Build the C, F and G major triads on a keyboard strip by counting up four and seven half steps from each root. Then build C minor, play it in the lesson and describe in one sentence how it sounds different.",
+          "takeaways": [
+            "A triad has a root, a third and a fifth. C major is C, E, G.",
+            "A major triad is a major third (4 half steps) and a perfect fifth (7) above the root.",
+            "A minor triad lowers the third by a half step: C minor is C, E-flat, G.",
+            "There are four triad qualities: major, minor, diminished and augmented."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "ab-triads",
+            "ab-minortriads",
+            "omt-triads"
+          ],
+          "checks": [
+            {
+              "q": "Build the G major triad.",
+              "kind": "apply",
+              "answer": "G, B, D. B is four half steps above G and D is seven."
+            }
+          ],
+          "teacherNote": "Answer key: C E G, F A C, G B D, and C E-flat G for C minor. The fourth takeaway is a preview; diminished and augmented are not assessed."
+        },
+        {
+          "id": "progressions",
+          "title": "Chord progressions and 1-5-6-4",
+          "note": "Four chords in a loop carry hundreds of pop songs.",
+          "predict": "Four chords repeat in hundreds of pop songs. Which scale degrees do you think they sit on?",
+          "do": "In C major the chords are C, G, A minor and F. Play or tap them in that order at 60 BPM in the lesson, then change the order and say how the tension and release change. Find one song you know on the Hooktheory page and test whether it fits.",
+          "takeaways": [
+            "A chord progression is a series of chords. In C major, 1-5-6-4 means C, G, A minor, F.",
+            "The Ableton lesson says 1-5-6-4 forms the basis of hundreds of pop songs.",
+            "Reordering the same chords changes the balance of tension and release.",
+            "Going from the fifth chord to the first (V to I) is a strong way to arrive home."
+          ],
+          "minutes": 35,
+          "practiceMinutes": 28,
+          "resources": [
+            "ab-1564",
+            "hooktheory"
+          ],
+          "checks": [
+            {
+              "q": "Which four chords make up 1-5-6-4 in C major?",
+              "kind": "recall",
+              "answer": "C major, G major, A minor and F major."
+            }
+          ],
+          "teacherNote": "Keep ten minutes for the chord camp. A student who says \"1-5-6-4 is a rule\" gets the reply: it is a very common pattern, not the only one; compare two songs that do not use it."
+        },
+        {
+          "id": "ear-training",
+          "title": "Hear the intervals",
+          "note": "Naming an interval by ear connects the numbers to the sound.",
+          "do": "Do ten minutes of interval ear training. Try to tell a third from a fifth, and sing the first two notes of \"Twinkle, Twinkle, Little Star\" (C up to G, a perfect fifth).",
+          "takeaways": [
+            "Link each interval to a tune you know. \"Twinkle, Twinkle\" opens with a leap of a perfect fifth.",
+            "Practise a few minutes a day. Ear training builds slowly."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 30,
+          "optional": true,
+          "resources": [
+            "ex-ear"
+          ],
+          "teacherNote": "Homework or side trail. Do not grade the ear exercise; it is for practice."
+        }
+      ],
+      "checkpoint": {
+        "title": "Chord camp",
+        "show": [
+          "Name the interval and the half-step count between C and G, and between C and E.",
+          "Build the F major triad and say its three notes.",
+          "Play or sing a 1-5-6-4 progression in C major with a partner."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "write-a-song",
+      "title": "Write a song",
+      "tier": "gold",
+      "summary": "Combine rhythm, melody and chords into an eight-bar song and perform it.",
+      "waypoints": [
+        {
+          "id": "melody",
+          "title": "Write a melody",
+          "note": "A melody is a pattern of single notes. Use your scale, your rhythms and a clear ending.",
+          "predict": "Where should a melody end to sound finished: on a note of the key, or on any note?",
+          "do": "Open Song Maker or MuseScore and write an eight-bar melody in C major. Use at least two rhythms from stage one and end on C. Play it back and change three notes to make it better.",
+          "takeaways": [
+            "A melody is a pattern of single notes. It usually carries the identity of the song.",
+            "Melodies are usually higher and more rhythmically busy than basslines.",
+            "Ending on the tonic (C in C major) makes a melody sound finished.",
+            "Repeating a short rhythm helps the ear follow the tune."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 36,
+          "resources": [
+            "ab-melodies",
+            "song-maker",
+            "musescore"
+          ],
+          "checks": [
+            {
+              "q": "Which note would you end an eight-bar melody in C major on, and why?",
+              "kind": "explain",
+              "answer": "C, the tonic. It is the home note of the key, so the ending sounds finished."
+            }
+          ],
+          "teacherNote": "Check the key and the bar sums on the way round the room. Students who finish early add a second melody for the chorus."
+        },
+        {
+          "id": "harmony-form",
+          "title": "Chords and form",
+          "note": "Put chords under the melody and arrange the song into sections.",
+          "predict": "A song has a verse and a chorus. How many bars do you think each usually has?",
+          "do": "Put the 1-5-6-4 chords under your melody, one chord per bar for four bars, repeated twice. Mark a verse and a chorus in multiples of four bars. Play the melody and chords together with a partner.",
+          "takeaways": [
+            "The sections of a song are usually built from multiples of four, eight or 16 bars.",
+            "Putting sections together is called arranging. The combination is the structure or form.",
+            "Choose melody notes from the chord of that bar on the strong beats so melody and chords fit."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 36,
+          "resources": [
+            "ab-structure",
+            "ab-1564"
+          ],
+          "checks": [
+            {
+              "q": "Name the chords for a 1-5-6-4 loop in C major, one per bar.",
+              "kind": "recall",
+              "answer": "C, G, A minor, F, then repeat."
+            }
+          ],
+          "teacherNote": "If the melody clashes with a chord, let students change the melody note to the nearest chord note on beat one. This is the point of the strong-beat takeaway."
+        },
+        {
+          "id": "showcase",
+          "title": "Perform and explain",
+          "note": "Play the song to the group and explain it with the words of this course.",
+          "do": "Perform your song. Say the key, time signature, tempo and chord progression, and one thing you changed after hearing it. Give another group one piece of feedback that names rhythm, melody or harmony.",
+          "takeaways": [
+            "Explain a piece with the course words: key, time signature, tempo, scale degrees and chords.",
+            "Useful feedback names what you heard and which part it came from: rhythm, melody or harmony."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 36,
+          "resources": [
+            "ab-home"
+          ],
+          "teacherNote": "Time: about three minutes per group of three. Assessment is met or not yet against the criteria; a not yet can be repeated in a later lesson."
+        }
+      ],
+      "checkpoint": {
+        "title": "Summit",
+        "show": [
+          "Perform your eight-bar song with a melody and a chord progression.",
+          "Name the key, time signature, tempo and chords of your song.",
+          "Explain one change you made after listening to it."
+        ],
+        "pass": 1
+      },
+      "project": {
+        "title": "Our class song",
+        "brief": "Each student or pair finishes an eight-bar song and performs it.",
+        "minutes": 45,
+        "capstone": true,
+        "resources": [
+          "song-maker"
+        ],
+        "rungs": [
+          {
+            "level": "own",
+            "task": "Finish an eight-bar song with melody and chords, and perform it for the class."
+          }
+        ],
+        "choices": [
+          "A song in C major with 1-5-6-4",
+          "A song in A minor with your own four chords",
+          "A groove from stage one with a melody on top"
+        ],
+        "criteria": [
+          "Every bar adds up",
+          "The melody stays in the key and ends on the tonic",
+          "The chords fit the melody",
+          "You explain it with the course words"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "ab-beat",
+      "title": "Learning Music: Beat and tempo",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/make-beats/beat-and-tempo.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Separates the two meanings of \"beat\" and defines tempo in BPM, with a pattern students can speed up and slow down.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-bars",
+      "title": "Learning Music: Bars",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/make-beats/bars.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Defines a bar as a group of four beats in a drum pattern students can edit.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "song-maker",
+      "title": "Chrome Music Lab: Song Maker",
+      "by": "Google",
+      "url": "https://musiclab.chromeexperiments.com/Song-Maker/",
+      "type": "tool",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "A free grid for drawing a melody and rhythm and playing it back, in the browser.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-duration",
+      "title": "musictheory.net: Note Duration",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/11",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Shows how whole, half, quarter, eighth and sixteenth notes relate and how each flag halves a note.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-measures",
+      "title": "musictheory.net: Measures and Time Signature",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/12",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Explains bar lines and shows what 4/4, 3/4 and 6/8 contain.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-rests",
+      "title": "musictheory.net: Rest Duration",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/13",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Shows that each rest has the same length as the note with the same name.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-dots",
+      "title": "musictheory.net: Dots and Ties",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/14",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "States that a dot adds half the note's length and a tie joins notes of the same pitch, even across a bar line.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "teoria-ex",
+      "title": "teoria: Exercises",
+      "by": "José Rodríguez Alvira",
+      "url": "https://www.teoria.com/en/exercises/",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "An index of free exercises that includes rhythm, intervals, chords and key signatures.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "omt-keyboard",
+      "title": "Open Music Theory: The Keyboard and the Grand Staff",
+      "by": "Open Music Theory authors",
+      "url": "https://viva.pressbooks.pub/openmusictheory/chapter/the-keyboard-and-grand-staff/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Shows the groups of two and three black keys, the white key letter names and middle C on the grand staff.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-pitch",
+      "title": "Learning Music: Explore pitch",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/notes-and-scales/notes-and-scales.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Defines pitch as how high or low a sound is and names the notes A, C, D, E and G on a keyboard.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-staff",
+      "title": "musictheory.net: The Staff, Clefs, and Ledger Lines",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/10",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Explains the five lines and four spaces, the treble and bass clefs, and ledger lines.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ex-note",
+      "title": "musictheory.net: Note Identification",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/exercises/note",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "An exercise for naming notes on the staff.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-steps",
+      "title": "musictheory.net: Steps and Accidentals",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/20",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Defines half and whole steps on the keyboard, sharps and flats, and why C# and Db are one key.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "omt-steps",
+      "title": "Open Music Theory: Half Steps, Whole Steps, and Accidentals",
+      "by": "Open Music Theory authors",
+      "url": "https://viva.pressbooks.pub/openmusictheory/chapter/half-and-whole-steps/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "A second explanation with keyboard pictures, including the black keys and enharmonic equivalence.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-major",
+      "title": "musictheory.net: The Major Scale",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/21",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Builds the C major scale from the whole and half step formula, then builds E-flat major with it.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-keys",
+      "title": "Learning Music: Keys and scales",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/notes-and-scales/keys-and-scales.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Plays the C major scale, explains the tonic as the home note and lets students make patterns from its notes.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "omt-major",
+      "title": "Open Music Theory: Major Scales, Scale Degrees, and Key Signatures",
+      "by": "Open Music Theory authors",
+      "url": "https://viva.pressbooks.pub/openmusictheory/chapter/major-scales/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Gives the W-W-H-W-W-W-H pattern, the scale degree names and the order of sharps and flats. Reading for fast students.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-keysig",
+      "title": "musictheory.net: Key Signatures",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/24",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Explains the key signature, the order of flats with a saying to remember it, and the sharps in the opposite order.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ex-keysig",
+      "title": "musictheory.net: Key Signature Identification",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/exercises/keysig",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "An exercise for naming the key from its signature.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-minor",
+      "title": "musictheory.net: The Minor Scales",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/22",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Builds A natural minor from its step formula and names the three minor scale types.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-minor",
+      "title": "Learning Music: Minor scales",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/notes-and-scales/minor-scales.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Plays the C minor scale next to C major so students can hear the difference.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mt-intervals",
+      "title": "musictheory.net: Specific Intervals",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/lessons/31",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Gives the half-step count of each interval: major second 2, major third 4, perfect fourth 5, perfect fifth 7.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "omt-intervals",
+      "title": "Open Music Theory: Intervals",
+      "by": "Open Music Theory authors",
+      "url": "https://viva.pressbooks.pub/openmusictheory/chapter/intervals/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Separates generic size from quality (perfect, major, minor) and notes that intervals are both written and heard.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ex-interval",
+      "title": "musictheory.net: Interval Identification",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/exercises/interval",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "An exercise for naming intervals on the staff.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ex-ear",
+      "title": "musictheory.net: Interval Ear Training",
+      "by": "musictheory.net",
+      "url": "https://www.musictheory.net/exercises/ear-interval",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Plays two notes and asks which interval you heard.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-triads",
+      "title": "Learning Music: Major triads",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/chords/major-triads.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Builds the C major triad from the first, third and fifth notes of the scale.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-minortriads",
+      "title": "Learning Music: Minor triads",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/chords/minor-triads.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Builds the C minor triad with E-flat as the third and compares its sound with major.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "omt-triads",
+      "title": "Open Music Theory: Triads",
+      "by": "Open Music Theory authors",
+      "url": "https://viva.pressbooks.pub/openmusictheory/chapter/triads/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Names the four triad qualities: major, minor, diminished and augmented. Reading for fast students.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-1564",
+      "title": "Learning Music: 1-5-6-4",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/chords/1-5-6-4.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Plays the 1-5-6-4 progression, said to underlie hundreds of pop songs, and lets students reorder its chords.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "hooktheory",
+      "title": "Hooktheory: Popular chord progressions and the songs that use them",
+      "by": "Hooktheory",
+      "url": "https://www.hooktheory.com/theorytab/popular-chord-progressions",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Lists common chord progressions with songs that use them, so students can test a progression on music they know.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-melodies",
+      "title": "Learning Music: Make melodies",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/make-melodies/make-melodies.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 10,
+      "why": "Describes a melody as a pattern of single notes that carries a song's identity, usually higher and busier than a bassline.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-structure",
+      "title": "Learning Music: Play with song structures",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/song-structure/song-structure.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 15,
+      "why": "Explains song form as sections built from multiples of four, eight or 16 bars.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "musescore",
+      "title": "MuseScore Studio Handbook",
+      "by": "MuseScore",
+      "url": "https://handbook.musescore.org/",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 20,
+      "why": "The free notation program's manual, with sections on creating a first score and entering notes and rests.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ab-home",
+      "title": "Learning Music (Ableton): start page",
+      "by": "Ableton",
+      "url": "https://learningmusic.ableton.com/",
+      "type": "course",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "why": "A free, browser-based course on beats, notes, scales, chords and melodies, for students who want to carry on.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    }
+  ],
+  "class": {
+    "size": 24,
+    "ages": "14",
+    "sessionsPerWeek": 2,
+    "sessionMinutes": 45,
+    "weeks": 8,
+    "devices": "shared",
+    "assessment": {
+      "mode": "pass",
+      "note": "Each camp signpost is marked met or not yet. A not yet can be repeated in a later lesson. The song performance is marked against the project criteria."
+    },
+    "handout": "session",
+    "homework": true,
+    "sessions": [
+      {
+        "n": 1,
+        "title": "Find the pulse",
+        "inClass": [
+          "pulse"
+        ],
+        "exit": "How long is one beat at 60 BPM?",
+        "materials": [
+          "Handout 1",
+          "Speaker or tablet with the beat lesson"
+        ]
+      },
+      {
+        "n": 2,
+        "title": "Note values",
+        "opener": "Tap a steady pulse for four beats while your partner claps a song rhythm over it.",
+        "inClass": [
+          "note-values"
+        ],
+        "exit": "How many eighth notes fill one whole note?",
+        "materials": [
+          "Handout 2",
+          "Note value cards, one set per group"
+        ]
+      },
+      {
+        "n": 3,
+        "title": "Bars and time signatures",
+        "opener": "Name the note that gets one beat in 4/4, and how many eighths fill a quarter.",
+        "inClass": [
+          "bars-meter"
+        ],
+        "exit": "How many quarter notes fit in a bar of 3/4?",
+        "materials": [
+          "Handout 3",
+          "Note value cards"
+        ]
+      },
+      {
+        "n": 4,
+        "title": "Rests, dots and ties, and the rhythm camp",
+        "opener": "Clap a bar of 3/4, then a bar of 4/4, with a stamp on beat one.",
+        "inClass": [
+          "rests-ties"
+        ],
+        "exit": "A dotted half note lasts how many beats?",
+        "materials": [
+          "Handout 4",
+          "Rhythm camp strips"
+        ]
+      },
+      {
+        "n": 5,
+        "title": "The keyboard and note names",
+        "opener": "Write the rhythm of a song you know using note values.",
+        "inClass": [
+          "keyboard"
+        ],
+        "exit": "Which key sits just left of a group of two black keys?",
+        "materials": [
+          "Handout 5",
+          "Printed keyboard strip per pair"
+        ]
+      },
+      {
+        "n": 6,
+        "title": "The staff and the clefs",
+        "opener": "Say the white key names from C to C without looking.",
+        "inClass": [
+          "staff"
+        ],
+        "homework": [
+          "note-drill"
+        ],
+        "exit": "How many lines and spaces does the staff have?",
+        "materials": [
+          "Handout 6",
+          "Blank staves"
+        ]
+      },
+      {
+        "n": 7,
+        "title": "Half steps and sharps, and the pitch camp",
+        "opener": "Name five notes on the treble staff from the board.",
+        "inClass": [
+          "steps"
+        ],
+        "exit": "Name one pair of notes that is a half step apart with no black key between.",
+        "materials": [
+          "Handout 7",
+          "Keyboard strips",
+          "Pitch camp sheet"
+        ]
+      },
+      {
+        "n": 8,
+        "title": "The major scale",
+        "opener": "Point to every half step between C and C on your keyboard strip.",
+        "inClass": [
+          "major-scale"
+        ],
+        "exit": "Write the step pattern of a major scale.",
+        "materials": [
+          "Handout 8",
+          "Keyboard strips"
+        ]
+      },
+      {
+        "n": 9,
+        "title": "Keys and key signatures",
+        "opener": "Build a C major scale aloud with whole and half steps.",
+        "inClass": [
+          "key-signatures"
+        ],
+        "exit": "Which major key has one sharp?",
+        "materials": [
+          "Handout 9",
+          "Device pairs for the key signature exercise"
+        ]
+      },
+      {
+        "n": 10,
+        "title": "The minor scale, and the scale camp",
+        "opener": "Say the order of sharps from memory.",
+        "inClass": [
+          "minor-scale"
+        ],
+        "homework": [
+          "scale-degrees"
+        ],
+        "exit": "What is the difference between A minor and C major?",
+        "materials": [
+          "Handout 10",
+          "Scale camp sheet"
+        ]
+      },
+      {
+        "n": 11,
+        "title": "Intervals",
+        "opener": "Write the key signature of G major.",
+        "inClass": [
+          "intervals"
+        ],
+        "homework": [
+          "ear-training"
+        ],
+        "exit": "How many half steps is a perfect fifth?",
+        "materials": [
+          "Handout 11",
+          "Keyboard strips"
+        ]
+      },
+      {
+        "n": 12,
+        "title": "Triads",
+        "opener": "Name three intervals with their half-step counts.",
+        "inClass": [
+          "triads"
+        ],
+        "exit": "Name the three notes of a G major triad.",
+        "materials": [
+          "Handout 12",
+          "Keyboard strips"
+        ]
+      },
+      {
+        "n": 13,
+        "title": "Chord progressions, and the chord camp",
+        "opener": "Build the C major triad from the root.",
+        "inClass": [
+          "progressions"
+        ],
+        "exit": "Which four chords make 1-5-6-4 in C major?",
+        "materials": [
+          "Handout 13",
+          "Chord camp sheet"
+        ]
+      },
+      {
+        "n": 14,
+        "title": "Write a melody",
+        "opener": "Say the four chords of 1-5-6-4 in C major.",
+        "inClass": [
+          "melody"
+        ],
+        "exit": "Which note ends your melody, and why?",
+        "materials": [
+          "Handout 14",
+          "Devices with Song Maker or MuseScore"
+        ]
+      },
+      {
+        "n": 15,
+        "title": "Chords and form",
+        "opener": "Read your melody aloud with the note names.",
+        "inClass": [
+          "harmony-form"
+        ],
+        "exit": "How many bars does each section of your song have?",
+        "materials": [
+          "Handout 15",
+          "Devices"
+        ]
+      },
+      {
+        "n": 16,
+        "title": "Perform and explain",
+        "opener": "Hum the first four bars of your song.",
+        "inClass": [
+          "showcase"
+        ],
+        "exit": "Which part of your song did you change after listening, and why?",
+        "materials": [
+          "Handout 16",
+          "Performance order list",
+          "Speaker"
+        ]
+      }
+    ]
+  }
+}

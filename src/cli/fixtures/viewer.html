@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+  // Text that looks like the elements below, inside a script, must be left alone by the build command.
+  const decoy = '<title>not the title</title> <script type="application/json" id="zero-to-roadmap">decoy';
+</script>
+<title>zero-to</title>
+<style>/* <title>not this one either</title> */ body { margin: 0; }</style>
+</head>
+<body>
+<!-- <script type="application/json" id="zero-to-roadmap">commented out</script> -->
+<main id="app"></main>
+<script type="application/json" id="zero-to-roadmap"></script>
+<script type="application/json" id="zero-to-receipt"></script>
+<script type="module">
+  const holder = document.getElementById('zero-to-roadmap');
+  const roadmap = holder && holder.textContent.trim() ? JSON.parse(holder.textContent) : null;
+  document.getElementById('app').textContent = roadmap ? roadmap.title : 'No roadmap';
+</script>
+</body>
+</html>

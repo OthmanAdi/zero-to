@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:zero-to:roadmap:1",
+  "title": "zero-to roadmap",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "title", "topic", "lang", "checkedOn", "brief", "stages", "resources"],
+  "properties": {
+    "schema": { "const": "zero-to/1" },
+    "id": { "$ref": "#/$defs/id" },
+    "title": { "type": "string", "maxLength": 80 },
+    "topic": { "type": "string", "description": "The prompt as typed." },
+    "summary": { "type": "string", "maxLength": 280 },
+    "lang": { "$ref": "#/$defs/lang", "description": "Language the roadmap itself is written in." },
+    "checkedOn": { "$ref": "#/$defs/date", "description": "Day of the last full link check." },
+    "freshness": { "enum": ["fast", "medium", "slow"], "default": "medium", "description": "How quickly the topic's sources go stale." },
+    "reviewDays": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "default": [2, 7, 21, 60] },
+    "brief": { "$ref": "#/$defs/brief" },
+    "capstone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "brief"],
+      "properties": {
+        "title": { "type": "string" },
+        "brief": { "type": "string" }
+      }
+    },
+    "map": { "$ref": "#/$defs/map" },
+    "stages": { "type": "array", "minItems": 2, "maxItems": 8, "items": { "$ref": "#/$defs/stage" } },
+    "resources": { "type": "array", "items": { "$ref": "#/$defs/resource" } },
+    "class": { "$ref": "#/$defs/class" }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,47}$" },
+    "lang": { "type": "string", "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$" },
+    "date": { "type": "string", "format": "date" },
+    "tier": { "enum": ["bronze", "silver", "gold", "diamond"] },
+    "ids": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "How the trek looks. Every field is optional; the site picks a landscape from the seed.",
+      "properties": {
+        "terrain": {
+          "enum": ["volcano", "ridge", "massif", "twin-peaks", "plateau", "canyon", "random"],
+          "default": "random",
+          "description": "The shape of the mountain."
+        },
+        "trail": {
+          "enum": ["switchback", "ridge-walk", "spiral", "valley-first", "traverse", "random"],
+          "default": "random",
+          "description": "How the route winds up it."
+        },
+        "seed": { "type": "string", "description": "Makes the landscape repeatable. Default: the roadmap id." },
+        "surfaces": {
+          "anyOf": [
+            { "const": "auto" },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": { "enum": ["water", "sand", "grass", "forest", "dirt", "scree", "rock", "snow"] }
+            }
+          ],
+          "description": "Ground types from the bottom of the mountain to the top: a list made of water, sand, grass, forest, dirt, scree, rock and snow, or the word auto.",
+          "default": "auto"
+        },
+        "signpost": { "type": "string", "description": "Asset key of the signpost model.", "default": "timber" },
+        "theme": { "type": "string" }
+      }
+    },
+
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["audience", "startLevel", "targetTier", "hoursPerWeek"],
+      "properties": {
+        "audience": { "enum": ["self", "student", "teacher"] },
+        "goal": { "type": "string", "description": "One sentence, in the user's words." },
+        "startLevel": { "enum": ["zero", "adjacent", "stuck", "gaps"] },
+        "entry": { "$ref": "#/$defs/id", "description": "Stage where the red pin goes in. Default: first stage." },
+        "targetTier": { "$ref": "#/$defs/tier" },
+        "hoursPerWeek": { "type": "number", "exclusiveMinimum": 0 },
+        "startDate": { "$ref": "#/$defs/date" },
+        "deadline": { "$ref": "#/$defs/date" },
+        "style": { "enum": ["build", "course", "read", "watch"], "default": "build" },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["max", "currency"],
+          "properties": {
+            "max": { "type": ["number", "null"], "minimum": 0, "description": "0 is free only, null is no limit." },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" }
+          }
+        },
+        "resourceLangs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/lang" }, "description": "In order of preference." },
+        "projects": { "enum": ["capstone", "per-stage", "drills", "own"], "default": "capstone" },
+        "gating": { "enum": ["open", "guided", "gated"], "default": "guided" },
+        "theme": { "type": "string" }
+      }
+    },
+
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "tier", "waypoints", "checkpoint"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "maxLength": 60 },
+        "tier": { "$ref": "#/$defs/tier" },
+        "summary": { "type": "string", "maxLength": 200 },
+        "requires": { "$ref": "#/$defs/ids", "description": "Stage ids. Default: the stage before." },
+        "waypoints": { "type": "array", "minItems": 1, "maxItems": 9, "items": { "$ref": "#/$defs/waypoint" } },
+        "checkpoint": { "$ref": "#/$defs/checkpoint" },
+        "project": { "$ref": "#/$defs/project" }
+      }
+    },
+
+    "waypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "note", "do", "minutes", "practiceMinutes", "resources"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "maxLength": 60 },
+        "note": { "type": "string", "maxLength": 240, "description": "Sticky note: what this step gives you." },
+        "predict": { "type": "string", "description": "One question to answer before opening a resource." },
+        "do": { "type": "string", "description": "The hands-on task and what to look at when it is done." },
+        "minutes": { "type": "integer", "minimum": 5 },
+        "practiceMinutes": { "type": "integer", "minimum": 0 },
+        "requires": { "$ref": "#/$defs/ids", "description": "Waypoint ids. Default: the waypoint before." },
+        "optional": { "type": "boolean", "default": false, "description": "A side trail." },
+        "resources": { "$ref": "#/$defs/ids", "description": "Resource ids, the first is the main one." },
+        "gap": { "type": "string", "description": "Written when no source could be verified for this step." },
+        "takeaways": {
+          "type": "array",
+          "maxItems": 4,
+          "items": { "type": "string", "maxLength": 140 },
+          "description": "Key points the learner can pin into a field notebook and take with them"
+        },
+        "checks": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/check" } },
+        "teacherNote": { "type": "string", "description": "Removed from the student file." }
+      }
+    },
+
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["q", "kind", "answer"],
+      "properties": {
+        "q": { "type": "string" },
+        "kind": { "enum": ["recall", "predict", "apply", "explain"] },
+        "options": { "type": "array", "minItems": 2, "maxItems": 5, "items": { "type": "string" } },
+        "correct": { "type": "integer", "minimum": 0, "description": "Index into options." },
+        "answer": { "type": "string", "description": "Model answer, or why the correct option is correct." },
+        "onMiss": { "$ref": "#/$defs/id", "description": "Waypoint to walk to after a miss." }
+      },
+      "dependentRequired": { "options": ["correct"] }
+    },
+
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "show"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 60 },
+        "signpost": { "type": "string", "description": "Asset key. Default comes from the map." },
+        "show": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": { "type": "string" },
+          "description": "Things the learner can show, test or explain. One signpost arm each."
+        },
+        "checks": { "type": "array", "maxItems": 6, "items": { "$ref": "#/$defs/check" } },
+        "pass": { "type": "number", "exclusiveMinimum": 0, "maximum": 1, "default": 0.8 }
+      }
+    },
+
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "brief", "rungs"],
+      "properties": {
+        "title": { "type": "string", "maxLength": 60 },
+        "brief": { "type": "string" },
+        "minutes": { "type": "integer", "minimum": 10 },
+        "capstone": { "type": "boolean", "default": false, "description": "Continues the roadmap's capstone." },
+        "rungs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["level", "task"],
+            "properties": {
+              "level": { "enum": ["guided", "changed", "own"] },
+              "task": { "type": "string" }
+            }
+          }
+        },
+        "resources": { "$ref": "#/$defs/ids", "description": "Shown on the shelf while the walker is at the camp." },
+        "choices": { "type": "array", "items": { "type": "string" }, "description": "The same menu for everyone." },
+        "criteria": { "type": "array", "maxItems": 5, "items": { "type": "string" } }
+      }
+    },
+
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "url", "type", "cost", "lang", "level", "why", "check"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string" },
+        "by": { "type": "string" },
+        "url": { "type": "string", "format": "uri", "pattern": "^https?://" },
+        "type": {
+          "enum": ["docs", "book", "course", "video", "article", "interactive", "exercises", "tool", "reference", "community"]
+        },
+        "cost": { "enum": ["free", "freemium", "paid"] },
+        "price": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["amount", "currency", "seenOn"],
+          "properties": {
+            "amount": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+            "per": { "enum": ["once", "month", "year"], "default": "once" },
+            "seenOn": { "$ref": "#/$defs/date" }
+          }
+        },
+        "lang": { "$ref": "#/$defs/lang" },
+        "level": { "$ref": "#/$defs/tier" },
+        "minutes": { "type": "integer", "minimum": 1 },
+        "updated": { "type": "string", "description": "The source's own date, as printed on it. Never guessed." },
+        "why": { "type": "string", "maxLength": 200, "description": "Why this is on the list, for this step." },
+        "check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "on", "http"],
+          "properties": {
+            "status": { "enum": ["verified", "gated", "unverified"] },
+            "on": { "$ref": "#/$defs/date" },
+            "http": { "type": ["integer", "null"] },
+            "note": { "type": "string" }
+          },
+          "if": { "properties": { "status": { "const": "verified" } } },
+          "else": { "required": ["note"] }
+        }
+      }
+    },
+
+    "class": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "sessionsPerWeek", "sessionMinutes"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 1 },
+        "ages": { "type": "string" },
+        "sessionsPerWeek": { "type": "number", "exclusiveMinimum": 0 },
+        "sessionMinutes": { "type": "integer", "minimum": 10 },
+        "weeks": { "type": "integer", "minimum": 1 },
+        "devices": { "enum": ["each", "shared", "teacher", "none"] },
+        "assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "enum": ["none", "pass", "graded", "test"] },
+            "note": { "type": "string" }
+          }
+        },
+        "handout": { "enum": ["session", "stage", "none"], "default": "session" },
+        "homework": { "type": "boolean", "default": false },
+        "skipDates": { "type": "array", "items": { "$ref": "#/$defs/date" } },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["n", "title", "inClass"],
+            "properties": {
+              "n": { "type": "integer", "minimum": 1 },
+              "date": { "$ref": "#/$defs/date" },
+              "title": { "type": "string" },
+              "opener": { "type": "string", "description": "A recall task from earlier sessions." },
+              "inClass": { "$ref": "#/$defs/ids" },
+              "homework": { "$ref": "#/$defs/ids" },
+              "exit": { "type": "string", "description": "One question each student answers before leaving." },
+              "materials": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    }
+  }
+}

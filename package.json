@@ -18,6 +18,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run test && npm run build",
+    "prerender": "node --experimental-strip-types scripts/prerender.ts",
+    "og-images": "node --experimental-strip-types scripts/og-images.ts",
     "build:skill": "node scripts/build-skill.ts"
   },
   "dependencies": {

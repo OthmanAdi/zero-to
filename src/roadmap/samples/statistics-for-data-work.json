@@ -1,0 +1,1382 @@
+{
+  "schema": "zero-to/1",
+  "id": "statistics-for-data-work",
+  "title": "Statistics for data work",
+  "topic": "statistics for data work",
+  "summary": "Six stages with Python: describe data, simulate chance, measure uncertainty, test claims, model relationships, then decide and report. Built on free books and docs, with one paid book listed with its price.",
+  "lang": "en",
+  "checkedOn": "2026-11-13",
+  "freshness": "slow",
+  "brief": {
+    "audience": "self",
+    "goal": "Analyse a real dataset end to end and defend the numbers: estimates with intervals, tests with effect sizes and a stated limit.",
+    "startLevel": "gaps",
+    "targetTier": "gold",
+    "hoursPerWeek": 5,
+    "startDate": "2026-11-16",
+    "deadline": "2027-02-14",
+    "style": "build",
+    "budget": {
+      "max": 40,
+      "currency": "USD"
+    },
+    "resourceLangs": [
+      "en"
+    ],
+    "projects": "capstone",
+    "gating": "guided"
+  },
+  "capstone": {
+    "title": "One dataset, one report",
+    "brief": "The report grows at every camp: a description, then intervals, then tests, then a model, then a one-page report you can defend."
+  },
+  "map": {
+    "terrain": "twin-peaks",
+    "trail": "switchback",
+    "surfaces": "auto"
+  },
+  "stages": [
+    {
+      "id": "describe-data",
+      "title": "Describe the data first",
+      "tier": "bronze",
+      "summary": "Clean a dataset, summarize it and plot it before any model or test. This stage prevents most later mistakes.",
+      "waypoints": [
+        {
+          "id": "first-look",
+          "title": "A first look: clean, then summarize",
+          "note": "Check the data for impossible values and missing codes, then summarize it. Do this before any model or test.",
+          "predict": "A column of incomes has a mean of 52,000 and a median of 38,000. What does the gap tell you about the data?",
+          "do": "Load the dataset from Think Stats chapter 1, or a CSV from your own work, with pandas. Run describe(), look for impossible values and codes that stand for missing, fix them, and write down the mean, median, standard deviation and the 5th, 50th and 95th percentiles of one column.",
+          "takeaways": [
+            "Validate before you summarize: look for impossible values, missing data and codes that stand for missing.",
+            "Mean, median and mode describe the centre. Standard deviation and percentiles describe the spread.",
+            "A mean far above the median usually means a right-skewed distribution or a few large outliers.",
+            "DataFrame.describe() reports count, mean, std, min, quartiles and max in one call."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-eda",
+            "pandas-describe",
+            "pandas-10min"
+          ],
+          "checks": [
+            {
+              "q": "Why can the mean of incomes be much larger than the median?",
+              "kind": "explain",
+              "answer": "A few very high incomes pull the mean up but barely move the median. The distribution is skewed to the right."
+            }
+          ]
+        },
+        {
+          "id": "distributions",
+          "title": "Histograms and effect size",
+          "note": "A histogram shows the shape of the data. Plot each group, then say how big a difference is, not only whether one exists.",
+          "predict": "Two groups differ in their mean by 0.1. Is that a large difference? What else do you need to know?",
+          "do": "Plot a histogram of one numeric column with three bin widths and pick the one that shows the shape best. Split the data into two groups, overlay their histograms, and compute the difference in means and Cohen's d.",
+          "takeaways": [
+            "A histogram shows how often values fall into each range. The shape tells you more than the mean does.",
+            "Outliers can be errors or real rare cases. Look at them before you delete them.",
+            "Effect size, such as Cohen's d (a difference in means divided by a standard deviation), says how big a difference is.",
+            "seaborn offers histplot, kdeplot and ecdfplot for plotting distributions."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-dist",
+            "seaborn-dist"
+          ],
+          "checks": [
+            {
+              "q": "Why report an effect size next to a difference in means?",
+              "kind": "explain",
+              "answer": "The raw difference depends on the units and the spread. An effect size such as Cohen's d puts it on a common scale, so you can say whether it is small or large."
+            }
+          ]
+        },
+        {
+          "id": "pmf-cdf",
+          "title": "PMFs, CDFs and percentiles",
+          "note": "A PMF gives each value's probability. A CDF gives the share at or below a value, and makes percentiles and group comparisons easy to read.",
+          "predict": "You ask 100 students how big their class is, and the school reports its average class size. Which number is larger, and why?",
+          "do": "Compute the PMF and the CDF of one column and plot both. Read the median and the 90th percentile from the CDF. Plot the CDFs of two groups on one chart and describe where they differ.",
+          "takeaways": [
+            "A PMF maps each value to its probability. A CDF maps each value to the share of data at or below it.",
+            "A percentile rank is the share of values at or below a value. You can read it off a CDF.",
+            "Plotting two CDFs on one chart compares groups without choosing bin widths.",
+            "Class size paradox: asking students about class size gives a larger average than the school's own average."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-pmf",
+            "ts-cdf"
+          ],
+          "checks": [
+            {
+              "q": "Why does asking students give a larger average class size than asking the school?",
+              "kind": "explain",
+              "answer": "A large class has more students, so it is counted by more students. Small classes are under-represented in the answers."
+            }
+          ]
+        },
+        {
+          "id": "describe-drill",
+          "title": "Describe one dataset in ten questions",
+          "note": "Practice the whole first stage on one dataset of your own.",
+          "do": "Take a dataset from your work or a CSV you care about. Write ten questions that summaries and plots can answer, answer each with a table or chart, and note one answer that surprised you.",
+          "takeaways": [
+            "Start from a question, then choose the table or plot that answers it. Avoid plots without a question.",
+            "Write down what surprised you. Surprises point to errors in the data or to something worth studying."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 90,
+          "resources": [
+            "pandas-10min"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Base camp",
+        "show": [
+          "Show a cleaned dataset with a summary table and two plots of one column.",
+          "Explain why the mean and median of that column differ.",
+          "Read a percentile off a CDF you plotted and say what it means."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Describe a real dataset",
+        "brief": "The first section of your analysis report: what the data contains and what it looks like.",
+        "minutes": 120,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Follow Think Stats chapters 1 and 2 on the book's dataset and reproduce the summary table and the histograms."
+          },
+          {
+            "level": "changed",
+            "task": "Do the same on a dataset of your own and add the effect size of one difference between two groups."
+          }
+        ],
+        "criteria": [
+          "No impossible values remain",
+          "Every plot answers a written question",
+          "One effect size is reported with its units"
+        ]
+      }
+    },
+    {
+      "id": "chance",
+      "title": "Chance you can simulate",
+      "tier": "bronze",
+      "summary": "Probability as long-run frequency, the binomial and normal distributions, and simulation as the tool for every question you cannot solve by formula.",
+      "waypoints": [
+        {
+          "id": "coin-flips",
+          "title": "Chance and long-run frequency",
+          "note": "Probability is a number between 0 and 1. When you cannot work it out, simulate it.",
+          "predict": "You flip a fair coin 10 times and get 7 heads. Is the coin biased?",
+          "do": "Flip the virtual coin 10, 100 and 1,000 times and watch the share of heads. Then simulate 10,000 runs of 10 flips in Python and count how often you see 7 or more heads.",
+          "takeaways": [
+            "Probability runs from 0 (impossible) to 1 (certain).",
+            "With few flips the share of heads can be far from 50 percent. With more flips it settles close to the true probability.",
+            "A simulation answers a probability question by repeating the random process many times and counting.",
+            "Seven or more heads in ten fair flips happens in about 17 percent of runs, so it is weak evidence of bias."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "seeing-prob"
+          ],
+          "checks": [
+            {
+              "q": "A fair coin is flipped 10 times. Is getting 7 or more heads surprising?",
+              "kind": "apply",
+              "options": [
+                "Yes, very surprising",
+                "No, it happens often"
+              ],
+              "correct": 1,
+              "answer": "No. About 17 percent of runs of ten fair flips give 7 or more heads, so one such run says little about the coin."
+            }
+          ]
+        },
+        {
+          "id": "named-distributions",
+          "title": "Binomial, normal and the central limit theorem",
+          "note": "A few named distributions describe most simple random processes. scipy.stats gives them all the same methods.",
+          "predict": "Means of samples of 30 from a skewed distribution: what shape do you expect for the histogram of those means?",
+          "do": "Explore the binomial distribution in the visual. In Python use scipy.stats.binom to compute P(7 or more heads) for n = 10, p = 0.5 and compare it with your simulation. Then draw 1,000 samples of 30 values from a skewed distribution, take each mean, and plot a histogram of the means.",
+          "takeaways": [
+            "A binomial counts successes in n independent trials that share the same probability p.",
+            "scipy.stats distributions share methods: pmf, cdf, rvs (random samples) and ppf (percentile).",
+            "The central limit theorem: means of many samples look roughly normal, even when the data are not."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "seeing-dist",
+            "scipy-stats",
+            "scipy-binom"
+          ],
+          "checks": [
+            {
+              "q": "Which scipy.stats method draws random samples from a distribution?",
+              "kind": "recall",
+              "options": [
+                "pmf",
+                "rvs",
+                "ppf"
+              ],
+              "correct": 1,
+              "answer": "rvs. For example binom(10, 0.5).rvs(1000) draws 1,000 samples."
+            }
+          ]
+        },
+        {
+          "id": "simulation-drill",
+          "title": "Simulate your own questions",
+          "note": "Turn each question into a random process, repeat it, count.",
+          "do": "Answer three questions by simulation with 10,000 runs each, for example: how often do 5 random people include two with the same birth month? Check one answer with a formula or with scipy.stats.",
+          "takeaways": [
+            "Write the random process as code first, repeat it 10,000 times, then count.",
+            "Check a simulation against a formula for a simple case before you trust it on a hard one."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 75,
+          "resources": [
+            "scipy-stats"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Chance camp",
+        "show": [
+          "Simulate a probability in Python and compare it with the exact value from scipy.stats.",
+          "Say in one sentence why seven heads in ten flips is weak evidence of a biased coin.",
+          "State what the central limit theorem says about sample means."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "uncertainty",
+      "title": "Samples and uncertainty",
+      "tier": "silver",
+      "summary": "Every number from a sample has a margin. Measure it with standard errors and bootstrap intervals, and read it correctly.",
+      "waypoints": [
+        {
+          "id": "sampling-dist",
+          "title": "Sampling distributions and standard error",
+          "note": "An estimate changes from sample to sample. The standard error tells you by how much.",
+          "predict": "You draw 100 different samples of 25 people and compute the mean of each. Will the 100 means be identical?",
+          "do": "Open the central limit theorem demo and change the sample size. In Python draw 1,000 samples of n = 10, 40 and 160 from a skewed population, compute each mean, and plot the three histograms of means. Compute the standard deviation of each set of means.",
+          "takeaways": [
+            "A sampling distribution is the distribution of a statistic, such as the mean, over many samples.",
+            "The standard error is the standard deviation of that sampling distribution. It measures how much an estimate varies.",
+            "Bigger samples have smaller standard errors: the standard error of a mean shrinks with the square root of n.",
+            "Standard error describes an estimate. Standard deviation describes the data."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-est",
+            "seeing-dist"
+          ],
+          "checks": [
+            {
+              "q": "You quadruple the sample size. By what factor does the standard error of the mean shrink?",
+              "kind": "apply",
+              "options": [
+                "2",
+                "4",
+                "16"
+              ],
+              "correct": 0,
+              "answer": "By a factor of 2, the square root of 4."
+            }
+          ]
+        },
+        {
+          "id": "bootstrap-ci",
+          "title": "Confidence intervals by bootstrap",
+          "note": "Resample your own data many times to see how much an estimate varies, then read an interval off the results.",
+          "predict": "If you resample your data with replacement, will every resample be identical to the original?",
+          "do": "Pick a numeric column. Resample it with replacement 1,000 times, compute the mean each time, and take the 2.5th and 97.5th percentiles as a 95 percent interval. Compare with scipy.stats.bootstrap.",
+          "takeaways": [
+            "Bootstrapping resamples your own data with replacement to see how a statistic would vary.",
+            "The 2.5th and 97.5th percentiles of the bootstrap statistics give a 95 percent confidence interval.",
+            "scipy.stats.bootstrap computes a confidence interval from one sample.",
+            "The bootstrap shows sampling variation. It does not repair a biased or tiny sample."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-est",
+            "scipy-bootstrap"
+          ]
+        },
+        {
+          "id": "ci-meaning",
+          "title": "What a confidence interval says",
+          "note": "A 95 percent interval is a property of the method, not a 95 percent chance for one interval.",
+          "predict": "A 95 percent interval for a mean is [2.1, 3.4]. Is there a 95 percent chance that the true mean lies inside?",
+          "do": "Run the confidence interval demo repeatedly at 95 percent and count how many intervals miss the true value. Then write two sentences about an interval you computed: one correct reading and one wrong one.",
+          "takeaways": [
+            "The confidence level is the share of intervals, built by the same method over repeated samples, that contain the true value.",
+            "One computed interval either contains the true value or does not. The 95 percent describes the method.",
+            "Intervals get wider with smaller samples, more variable data and higher confidence levels."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "seeing-freq"
+          ],
+          "checks": [
+            {
+              "q": "In 100 simulated 95 percent intervals, about how many miss the true value?",
+              "kind": "predict",
+              "answer": "About 5. That is what 95 percent confidence means for the method."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Uncertainty camp",
+        "show": [
+          "Show a bootstrap interval for a mean from your data and the code that made it.",
+          "Explain the difference between standard deviation and standard error.",
+          "Say in two sentences what a 95 percent interval does and does not mean."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Put error bars on your numbers",
+        "brief": "Every mean in your report gets an interval.",
+        "minutes": 60,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Add a 95 percent bootstrap interval to every mean in your dataset description."
+          },
+          {
+            "level": "changed",
+            "task": "Compare two groups with both intervals on one plot and say what the overlap does and does not show."
+          }
+        ]
+      }
+    },
+    {
+      "id": "testing",
+      "title": "Testing claims",
+      "tier": "silver",
+      "summary": "Test a difference by shuffling, check it with a formula, and learn what a p value cannot tell you.",
+      "waypoints": [
+        {
+          "id": "permutation",
+          "title": "A test by shuffling",
+          "note": "If the group labels did not matter, shuffling them should give similar differences. How often it does is the p value.",
+          "predict": "If group labels do not matter, what happens to the difference in means when you shuffle them?",
+          "do": "Take two groups from your data. Compute the difference in means, then shuffle the group labels 10,000 times and compute the difference each time. The share of shuffles at least as large as your observed difference is the p value. Check it with scipy.stats.permutation_test.",
+          "takeaways": [
+            "A hypothesis test asks: if there were no real effect, how often would chance give a result at least this extreme?",
+            "A permutation test builds that chance model by shuffling the group labels.",
+            "The p value is the share of shuffled results at least as extreme as the observed one.",
+            "The method works for means, medians and other statistics, also those without a formula."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-test",
+            "perm-visual",
+            "scipy-permtest"
+          ],
+          "checks": [
+            {
+              "q": "In 10,000 shuffles, 240 give a difference at least as large as the observed one. What is the p value?",
+              "kind": "apply",
+              "answer": "0.024, which is 240 / 10,000."
+            }
+          ]
+        },
+        {
+          "id": "ttest",
+          "title": "The t test, checked against your shuffle",
+          "note": "The t test is a shortcut for the same question. Check that it agrees with your permutation test.",
+          "do": "Run scipy.stats.ttest_ind on the same two groups and compare its p value with your permutation result. Then run it again with the permutations argument set to 10,000 and compare again.",
+          "takeaways": [
+            "ttest_ind compares the means of two independent samples and returns a statistic and a p value.",
+            "Its answer should be close to the permutation test for well-behaved data. If not, ask why before you pick one.",
+            "The permutations argument makes ttest_ind compute the p value by shuffling instead of by formula."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "scipy-ttest"
+          ]
+        },
+        {
+          "id": "p-traps",
+          "title": "What a p value is not",
+          "note": "The p value is one of the most misread numbers in data work. Learn the six statements the ASA made about it.",
+          "predict": "A study reports p = 0.03. Is there a 97 percent chance that the effect is real?",
+          "do": "Read the six principles in the ASA release and write each in one sentence of your own. Find the one that an analysis you know breaks. Then read the base rate fallacy chapter of Statistics Done Wrong.",
+          "takeaways": [
+            "A p value does not measure the probability that the hypothesis is true.",
+            "A p value does not measure the size or the importance of an effect.",
+            "Conclusions should not rest only on whether p passes a threshold such as 0.05.",
+            "One group being significant and another not does not show that the two groups differ."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 35,
+          "resources": [
+            "asa",
+            "sdw-p",
+            "sdw-diff"
+          ],
+          "checks": [
+            {
+              "q": "Group A improves with p = 0.03, group B with p = 0.20. Can you say A improved more than B?",
+              "kind": "apply",
+              "answer": "No. The difference between a significant and a non-significant result is not itself significant. Test the difference between A and B directly."
+            }
+          ]
+        },
+        {
+          "id": "power",
+          "title": "Power and sample size",
+          "note": "Power is the chance that a test finds a real effect of a given size. Work out how much data you need before you collect it.",
+          "predict": "How many people per group do you need to detect a medium effect with 80 percent power? A few dozen or a few hundred?",
+          "do": "Use statsmodels' TTestIndPower to find the sample size per group needed to detect a medium effect (d = 0.5) with 80 percent power at alpha 0.05. Then repeat for d = 0.2 and compare the two numbers.",
+          "takeaways": [
+            "Power is the likelihood that a test distinguishes an effect of a given size from luck.",
+            "Underpowered studies miss real effects.",
+            "Small effects need much more data: for d = 0.2 you need roughly six times more than for d = 0.5.",
+            "Decide the sample size before you collect data, not after you see the result."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "sdw-power",
+            "statsmodels-power"
+          ],
+          "checks": [
+            {
+              "q": "Roughly how many per group for d = 0.5, 80 percent power, alpha 0.05, and about how many for d = 0.2?",
+              "kind": "apply",
+              "answer": "About 64 per group for d = 0.5 and about 400 per group for d = 0.2."
+            }
+          ]
+        },
+        {
+          "id": "pseudoreplication",
+          "title": "Pseudoreplication",
+          "note": "Many measurements from one unit are not many independent samples.",
+          "do": "Think of a dataset where you have several rows per person, site or machine. Write down how you would count the independent units, and what a test on all rows would claim.",
+          "takeaways": [
+            "Repeated measurements from one unit (one person, one site) are not independent samples.",
+            "Counting them as independent inflates the evidence and makes p values too small."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 20,
+          "optional": true,
+          "resources": [
+            "sdw-pseudo"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Testing camp",
+        "show": [
+          "Run a permutation test and a t test on the same data and compare the two p values.",
+          "Say in two sentences what a p value is and one thing it is not.",
+          "Compute the sample size you would need for a given effect size and power."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "relationships",
+      "title": "Relationships and models",
+      "tier": "gold",
+      "summary": "Correlation, least squares and multiple regression: relate variables, and know when a model misleads.",
+      "waypoints": [
+        {
+          "id": "correlation",
+          "title": "Correlation and causation",
+          "note": "Plot first. Correlation summarizes a straight-line relationship and nothing else.",
+          "predict": "Ice cream sales and drownings both rise in summer. Does one cause the other?",
+          "do": "Make a scatter plot of two columns and compute Pearson and Spearman correlation. Then open the Anscombe's quartet demo and compare the four datasets: same numbers, different pictures.",
+          "takeaways": [
+            "Plot the scatter first: a correlation number hides curves, clusters and outliers.",
+            "Pearson correlation measures a linear relationship from -1 to +1. Rank correlation is less sensitive to outliers.",
+            "Anscombe's quartet: four datasets with almost the same summary numbers and very different plots.",
+            "Correlation alone does not show causation. Look for confounders, or run an experiment."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "ts-rel",
+            "seeing-reg"
+          ],
+          "checks": [
+            {
+              "q": "What is a confounder in the ice cream and drowning example?",
+              "kind": "explain",
+              "answer": "Warm weather. It raises ice cream sales and also raises swimming, which raises drownings."
+            }
+          ]
+        },
+        {
+          "id": "least-squares",
+          "title": "Fit a line by least squares",
+          "note": "Least squares picks the line with the smallest total squared error.",
+          "do": "Fit a line to two columns, plot it over the data, and compute the residuals and R squared. In the regression demo drag one point far away and watch how the slope moves.",
+          "takeaways": [
+            "Least squares chooses the line that minimizes the sum of squared errors between observations and predictions.",
+            "R squared, the coefficient of determination, is the share of the variance in y that the model explains.",
+            "A single outlier can pull the slope a long way. Look at the residuals.",
+            "Show the fit with its uncertainty, not as a bare line."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "ts-ols",
+            "seeing-reg"
+          ],
+          "checks": [
+            {
+              "q": "What does an R squared of 0.3 mean?",
+              "kind": "explain",
+              "answer": "The model explains about 30 percent of the variance in the outcome. The rest is left unexplained."
+            }
+          ]
+        },
+        {
+          "id": "multiple-regression",
+          "title": "Multiple regression and control variables",
+          "note": "Add a second variable and the first one's effect can change. Learn to read that.",
+          "predict": "You add a second variable to a regression. Does the coefficient of the first variable stay the same?",
+          "do": "Use statsmodels' OLS with the formula interface to predict an outcome from one variable, then from the same variable plus a second. Compare the coefficient of the first variable in both models and write down what changed and why.",
+          "takeaways": [
+            "Multiple regression estimates the effect of each variable while holding the others fixed.",
+            "Adding a control variable can shrink, grow or even flip another coefficient.",
+            "The statsmodels OLS summary shows coefficients, standard errors, p values and R squared.",
+            "Logistic regression models a yes or no outcome."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 65,
+          "resources": [
+            "ts-multi",
+            "statsmodels-ols"
+          ]
+        },
+        {
+          "id": "regression-to-mean",
+          "title": "Regression to the mean",
+          "note": "Extreme results tend to be followed by less extreme ones, just by chance.",
+          "do": "Simulate 1,000 people who each take two noisy tests of the same true ability. Select the top 10 percent on test 1 and compare their average on test 2.",
+          "takeaways": [
+            "Extreme measurements are followed on average by less extreme ones, even when nothing changed.",
+            "Do not credit a treatment for an improvement that regression to the mean explains."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 40,
+          "optional": true,
+          "resources": [
+            "sdw-reg"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Model camp",
+        "show": [
+          "Show a scatter plot, a fitted line and a residual plot for two of your variables.",
+          "Show one coefficient that changes when you add a control variable and explain why.",
+          "Explain why a correlation alone does not show that one variable causes the other."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Model one relationship",
+        "brief": "The modelling section of your report: one relationship, fitted, plotted and read carefully.",
+        "minutes": 90,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Fit and plot one regression on your dataset, with a 95 percent interval for the slope."
+          },
+          {
+            "level": "changed",
+            "task": "Add one control variable and report how the coefficient changed."
+          }
+        ]
+      }
+    },
+    {
+      "id": "decide",
+      "title": "Decide and report",
+      "tier": "gold",
+      "summary": "Update beliefs with Bayes' rule, analyse a complete A/B test and write the report a colleague can challenge.",
+      "waypoints": [
+        {
+          "id": "bayes-update",
+          "title": "Update beliefs with Bayes' rule",
+          "note": "Bayes' rule combines a prior with evidence. For rare conditions the prior matters more than the test accuracy.",
+          "predict": "A test for a rare disease is 99 percent accurate and you test positive. Is it 99 percent likely that you have the disease?",
+          "do": "In the demo set a disease that affects 1 in 1,000 people and a test that is 99 percent accurate for both groups, and read the posterior. Then redo it in Python as a table of 100,000 people.",
+          "takeaways": [
+            "Bayes' rule updates a prior probability with evidence to give a posterior probability.",
+            "The prior matters: for a rare condition most positives are false positives, even with an accurate test.",
+            "Counting in a table of 100,000 people is an easy way to do the arithmetic.",
+            "Think Bayes covers the same ideas in Python for free. The paid book is an alternative explanation."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 50,
+          "resources": [
+            "seeing-bayes",
+            "think-bayes",
+            "bayes-fun-way"
+          ],
+          "checks": [
+            {
+              "q": "1 in 1,000 people have a disease. The test is 99 percent accurate both ways. You test positive. About how likely is it that you have it?",
+              "kind": "apply",
+              "answer": "About 9 percent. Of 100,000 people, 100 are ill and 99 test positive; of 99,900 healthy people about 999 test positive. 99 / (99 + 999) is about 9 percent."
+            }
+          ]
+        },
+        {
+          "id": "ab-test",
+          "title": "Analyse an A/B test end to end",
+          "note": "Combine the stages: an estimate with an interval, a test, an effect size and a power check.",
+          "do": "Take or simulate conversion data for versions A and B. Estimate each rate with a bootstrap interval, test the difference with a permutation test, compute the effect size, and check the power you had. Write a three-line conclusion with a number and an interval.",
+          "takeaways": [
+            "Report an estimate with an interval, then a test, then whether the size matters in practice.",
+            "Decide the sample size and the metric before you look at the results.",
+            "Do not stop a test as soon as p dips below 0.05. Stopping rules change the error rate."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 75,
+          "resources": [
+            "scipy-permtest",
+            "scipy-bootstrap",
+            "sdw-reg"
+          ]
+        },
+        {
+          "id": "report",
+          "title": "Write the report",
+          "note": "A result nobody can read changes nothing. Write the one-page report your colleague can challenge.",
+          "do": "Write a one-page report on your dataset: the question, the data and its cleaning, summaries, estimates with intervals, tests with effect sizes, a model if needed, the limits, and the decision. Give it to a colleague and ask which sentence they would challenge.",
+          "takeaways": [
+            "Lead with the question and the answer, then show the evidence.",
+            "Give every number a unit and an interval or a sample size.",
+            "State the limits: the sample, missing data, and what you did not test.",
+            "Check the report against the common mistakes in Statistics Done Wrong."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 70,
+          "resources": [
+            "sdw-home"
+          ]
+        },
+        {
+          "id": "go-deeper",
+          "title": "Pick a course to go deeper",
+          "note": "Choose one free course or book for the next level and finish a chapter before you open another.",
+          "do": "Choose one of MIT 18.05, Penn State STAT 200 or OpenIntro Statistics. Do the first problem set or the exercises of the first two chapters, and note what you now see differently about your report.",
+          "takeaways": [
+            "Pick one resource and finish a chapter before you open another.",
+            "Go through the exercises, not only the text: the exercises are where it sticks."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 40,
+          "optional": true,
+          "resources": [
+            "mit-1805",
+            "psu-200",
+            "openintro"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Summit camp",
+        "show": [
+          "Hand over a one-page report with a question, estimates with intervals, a test with an effect size and a stated limit.",
+          "Show the code that reproduces every number in the report.",
+          "Explain a base-rate example with a rare condition in three sentences."
+        ],
+        "pass": 1
+      },
+      "project": {
+        "title": "The dataset report",
+        "brief": "One dataset, analysed end to end, written up for a reader who will question it.",
+        "minutes": 240,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Write the report following the structure in the last step, using the dataset from stage one."
+          },
+          {
+            "level": "changed",
+            "task": "Add a power calculation and a permutation test to the report and state what each changes."
+          },
+          {
+            "level": "own",
+            "task": "Pick a new dataset and write the whole report without a template."
+          }
+        ],
+        "choices": [
+          "An A/B test of two page versions",
+          "A survey with two groups of respondents",
+          "Sensor readings before and after a change"
+        ],
+        "criteria": [
+          "Every number has an interval or a sample size",
+          "The report states its limits",
+          "A colleague could rerun your code and get the same numbers"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "ts-eda",
+      "title": "Think Stats 3e, chapter 1: Exploratory Data Analysis",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap01.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 60,
+      "why": "Reads a real survey into pandas, validates it, transforms it and computes summary statistics. Python code throughout.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "pandas-describe",
+      "title": "pandas: DataFrame.describe",
+      "by": "pandas team",
+      "url": "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.describe.html",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Shows what describe() reports: count, mean, std, min, quartiles and max, and how to change the percentiles.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "pandas-10min",
+      "title": "10 minutes to pandas",
+      "by": "pandas team",
+      "url": "https://pandas.pydata.org/docs/user_guide/10min.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "A quick tour of DataFrames, selecting, grouping and plotting, for anyone who needs to refresh pandas first.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-dist",
+      "title": "Think Stats 3e, chapter 2: Distributions",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap02.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 60,
+      "why": "Frequency tables, histograms, outliers and effect size, with the first-babies comparison worked in code.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seaborn-dist",
+      "title": "seaborn: Visualizing distributions of data",
+      "by": "seaborn team",
+      "url": "https://seaborn.pydata.org/tutorial/distributions.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Covers histplot, kdeplot and ecdfplot with the options that change how a distribution looks.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-pmf",
+      "title": "Think Stats 3e, chapter 3: Probability Mass Functions",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap03.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 45,
+      "why": "Defines the PMF, summarizes it, and works through the class size paradox.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-cdf",
+      "title": "Think Stats 3e, chapter 4: Cumulative Distribution Functions",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap04.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 45,
+      "why": "Percentiles, percentile ranks, CDFs and how to compare two groups by their CDFs.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seeing-prob",
+      "title": "Seeing Theory: Basic Probability",
+      "by": "Brown University",
+      "url": "https://seeing-theory.brown.edu/basic-probability/index.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "A virtual coin to flip 100 times that shows the share of heads settling toward the true probability. The site is marked as archived but still works.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seeing-dist",
+      "title": "Seeing Theory: Probability Distributions",
+      "by": "Brown University",
+      "url": "https://seeing-theory.brown.edu/probability-distributions/index.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 25,
+      "why": "Lets you view the PMF and CDF of Bernoulli, binomial and other distributions, and has a central limit theorem demo. Archived but online.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "scipy-stats",
+      "title": "SciPy tutorial: Statistics (scipy.stats)",
+      "by": "SciPy",
+      "url": "https://docs.scipy.org/doc/scipy/tutorial/stats.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 30,
+      "why": "Explains probability distributions, the common methods, random number generation and the tests in scipy.stats.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "scipy-binom",
+      "title": "scipy.stats.binom",
+      "by": "SciPy",
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.binom.html",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Reference for the binomial distribution with pmf, cdf, rvs (random samples) and ppf (percentile).",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-est",
+      "title": "Think Stats 3e, chapter 8: Estimation",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap08.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 60,
+      "why": "Sampling distributions, standard error and confidence intervals computed by resampling with penguin weights.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "scipy-bootstrap",
+      "title": "scipy.stats.bootstrap",
+      "by": "SciPy",
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.bootstrap.html",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Computes a two-sided bootstrap confidence interval for a statistic from one sample.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seeing-freq",
+      "title": "Seeing Theory: Frequentist Inference",
+      "by": "Brown University",
+      "url": "https://seeing-theory.brown.edu/frequentist-inference/index.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Point estimates and confidence intervals, with the confidence level defined as a property of the procedure. Archived but online.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-test",
+      "title": "Think Stats 3e, chapter 9: Hypothesis Testing",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap09.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 60,
+      "why": "Tests by shuffling: a difference in means, other statistics, a correlation and proportions, with the p value as a share of shuffles.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "perm-visual",
+      "title": "Permutation Test: Visual Explanation",
+      "by": "Jared Wilber",
+      "url": "https://www.jwilber.me/permutationtest/",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "An animated walk through shuffling labels and building the distribution of the test statistic.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "scipy-permtest",
+      "title": "scipy.stats.permutation_test",
+      "by": "SciPy",
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Runs a permutation test for a statistic you define, so the shuffle you wrote by hand can be checked.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "scipy-ttest",
+      "title": "scipy.stats.ttest_ind",
+      "by": "SciPy",
+      "url": "https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ttest_ind.html",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "The t test for two independent samples. Its permutations argument computes the p value by shuffling.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "asa",
+      "title": "ASA statement on statistical significance and p-values (press release)",
+      "by": "American Statistical Association",
+      "url": "https://www.amstat.org/asa/files/pdfs/p-valuestatement.pdf",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "The ASA release lists six principles for using p values, such as that a p value does not measure the probability that a hypothesis is true.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-p",
+      "title": "Statistics Done Wrong: The p value and the base rate fallacy",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/p-value.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Shows why a small p value does not make a finding 95 percent likely to be true, using the base rate fallacy.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-diff",
+      "title": "Statistics Done Wrong: When differences in significance aren't significant differences",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/significant-differences.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Explains why one group being significant and another not does not show that the two groups differ.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-power",
+      "title": "Statistics Done Wrong: Statistical power and underpowered statistics",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/power.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Defines power as the likelihood of distinguishing an effect of a given size from luck, and why small studies miss real effects.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "statsmodels-power",
+      "title": "statsmodels: Statistics (stats)",
+      "by": "statsmodels team",
+      "url": "https://www.statsmodels.org/stable/stats.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Lists the power classes, including TTestIndPower, for finding the sample size needed for a given effect.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-pseudo",
+      "title": "Statistics Done Wrong: Pseudoreplication",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/pseudoreplication.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 10,
+      "why": "Shows how treating repeated measurements from one unit as independent inflates the evidence.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-rel",
+      "title": "Think Stats 3e, chapter 7: Relationships between variables",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap07.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Scatter plots, correlation, rank correlation and a section on correlation and causation.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seeing-reg",
+      "title": "Seeing Theory: Regression Analysis",
+      "by": "Brown University",
+      "url": "https://seeing-theory.brown.edu/regression-analysis/index.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 25,
+      "why": "Drag points to see how least squares reacts, with Anscombe's quartet and correlation. Archived but online.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-ols",
+      "title": "Think Stats 3e, chapter 10: Least Squares",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap10.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Fitting a line, the coefficient of determination, estimation and visualizing the uncertainty of a fit.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "ts-multi",
+      "title": "Think Stats 3e, chapter 11: Multiple Regression",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkStats/chap11.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Multiple regression with StatsModels, control variables, nonlinear relationships and logistic regression.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "statsmodels-ols",
+      "title": "statsmodels: Linear Regression",
+      "by": "statsmodels team",
+      "url": "https://www.statsmodels.org/stable/regression.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 20,
+      "why": "Documents OLS and how to read its summary of coefficients, standard errors and R squared.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-reg",
+      "title": "Statistics Done Wrong: Stopping rules and regression to the mean",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/regression.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 15,
+      "why": "Explains why stopping a test when p dips below 0.05 distorts results, and why extreme values drift back toward the mean.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "seeing-bayes",
+      "title": "Seeing Theory: Bayesian Inference",
+      "by": "Brown University",
+      "url": "https://seeing-theory.brown.edu/bayesian-inference/index.html",
+      "type": "interactive",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 25,
+      "why": "A rare-disease test where you set the prior and the accuracy and see the posterior. Archived but online.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "think-bayes",
+      "title": "Think Bayes, 2nd edition",
+      "by": "Allen B. Downey",
+      "url": "https://allendowney.github.io/ThinkBayes2/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "The free Python book on Bayesian statistics. Use it for the same ideas with code.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "bayes-fun-way",
+      "title": "Bayesian Statistics the Fun Way",
+      "by": "Will Kurt",
+      "url": "https://nostarch.com/learnbayes",
+      "type": "book",
+      "cost": "paid",
+      "price": {
+        "amount": 39.99,
+        "currency": "USD",
+        "per": "once",
+        "seenOn": "2026-11-13"
+      },
+      "lang": "en",
+      "level": "gold",
+      "why": "A paid book on Bayes' theorem, priors and posteriors with worked examples. Think Bayes covers the same ground for free.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sdw-home",
+      "title": "Statistics Done Wrong: the free book",
+      "by": "Alex Reinhart",
+      "url": "https://www.statisticsdonewrong.com/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "A free book on common statistical mistakes. Its chapters on p values, power, pseudoreplication and regression match the pitfalls in this roadmap.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "mit-1805",
+      "title": "MIT OpenCourseWare 18.05: Introduction to Probability and Statistics",
+      "by": "MIT",
+      "url": "https://ocw.mit.edu/courses/18-05-introduction-to-probability-and-statistics-spring-2022/",
+      "type": "course",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "why": "A full university course on probability and statistics with free materials. A route to go deeper after this roadmap.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "psu-200",
+      "title": "Penn State STAT 200: Elementary Statistics",
+      "by": "Penn State",
+      "url": "https://online.stat.psu.edu/stat200/",
+      "type": "course",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "why": "Free online lesson notes for an introductory statistics course. An alternative way to go deeper.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "openintro",
+      "title": "OpenIntro Statistics",
+      "by": "OpenIntro",
+      "url": "https://www.openintro.org/book/os/",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "why": "A free textbook of introductory statistics. A third way to go deeper, with exercises.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    }
+  ]
+}

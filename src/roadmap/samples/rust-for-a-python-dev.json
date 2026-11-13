@@ -1,0 +1,811 @@
+{
+  "schema": "zero-to/1",
+  "id": "rust-for-a-python-dev",
+  "title": "Zero to Rust, coming from Python",
+  "topic": "Rust for a Python dev",
+  "summary": "Five stages from a first compiled program to a tested command-line tool, built around the one idea Python does not have: ownership.",
+  "lang": "en",
+  "checkedOn": "2026-11-13",
+  "freshness": "medium",
+  "brief": {
+    "audience": "self",
+    "goal": "Write a small command-line tool in Rust without following a guide.",
+    "startLevel": "adjacent",
+    "targetTier": "gold",
+    "hoursPerWeek": 5,
+    "startDate": "2026-11-16",
+    "deadline": "2027-02-14",
+    "style": "build",
+    "budget": { "max": 0, "currency": "EUR" },
+    "resourceLangs": ["en", "de"],
+    "projects": "capstone",
+    "gating": "guided",
+    "theme": "classic-topo"
+  },
+  "capstone": {
+    "title": "A command-line tool of your own",
+    "brief": "One tool that grows at every camp: first built along a guide, then changed, then replaced by one you chose."
+  },
+  "map": { "terrain": "massif", "trail": "switchback", "surfaces": "auto" },
+  "stages": [
+    {
+      "id": "first-binary",
+      "title": "First binary",
+      "tier": "bronze",
+      "summary": "Install the toolchain, compile, and read your first compiler errors.",
+      "waypoints": [
+        {
+          "id": "toolchain",
+          "title": "Install and run",
+          "note": "After this step you have a compiler and cargo, and you have seen a program build and run.",
+          "do": "Install with rustup, run cargo new hello, then cargo run. Read the three lines cargo prints.",
+          "takeaways": [
+            "rustup installs the compiler and cargo together; rustc compiles one file, cargo builds whole projects.",
+            "cargo new makes a project, cargo run builds and runs it, cargo check only checks that it compiles."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": ["rust-install"]
+        },
+        {
+          "id": "guessing-game",
+          "title": "One whole program",
+          "note": "A complete program before any theory: input, a loop, match, one external crate.",
+          "predict": "Python lets you rebind any name. What will the Rust compiler say to: let x = 5; x = 6;",
+          "do": "Type the guessing game yourself, no pasting. Then break it on purpose: remove one mut and read the error.",
+          "takeaways": [
+            "Variables are immutable by default; add mut to allow reassignment.",
+            "match compares a value against patterns and must cover every case.",
+            "External crates (the guide uses rand) are listed in Cargo.toml and cargo downloads them.",
+            "A compiler error names the line, says what is wrong and often suggests a fix."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": ["book-guessing-game"],
+          "checks": [
+            {
+              "q": "let x = 5; x = 6; What happens?",
+              "kind": "predict",
+              "options": ["It runs and x is 6", "It does not compile", "It compiles and fails at run time"],
+              "correct": 1,
+              "answer": "Variables are immutable unless declared with let mut. The compiler rejects the second assignment."
+            }
+          ]
+        },
+        {
+          "id": "first-drills",
+          "title": "Fix twenty small programs",
+          "note": "Short broken programs to repair. This is where reading compiler errors becomes routine.",
+          "do": "Work through the first Rustlings exercise groups until every one compiles.",
+          "takeaways": [
+            "Read the compiler error from the top before changing code; it usually points at the exact fix.",
+            "Fix Rustlings exercises one at a time until each one compiles and passes."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 150,
+          "resources": ["rustlings"]
+        }
+      ],
+      "checkpoint": {
+        "title": "Base camp",
+        "show": [
+          "Show a project you created with cargo that builds without warnings.",
+          "Show one compiler error you caused on purpose and explain each line of it."
+        ],
+        "pass": 1
+      },
+      "project": {
+        "title": "Build the guided tool",
+        "brief": "Follow the guide once, typing everything.",
+        "minutes": 90,
+        "capstone": true,
+        "resources": ["cli-book"],
+        "rungs": [{ "level": "guided", "task": "Build grrs along the tutorial and run it on a file of your own." }]
+      }
+    },
+    {
+      "id": "ownership",
+      "title": "Ownership and borrowing",
+      "tier": "silver",
+      "summary": "The one idea Python does not have. Everything later depends on it.",
+      "requires": ["first-binary"],
+      "waypoints": [
+        {
+          "id": "moves",
+          "title": "Who owns the value",
+          "note": "In Python two names can share one object. Here a value has one owner, and assignment can move it.",
+          "predict": "let a = String::from(\"hi\"); let b = a; println!(\"{a}\"); Does this compile?",
+          "do": "Write the three lines, read the error, then make it compile in two different ways.",
+          "takeaways": [
+            "Each value has exactly one owner, and the value is dropped when its owner goes out of scope.",
+            "Assigning a String to another variable moves it; the old variable can no longer be used.",
+            "Integers and other simple types are copied on assignment, so both variables stay valid.",
+            "clone makes a real copy when you need both; it costs time and memory."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 100,
+          "resources": ["book-ownership", "book-ownership-de"],
+          "checks": [
+            {
+              "q": "The same three lines with let a = 5 compile. Why?",
+              "kind": "explain",
+              "answer": "An integer is copied on assignment, so a stays valid. A String is moved, so a is no longer usable.",
+              "onMiss": "borrowing-examples"
+            }
+          ]
+        },
+        {
+          "id": "borrowing",
+          "title": "Lend, do not give away",
+          "note": "References let a function use a value without taking it. The compiler allows one writer or many readers, never both.",
+          "predict": "A function takes &String and tries to push to it. Does it compile, and what would change that?",
+          "do": "Write one function that reads a String through a reference and one that changes it through a mutable reference. Call each twice from main.",
+          "takeaways": [
+            "&T lends read-only access, &mut T lends write access, and the owner keeps the value.",
+            "At one time you may have many shared references or one mutable reference, never both.",
+            "A reference must not outlive the value it points to; the compiler checks this."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": ["book-references"],
+          "checks": [
+            {
+              "q": "Why can you not hold two mutable references to the same String at once?",
+              "kind": "explain",
+              "answer": "Two writers could change the value under each other. The compiler refuses it at build time, so no data race can happen.",
+              "onMiss": "borrowing-examples"
+            }
+          ]
+        },
+        {
+          "id": "borrowing-examples",
+          "title": "Borrowing, by example",
+          "note": "A side trail: short examples of lending a value instead of giving it away.",
+          "do": "Run each example, change one line so it fails, and predict the error before you compile.",
+          "takeaways": [
+            "Pass &value to lend and &mut value to lend for changes; the function does not take ownership.",
+            "Borrowing does not move a value: the owner can use it again once the borrow is over."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 50,
+          "optional": true,
+          "resources": ["rbe-borrowing"]
+        },
+        {
+          "id": "ownership-drills",
+          "title": "Move and borrow, twenty times",
+          "note": "Repetition is how ownership stops feeling like a rule and starts feeling like a habit.",
+          "do": "Continue Rustlings with the exercises that deal with moving and borrowing values. Fix each one without looking up the answer first.",
+          "requires": ["borrowing"],
+          "takeaways": [
+            "On a moved-value error, either borrow with & or clone, depending on whether the caller still needs the value.",
+            "A function that only reads its argument should take a reference, so the caller keeps ownership."
+          ],
+          "minutes": 180,
+          "practiceMinutes": 180,
+          "resources": ["rustlings"]
+        }
+      ],
+      "checkpoint": {
+        "title": "Ownership ridge",
+        "show": [
+          "Show a function that borrows a String and one that takes ownership, and say which one the caller can still use afterwards.",
+          "Explain a moved-value error to someone who only knows Python."
+        ]
+      },
+      "project": {
+        "title": "Change the tool, then build your own",
+        "brief": "Same tool, new behaviour, then a tool you pick.",
+        "minutes": 240,
+        "capstone": true,
+        "rungs": [
+          { "level": "changed", "task": "Add an option that prints the line number in front of every match." },
+          { "level": "own", "task": "Build a different tool from the menu, without a guide." }
+        ],
+        "choices": ["Word counter for text files", "Sum one column of a CSV file", "Batch file renamer"],
+        "criteria": ["Builds without warnings", "Handles a missing file without a panic", "You can explain every borrow in it"]
+      }
+    },
+    {
+      "id": "shaping-data",
+      "title": "Structs, enums and errors",
+      "tier": "silver",
+      "summary": "Model your data with types, and handle failure with values instead of exceptions.",
+      "waypoints": [
+        {
+          "id": "structs",
+          "title": "Your own types",
+          "note": "A struct is a Python class without inheritance. Methods live in a separate impl block.",
+          "predict": "A Python class bundles data and methods in one block. Where do you think a Rust struct keeps its methods?",
+          "do": "Define a struct for one line of your tool's output, write a constructor function and one method, and print an instance.",
+          "takeaways": [
+            "A struct groups named fields; its methods go in a separate impl block, not inside the struct.",
+            "Field init shorthand lets you write name instead of name: name when the variable has the same name.",
+            "Struct update syntax (..other) fills the remaining fields from another instance.",
+            "mut applies to the whole instance, not to single fields."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 80,
+          "resources": ["book-structs"]
+        },
+        {
+          "id": "enums",
+          "title": "Enums and match",
+          "note": "An enum can carry data in each variant. Option replaces None, and match makes you handle every case.",
+          "predict": "Python returns None when nothing is found. What would a function that may find nothing return in Rust?",
+          "do": "Write an enum with three variants that carry different data, and a match that handles each. Then delete one arm and read the error.",
+          "takeaways": [
+            "An enum value is exactly one variant, and each variant can carry its own data.",
+            "Option<T> replaces null: a value is Some(x) or None, and you must handle both.",
+            "match must cover every variant; use _ as a catch-all only when you mean it."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 80,
+          "resources": ["book-enums"],
+          "checks": [
+            {
+              "q": "What does the compiler do when a match leaves out one variant of an enum?",
+              "kind": "recall",
+              "options": ["Runs the other arms and ignores it", "Refuses to compile", "Panics at run time"],
+              "correct": 1,
+              "answer": "A match must cover every variant. A missing one is a compile error, which is the point of enums."
+            }
+          ]
+        },
+        {
+          "id": "errors",
+          "title": "Result instead of exceptions",
+          "note": "Failure is a value you return. The question mark passes it up, and unwrap is only for code that cannot fail.",
+          "predict": "Python raises an exception when a file is missing. How could a function report that without raising?",
+          "do": "Make your tool return a Result when the file is missing, pass it up with the question mark, and print a readable message in main.",
+          "takeaways": [
+            "Result<T, E> is Ok(value) or Err(error); the caller decides what to do with each.",
+            "The ? operator returns the error early, so it only works in a function that returns a compatible Result.",
+            "unwrap and expect panic on Err; keep them for tests, examples and cases that cannot fail.",
+            "The anyhow crate adds context to errors, for example .with_context(...), for readable messages in a CLI."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 110,
+          "resources": ["book-result", "cli-errors"],
+          "checks": [
+            {
+              "q": "Name one place where unwrap is fine and one where it is not.",
+              "kind": "explain",
+              "answer": "Fine in a quick test or when a failure is truly impossible. Not in code that reads user input or files, because a failure would crash the program."
+            }
+          ]
+        },
+        {
+          "id": "error-drills",
+          "title": "Types and errors, in small tasks",
+          "note": "Three small exercises that each need a struct, an enum or a Result.",
+          "do": "Solve three exercises on the Rust track, choosing ones that use a struct, an enum and a Result. Read one community solution for each afterwards.",
+          "takeaways": [
+            "Start from the types: a struct for related fields, an enum for one-of-several cases, Result for what can fail.",
+            "Read other solutions after yours and compare how they used match, ? and iterators."
+          ],
+          "minutes": 180,
+          "practiceMinutes": 180,
+          "resources": ["exercism-rust"]
+        }
+      ],
+      "checkpoint": {
+        "title": "Types camp",
+        "show": [
+          "Show a function that returns a Result and a caller that handles both outcomes.",
+          "Show an enum with data in its variants and a match over it with no catch-all arm.",
+          "Explain in one sentence why Rust has no null."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Report errors properly",
+        "brief": "The tool from the last camp should never panic on bad input.",
+        "minutes": 120,
+        "capstone": true,
+        "rungs": [{ "level": "changed", "task": "Give your tool its own error type and an exit code that differs for a missing file and an unreadable one." }]
+      }
+    },
+    {
+      "id": "collections-traits",
+      "title": "Collections, traits and lifetimes",
+      "tier": "gold",
+      "summary": "Store many values, share behaviour between types, and read lifetime annotations without fear.",
+      "waypoints": [
+        {
+          "id": "collections",
+          "title": "Vectors and hash maps",
+          "note": "Vec is the list you know, HashMap the dict. Both own what they hold, so ownership comes along.",
+          "predict": "In Python you can append to a list while looping over it. What will the borrow checker say to that in Rust?",
+          "do": "Count word frequencies in a text file with a HashMap, then sort the result into a Vec and print the top five.",
+          "takeaways": [
+            "Vec<T> is a growable list. v[i] panics when i is out of range; v.get(i) returns an Option instead.",
+            "You cannot push to a Vec while holding a reference to one of its elements; the push may move the data.",
+            "HashMap<K, V> takes ownership of inserted keys and values that are not Copy.",
+            "map.entry(key).or_insert(0) is the usual way to update a count without overwriting it."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": ["book-vectors", "book-hashmaps"]
+        },
+        {
+          "id": "traits",
+          "title": "Traits: shared behaviour",
+          "note": "A trait is like an abstract base class or a protocol: a list of methods a type promises to have.",
+          "predict": "How does Python decide that an object can be used as an iterable? What do you expect Rust to ask for instead?",
+          "do": "Define a trait with one method, implement it for two of your own types, and write one function that accepts any type with that trait.",
+          "takeaways": [
+            "A trait lists method signatures; a type opts in with impl Trait for Type.",
+            "A function can take impl Trait or a generic T: Trait, so it works for any type that implements it.",
+            "Traits can have default methods that an implementing type may keep or override.",
+            "You may implement a trait for a type only if the trait or the type is defined in your own crate (the orphan rule)."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 110,
+          "resources": ["book-traits"],
+          "checks": [
+            {
+              "q": "What must a type do before it can be passed to a function that asks for T: MyTrait?",
+              "kind": "recall",
+              "answer": "It must implement MyTrait, in an impl MyTrait for Type block."
+            }
+          ]
+        },
+        {
+          "id": "lifetimes",
+          "title": "Lifetimes, read slowly",
+          "note": "Lifetime annotations do not change how long anything lives. They tell the compiler how references relate.",
+          "predict": "A function returns one of two string references. How does the compiler know the result does not outlive either input?",
+          "do": "Write the longest function from the chapter without looking, trigger the missing lifetime error, then fix it with an annotation.",
+          "takeaways": [
+            "A lifetime annotation like 'a does not extend a lifetime; it states how the lifetimes of references relate.",
+            "A function that returns a reference must tie it to an input, or the compiler cannot prove the result stays valid.",
+            "Most signatures need no annotations, because of the lifetime elision rules.",
+            "A struct that holds a reference needs a lifetime parameter so it cannot outlive what it borrows."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 100,
+          "resources": ["book-lifetimes"],
+          "checks": [
+            {
+              "q": "Does writing 'a on a reference make the value live longer?",
+              "kind": "explain",
+              "answer": "No. The annotation only describes how the lifetimes of references relate, so the compiler can check them."
+            }
+          ]
+        },
+        {
+          "id": "trait-drills",
+          "title": "Collections and traits, in small tasks",
+          "note": "Exercises where the type system does half the work once you pick the right types.",
+          "do": "Solve three exercises that need a Vec or a HashMap and one that needs you to implement a trait. Refactor one earlier solution to use what you learned.",
+          "takeaways": [
+            "Pick the collection by access pattern: Vec for order and index, HashMap for lookup by key.",
+            "When a function needs behaviour rather than a concrete type, ask for a trait bound."
+          ],
+          "minutes": 240,
+          "practiceMinutes": 240,
+          "resources": ["exercism-rust", "rustlings"]
+        }
+      ],
+      "checkpoint": {
+        "title": "Trait pass",
+        "show": [
+          "Show a function that works for two different types through a trait.",
+          "Show a struct that holds a reference, with its lifetime annotation, and say what it prevents.",
+          "Explain when you would pick a HashMap over a Vec."
+        ],
+        "pass": 0.66
+      }
+    },
+    {
+      "id": "finish-the-tool",
+      "title": "Finish the tool",
+      "tier": "gold",
+      "summary": "Split the code into modules, test it, use iterators, and ship a tool you chose yourself.",
+      "waypoints": [
+        {
+          "id": "modules",
+          "title": "Modules and crates",
+          "note": "Split a growing program into files and modules, and pull in a crate for argument parsing.",
+          "do": "Move your tool's logic out of main into a library part with at least two modules, keep main thin, and add one dependency to Cargo.toml.",
+          "takeaways": [
+            "A package holds crates; a crate is a tree of modules rooted at main.rs (binary) or lib.rs (library).",
+            "Items are private by default; mark them pub to use them from outside their module.",
+            "Dependencies go under [dependencies] in Cargo.toml, and cargo fetches them on the next build.",
+            "Keep main thin: parse arguments, call a library function, and handle the Result it returns."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 60,
+          "resources": ["book-modules", "cargo-guide"]
+        },
+        {
+          "id": "tests",
+          "title": "Tests you can trust",
+          "note": "Unit tests live next to the code, and cargo test runs them all. Test the failure paths too.",
+          "predict": "Where would you put the tests for a function in a Python project? Where do you expect Rust to put them?",
+          "do": "Write at least five tests for your tool: three for normal input and two for failures. Make one fail on purpose and read the output.",
+          "takeaways": [
+            "A test is a function marked #[test]; cargo test runs all of them and reports each as ok or FAILED.",
+            "assert_eq!(left, right) prints both values when they differ; assert! only reports the failed expression.",
+            "Unit tests live in a #[cfg(test)] module in the same file; integration tests live in a tests directory.",
+            "#[should_panic] checks that code panics on bad input; a test can also return a Result."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": ["book-tests", "cli-testing"],
+          "checks": [
+            {
+              "q": "Which macro compares two values in a test and shows both when they differ?",
+              "kind": "recall",
+              "options": ["assert!", "assert_eq!", "panic!"],
+              "correct": 1,
+              "answer": "assert_eq! prints the left and right value when they differ. assert! only prints the expression."
+            }
+          ]
+        },
+        {
+          "id": "iterators",
+          "title": "Iterators",
+          "note": "Iterator chains are Rust's list comprehensions: lazy, fast, and checked by the compiler.",
+          "predict": "Python's map and filter are lazy. What do you expect Rust to need before an iterator chain produces a value?",
+          "do": "Rewrite one loop in your tool as an iterator chain with map, filter and collect, and check that the output is unchanged.",
+          "takeaways": [
+            "Iterators are lazy: map and filter do nothing until a consuming method such as collect, sum or a for loop runs them.",
+            "iter() borrows the items, into_iter() takes ownership of them, iter_mut() borrows them mutably.",
+            "collect needs a target type, for example let v: Vec<_> = ... or collect::<Vec<_>>()."
+          ],
+          "minutes": 150,
+          "practiceMinutes": 110,
+          "resources": ["book-iterators"]
+        },
+        {
+          "id": "read-real-code",
+          "title": "Read someone else's Rust",
+          "note": "Reading a small, well-made crate shows how the pieces you learned fit together outside of exercises.",
+          "do": "Pick a small crate you use, read its main module and tests, and write down three things it does that you would have done differently.",
+          "takeaways": [
+            "Read the tests first: they show what the crate promises and how its functions are meant to be called.",
+            "Start at lib.rs or main.rs and follow one public function down to where it does its work."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 60,
+          "optional": true,
+          "resources": [],
+          "gap": "No source could be verified for this step. Search terms that should find one: \"small Rust crates to read for beginners\", \"Rust code reading guide\"."
+        }
+      ],
+      "checkpoint": {
+        "title": "Summit camp",
+        "show": [
+          "Run cargo test on your own tool and show that every test passes.",
+          "Show your tool handling a missing file, a bad option and an empty input without a panic.",
+          "Explain to someone else why you chose the types you did."
+        ],
+        "pass": 1
+      },
+      "project": {
+        "title": "Ship your own tool",
+        "brief": "A tool you chose, tested, with a readable command line.",
+        "minutes": 300,
+        "capstone": true,
+        "resources": ["book-io-project", "clap-docs"],
+        "rungs": [
+          { "level": "own", "task": "Finish the tool you started at the ownership camp: tests, error handling and a help text, with no guide open." }
+        ],
+        "criteria": ["Builds without warnings", "At least five passing tests", "Never panics on bad input", "You can explain every borrow in it"]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "rust-install",
+      "title": "Install Rust",
+      "by": "Rust project",
+      "url": "https://rust-lang.org/tools/install/",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "The official install page. It installs through rustup, which also brings cargo.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-guessing-game",
+      "title": "The Rust Programming Language, chapter 2: Programming a Guessing Game",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch02-00-guessing-game-tutorial.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 60,
+      "why": "One complete program, typed step by step, that uses cargo new, match and the rand crate.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "rustlings",
+      "title": "Rustlings",
+      "by": "Rust project",
+      "url": "https://rustlings.rust-lang.org/",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "why": "Small exercises for reading and writing Rust. The project itself recommends them alongside the book.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "cli-book",
+      "title": "Command Line Applications in Rust: a command line app in 15 minutes",
+      "by": "Rust CLI working group",
+      "url": "https://rust-cli.github.io/book/tutorial/index.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 60,
+      "why": "A guided build of grrs, a small search tool. It is the first rung of the project.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-ownership",
+      "title": "The Rust Programming Language, chapter 4.1: What Is Ownership?",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 45,
+      "why": "States the ownership rules and shows a move, the exact case in this step's prediction.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-ownership-de",
+      "title": "Die Programmiersprache Rust, Kapitel 4.1",
+      "by": "rust-lang-de",
+      "url": "https://rust-lang-de.github.io/rustbook-de/ch04-01-what-is-ownership.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "de",
+      "level": "silver",
+      "minutes": 45,
+      "why": "The same chapter in German, for the step where exact wording matters most.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-references",
+      "title": "The Rust Programming Language, chapter 4.2: References and Borrowing",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch04-02-references-and-borrowing.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 40,
+      "why": "Explains shared and mutable references and the rule that stops two writers, the case in this step's check.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "rbe-borrowing",
+      "title": "Rust By Example: Borrowing",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/rust-by-example/scope/borrow.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Short code examples of borrowing to change and run again.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-structs",
+      "title": "The Rust Programming Language, chapter 5.1: Defining and Instantiating Structs",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch05-01-defining-structs.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 30,
+      "why": "Shows how to define a struct and create an instance, which is what this step asks you to do.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-enums",
+      "title": "The Rust Programming Language, chapter 6.1: Defining an Enum",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch06-01-defining-an-enum.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 35,
+      "why": "Covers enums with data in their variants and the Option type, which stands in for None.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-result",
+      "title": "The Rust Programming Language, chapter 9.2: Recoverable Errors with Result",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch09-02-recoverable-errors-with-result.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 45,
+      "why": "Covers Result, unwrap and the question mark operator, the three tools this step uses.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "cli-errors",
+      "title": "Command Line Applications in Rust: Nicer error reporting",
+      "by": "Rust CLI working group",
+      "url": "https://rust-cli.github.io/book/tutorial/errors.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Shows error reporting in the tool you are building, using the anyhow crate.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "exercism-rust",
+      "title": "Rust on Exercism",
+      "by": "Exercism",
+      "url": "https://exercism.org/tracks/rust",
+      "type": "exercises",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "why": "Practice exercises with community solutions to read afterwards. The site says it is free for everyone.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-vectors",
+      "title": "The Rust Programming Language, chapter 8.1: Storing Lists of Values with Vectors",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch08-01-vectors.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 30,
+      "why": "Explains Vec, including why you cannot push to it while holding a reference into it.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-hashmaps",
+      "title": "The Rust Programming Language, chapter 8.3: Storing Keys with Associated Values in Hash Maps",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch08-03-hash-maps.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 30,
+      "why": "Covers HashMap and how it takes ownership of what you insert, the basis of the word count task.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-traits",
+      "title": "The Rust Programming Language, chapter 10.2: Defining Shared Behavior with Traits",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch10-02-traits.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 50,
+      "why": "Defines a trait, implements it for types and passes any such type to a function, the three parts of this step.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-lifetimes",
+      "title": "The Rust Programming Language, chapter 10.3: Validating References with Lifetimes",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch10-03-lifetime-syntax.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Builds up lifetime annotations from the borrow checker's error, starting with the longest function.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-modules",
+      "title": "The Rust Programming Language, chapter 7: Packages, Crates, and Modules",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch07-00-managing-growing-projects-with-packages-crates-and-modules.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "The official overview of packages, crates and modules for splitting a growing program.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "cargo-guide",
+      "title": "The Cargo Book: Cargo Guide",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/cargo/guide/",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 20,
+      "why": "The official guide to Cargo.toml and dependencies, for adding your first crate.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-tests",
+      "title": "The Rust Programming Language, chapter 11.1: How to Write Tests",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch11-01-writing-tests.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "Shows how to write a test function and use assert_eq!, the macro this step's check asks about.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "cli-testing",
+      "title": "Command Line Applications in Rust: Testing",
+      "by": "Rust CLI working group",
+      "url": "https://rust-cli.github.io/book/tutorial/testing.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 30,
+      "why": "Tests written for the same kind of tool you are building, including running the program itself.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-iterators",
+      "title": "The Rust Programming Language, chapter 13.2: Processing a Series of Items with Iterators",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch13-02-iterators.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "Explains that iterators are lazy and how map, filter and collect chain together.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "book-io-project",
+      "title": "The Rust Programming Language, chapter 12: An I/O Project: Building a Command Line Program",
+      "by": "Rust project",
+      "url": "https://doc.rust-lang.org/book/ch12-00-an-io-project.html",
+      "type": "book",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 90,
+      "why": "A second full command-line program, with modules, errors and tests, to compare with your own design.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    },
+    {
+      "id": "clap-docs",
+      "title": "clap: API documentation",
+      "by": "clap contributors",
+      "url": "https://docs.rs/clap/latest/clap/",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "why": "Reference for the argument-parsing crate, including the derive approach, for the help text of your tool.",
+      "check": { "status": "verified", "on": "2026-11-13", "http": 200 }
+    }
+  ]
+}

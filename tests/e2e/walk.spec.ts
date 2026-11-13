@@ -197,7 +197,7 @@ test('a roadmap with 2 stages and one with 8 walk from the first panel to the la
   expect(errors).toEqual([]);
 });
 
-test('the active panel fits above the note on a narrow window, and inside the frame on a wide one', async ({ page }, info) => {
+test('the active panel sits above the note on a narrow window, and inside the frame on a wide one', async ({ page }, info) => {
   const errors = watchErrors(page);
   await open(page, 'road=rust-for-a-python-dev&p=0.3');
   const state = await measure(page);
@@ -209,10 +209,16 @@ test('the active panel fits above the note on a narrow window, and inside the fr
   const limit = narrow ? viewport.height - 96 : viewport.height;
   for (const corner of front) {
     expect(corner.y).toBeLessThanOrEqual(limit + 2);
-    expect(corner.x).toBeGreaterThanOrEqual(-2);
-    expect(corner.x).toBeLessThanOrEqual(viewport.width + 2);
+    // A narrow window shows the panel larger than the screen and follows the walker along it, so only a wide
+    // window holds the whole width of the panel.
+    if (!narrow) {
+      expect(corner.x).toBeGreaterThanOrEqual(-2);
+      expect(corner.x).toBeLessThanOrEqual(viewport.width + 2);
+    }
   }
   expect(state.walker.y).toBeLessThan(limit);
+  expect(state.walker.x).toBeGreaterThan(viewport.width * 0.1);
+  expect(state.walker.x).toBeLessThan(viewport.width * 0.9);
   await page.screenshot({ path: receipt(info, 'p030-with-the-note') });
   expect(errors).toEqual([]);
 });

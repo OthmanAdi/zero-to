@@ -27,11 +27,15 @@ import { PANEL, coverAngle, coverHeight, creaseAngle, panelLanded, stackOffset }
 import { createPanelView, type PanelView, type WalkHit, type WeightedWorldPoint } from './panel';
 import { hereAt, placeAt, planWalk, progressForAlong, progressForItem, type HerePlace, type PanelPlan, type WalkPlace, type WalkPlan } from './plan';
 import { MINI, PRINT, miniPixel, paintLegend, paintMiniMap } from './print';
-import { LANDING, cameraAt, landingPose, panelLeft, railPoses, type WalkInsets } from './rail';
+import { LANDING, RAIL, cameraAt, followShift, landingPose, panelLeft, railPoses, shiftPose, type WalkInsets } from './rail';
 import { WALK, mapOpenAt, railAt, sceneAt, type WalkItem } from './timeline';
 
 /**
- * The light of the walk: a little daylight everywhere and one lamp whose pool is one panel wide.
+ * The light of the walk: a low, cool fill everywhere and one warm lamp whose pool is one panel wide. The fill is
+ * what the paper outside the pool is read by: it has to stay paper there, darker and cooler, and never go black.
+ * It has a ceiling too: the panels beside the lit one have to stay at least 40 percent darker than it, or the pool
+ * is no longer a pool. Fill and cone are set together for that. A wider cone spills on the neighbours and leaves
+ * less room for fill.
  *
  * The lamp stands in front of the panel it lights, a little to the right. A low lamp throws a pool that is
  * long in the direction it shines. Shining from the front, the pool is long along the depth of the panel and
@@ -39,11 +43,16 @@ import { WALK, mapOpenAt, railAt, sceneAt, type WalkItem } from './timeline';
  * beside it fall into shade.
  */
 export const WALK_LIGHT = {
-  key: 0.27,
-  hemisphere: 0.1,
-  fill: 0.05,
+  key: 0.32,
+  hemisphere: 0.28,
+  fill: 0.11,
   /** The lamp: candela, half-angle of its cone in degrees, and where it stands from the point it lights. */
-  lamp: { intensity: 560, cone: 22, penumbra: 0.6, decay: 2, distance: 9.3, azimuth: 152, elevation: 34 },
+  lamp: { intensity: 560, cone: 21, penumbra: 0.6, decay: 2, distance: 9.3, azimuth: 152, elevation: 34 },
+  /**
+   * In a narrow window the pool goes along with the walker: this share of the way from the middle of the panel
+   * to him, gliding there at this rate per second.
+   */
+  follow: { share: 0.8, rate: 3 },
   /** Where the pool lies on a panel, measured from the panel's middle. */
   aim: { x: -0.1, z: 0.35 },
   shadow: { mapSize: 2048, phoneMapSize: 1024, near: 2.3, far: 24, bias: -0.0003, normalBias: 0.015 },
@@ -423,6 +432,12 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
   // The rail.
 
   let poses: CameraPose[] = railPoses(count, 1.6);
+  /** A narrow window does not hold a whole panel: its camera and the lamp go along with the walker. */
+  let narrow = false;
+  let lampShift = 0;
+  let lampSnap = true;
+  const shiftAt = (rail: number, at: { readonly panel: number; readonly point: { readonly x: number } }, share?: number): number =>
+    narrow ? followShift(rail, count, panelLeft(at.panel) + at.point.x, share) : 0;
 
   // -------------------------------------------------------------------------------------------------------
   // Mini maps, drawn when first asked for and again when you-are-here moves.
@@ -523,10 +538,18 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
     // The lamp stands by the panel the camera is on, and by the walker while he lands.
     if (aimOverride) {
       aimAt.copy(aimOverride);
+      lampShift = 0;
+      lampSnap = false;
     } else if (landing !== null && landing < 1) {
       aimAt.set(panelLeft(here.panel) + here.point.x, 0.1, here.point.z);
+      lampShift = 0;
+      lampSnap = false;
     } else {
       const rail = railAt(progress, count, windows);
+      // It glides to where the camera went, so the pool does not jump when a host hands the lamp back.
+      const wanted = shiftAt(rail, place, WALK_LIGHT.follow.share);
+      lampShift = lampSnap || frame.reduced ? wanted : lerp(lampShift, wanted, 1 - Math.exp(-WALK_LIGHT.follow.rate * Math.min(frame.dt, 0.1)));
+      lampSnap = false;
       const middle = panelLeft(0) + (count * PANEL.width) / 2;
       let x: number;
       if (rail <= 1) x = 0;
@@ -534,7 +557,7 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
       else if (rail <= count + 1) x = lerp((count - 1) * PANEL.width, middle, rail - count);
       else x = lerp(middle, 0, rail - count - 1);
       const onPanel = clamp01(rail) * (1 - clamp01(rail - count - 1));
-      aimAt.set(x + WALK_LIGHT.aim.x * onPanel, 0.1, WALK_LIGHT.aim.z * onPanel);
+      aimAt.set(x + WALK_LIGHT.aim.x * onPanel + lampShift, 0.1, WALK_LIGHT.aim.z * onPanel);
     }
     placeLights();
     dirty = false;
@@ -632,14 +655,17 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
       const ground = (views[here.panel] as PanelView).groundAt(here.point.x, here.point.z);
       const spot = frame.localToWorld(new Vector3(here.point.x, ground, here.point.z - 0.012));
       const head = frame.localToWorld(new Vector3(here.point.x, ground + (PIN.needle + PIN.radius * 0.9) * LANDING.head, here.point.z - 0.012));
-      return landingPose(u, { spot, head, headDistance: PIN.diveDistance * LANDING.head, stage: poses[here.panel + 1] as CameraPose, fov: 32 });
+      const stage = shiftPose(poses[here.panel + 1] as CameraPose, shiftAt(here.panel + 1, here));
+      return landingPose(u, { spot, head, headDistance: PIN.diveDistance * LANDING.head, stage, fov: 32 });
     },
     posesFor(aspect, insets = {}) {
       poses = railPoses(count, aspect, insets);
+      narrow = insets.narrow ?? (aspect > 0 && aspect < RAIL.narrowAspect);
       return poses;
     },
     cameraAt(p = progress) {
-      return cameraAt(railAt(p, count, windows), poses);
+      const rail = railAt(p, count, windows);
+      return shiftPose(cameraAt(rail, poses), shiftAt(rail, placeAt(plan, p)));
     },
     aim(target) {
       aimOverride = target === null ? null : new Vector3(target.x, target.y, target.z);
@@ -757,6 +783,7 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
         view.settle();
       });
       walkerLength = null;
+      lampSnap = true;
     },
     reprint() {
       for (const view of views) {

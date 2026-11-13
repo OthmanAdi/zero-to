@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { projectToScreen, type CameraPose, type Vec3 } from '../paper/motion';
 import { PANEL } from './fold';
-import { LANDING, RAIL, cameraAt, landingPose, panelLeft, panelPoints, railPoses } from './rail';
+import { LANDING, RAIL, cameraAt, followShift, landingPose, panelLeft, panelPoints, railPoses, shiftPose } from './rail';
 import { railAt } from './timeline';
 
 function inside(pose: CameraPose, point: Vec3, aspect: number, slack = 0.03): boolean {
@@ -60,6 +60,70 @@ describe('railPoses', () => {
     for (const point of panelPoints(0)) {
       expect(projectToScreen(pose, point, aspect).y).toBeGreaterThanOrEqual(RAIL.panel.narrowBox.y0 + bottom - 0.02);
     }
+  });
+});
+
+describe('followShift', () => {
+  const aspect = 390 / 844;
+  const bottom = (2 * 152) / 844;
+
+  it('shows a panel larger than a narrow window and keeps the walker in the picture', () => {
+    const n = 5;
+    const poses = railPoses(n, aspect, { bottom });
+    for (let index = 0; index < n; index += 1) {
+      const pose = poses[index + 1] as CameraPose;
+      const left = panelLeft(index);
+      // The front edge of the panel is wider than the window, which is 2 wide: the trail is not shrunk to fit a whole panel.
+      const frontLeft = projectToScreen(pose, { x: left, y: 0, z: PANEL.depth / 2 }, aspect);
+      const frontRight = projectToScreen(pose, { x: left + PANEL.width, y: 0, z: PANEL.depth / 2 }, aspect);
+      expect(frontRight.x - frontLeft.x).toBeGreaterThan(2.4);
+      // Wherever the walker stands on the panel, the camera has gone along far enough to show him.
+      for (let step = 0; step <= 20; step += 1) {
+        const walkerX = left + (PANEL.width * step) / 20;
+        const followed = shiftPose(pose, followShift(index + 1, n, walkerX));
+        for (const z of [0.4, 1.2, 2]) {
+          const screen = projectToScreen(followed, { x: walkerX, y: 0.2, z }, aspect);
+          expect(Math.abs(screen.x), `panel ${index}, walker at ${walkerX.toFixed(2)}, ${z}`).toBeLessThan(0.9);
+          expect(screen.y).toBeGreaterThan(RAIL.panel.narrowBox.y0 + bottom);
+          expect(screen.y).toBeLessThan(RAIL.panel.narrowBox.y1);
+        }
+      }
+    }
+  });
+
+  it('does not move the shots of the whole map', () => {
+    const n = 5;
+    expect(followShift(0, n, 3)).toBeCloseTo(0, 12);
+    expect(followShift(n + 1, n, 3)).toBeCloseTo(0, 12);
+    expect(followShift(n + 2, n, 3)).toBeCloseTo(0, 12);
+    // In the middle of a panel there is nothing to follow.
+    expect(followShift(3, n, 2 * PANEL.width)).toBeCloseTo(0, 12);
+  });
+
+  it('carries the camera over a crease without a jump', () => {
+    const n = 5;
+    const poses = railPoses(n, aspect);
+    // The walker waits at the crease between two panels while the rail crosses from one to the next.
+    const walkerX = panelLeft(2) + PANEL.width;
+    let previous = shiftPose(cameraAt(2, poses), followShift(2, n, walkerX));
+    for (let step = 1; step <= 400; step += 1) {
+      const rail = 2 + step / 400;
+      const pose = shiftPose(cameraAt(rail, poses), followShift(rail, n, walkerX));
+      expect(Math.abs(pose.position.x - previous.position.x)).toBeLessThan(0.02);
+      previous = pose;
+    }
+  });
+
+  it('moves a pose sideways and leaves where it looks alone', () => {
+    const pose = railPoses(3, aspect)[2] as CameraPose;
+    const moved = shiftPose(pose, 0.7);
+    expect(moved.position.x - pose.position.x).toBeCloseTo(0.7, 12);
+    expect(moved.target.x - pose.target.x).toBeCloseTo(0.7, 12);
+    expect(moved.position.y).toBe(pose.position.y);
+    expect(moved.target.z).toBe(pose.target.z);
+    expect(moved.distance).toBe(pose.distance);
+    expect(moved.fov).toBe(pose.fov);
+    expect(shiftPose(pose, 0)).toBe(pose);
   });
 });
 

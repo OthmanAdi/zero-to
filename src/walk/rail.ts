@@ -12,11 +12,19 @@ export const RAIL = {
   shut: { elevation: 48, yaw: -7, narrow: { elevation: 58, yaw: -4 }, box: { x0: -0.42, x1: 0.42, y0: -0.78, y1: 0.7 } },
   panel: {
     elevation: 30,
+    /** A narrow window looks down more steeply, so the panel stands taller in it and the trail lies open. */
+    narrowElevation: 36,
     yaw: -9,
     fov: 34,
     narrowFov: 40,
     box: { x0: -0.8, x1: 0.98, y0: -0.98, y1: 0.84 },
-    narrowBox: { x0: -0.94, x1: 0.94, y0: -0.6, y1: 0.66 },
+    /**
+     * A narrow window is too small for a whole panel: the box is wider than the screen (which ends at -1 and 1), so
+     * the panel is larger than the window and the camera goes along with the walker (`followShift`).
+     */
+    narrowBox: { x0: -1.9, x1: 1.9, y0: -0.77, y1: 0.8 },
+    /** In a narrow window the camera goes this share of the way from the middle of the panel to the walker. */
+    narrowFollow: 0.6,
     /** Height of the scenery band at the back of a panel, on its left and on its right. */
     scenery: [1.75, 2.0],
   },
@@ -51,6 +59,24 @@ function inset(box: ScreenBox, insets: WalkInsets): ScreenBox {
   const y1 = box.y1 - (insets.top ?? 0);
   // A box never closes: overlays that claim everything leave a strip in the middle.
   return { x0: Math.min(x0, x1 - 0.2), x1: Math.max(x1, x0 + 0.2), y0: Math.min(y0, y1 - 0.2), y1: Math.max(y1, y0 + 0.2) };
+}
+
+/**
+ * How far a narrow window's camera moves along the row of panels to keep the walker in the picture. `rail` is the
+ * rail position (see `railAt`) and `walkerX` is where the walker stands in map space. Nothing moves before the
+ * first panel and after the last one, where the shots show the whole map.
+ */
+export function followShift(rail: number, count: number, walkerX: number, share: number = RAIL.panel.narrowFollow): number {
+  const n = clampPanels(count);
+  const onPanel = clamp01(rail) * (1 - clamp01(rail - n));
+  const middle = (Math.min(n, Math.max(1, rail)) - 1) * PANEL.width;
+  return share * onPanel * (walkerX - middle);
+}
+
+/** A pose moved along the row of panels, looking the same way. */
+export function shiftPose(pose: CameraPose, x: number): CameraPose {
+  if (x === 0) return pose;
+  return { position: { ...pose.position, x: pose.position.x + x }, target: { ...pose.target, x: pose.target.x + x }, distance: pose.distance, fov: pose.fov };
 }
 
 /** The points a panel's pose is fitted to: its front corners and the top of the scenery at its back. */
@@ -89,9 +115,10 @@ export function railPoses(count: number, aspect: number, insets: WalkInsets = {}
 
   const poses: CameraPose[] = [shut];
   const panelBox = inset(narrow ? RAIL.panel.narrowBox : RAIL.panel.box, insets);
+  const panelElevation = narrow ? RAIL.panel.narrowElevation : RAIL.panel.elevation;
   for (let index = 0; index < n; index += 1) {
     const middle = panelLeft(index) + half.x;
-    poses.push(fitPose(panelPoints(index), { x: middle, y: 0.4, z: 0 }, RAIL.panel.elevation, RAIL.panel.yaw, fov, panelBox, ratio));
+    poses.push(fitPose(panelPoints(index), { x: middle, y: 0.4, z: 0 }, panelElevation, RAIL.panel.yaw, fov, panelBox, ratio));
   }
 
   // The whole map, with the legend on its left.

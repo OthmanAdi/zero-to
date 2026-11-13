@@ -150,6 +150,33 @@ describe('motion.attach drag', () => {
     expect(motion.state.target).toBe(4);
   });
 
+  it('carries the speed of a throw whose last move came a late frame after the one before', () => {
+    const { motion, fire } = setup();
+    fire('pointerdown', { x: 900, t: 0 });
+    fire('pointermove', { x: 700, t: 100 });
+    // The frame before the release took 120 ms: only this move lies inside the window.
+    fire('pointermove', { x: 580, t: 220 });
+    fire('pointerup', { x: 580, t: 220 });
+    // 120 px in those 120 ms is 1 px/ms, which is 0.01 items per ms at a pitch of 100.
+    expect(motion.state.velocity).toBeCloseTo(0.01, 6);
+    expect(motion.state.target).toBe(6);
+  });
+
+  it('still carries no speed when one late move follows a rest and the pointer is let go after another', () => {
+    const { motion, fire } = setup();
+    fire('pointerdown', { x: 900, t: 0 });
+    fire('pointermove', { x: 700, t: 20 });
+    fire('pointermove', { x: 500, t: 40 });
+    fire('pointerup', { x: 500, t: 400 });
+    expect(motion.state.velocity).toBe(0);
+    // A last small move after a long rest is measured over the rest: next to no speed, and no throw.
+    fire('pointerdown', { x: 900, t: 1000 });
+    fire('pointermove', { x: 600, t: 1020 });
+    fire('pointermove', { x: 598, t: 1420 });
+    fire('pointerup', { x: 598, t: 1430 });
+    expect(Math.abs(motion.state.velocity)).toBeLessThan(0.0001);
+  });
+
   it('a fast flick moves at least one volume in its direction', () => {
     const { clock, motion, fire } = setup({ initial: 5 });
     fire('pointerdown', { x: 500, t: 0 });
@@ -194,6 +221,25 @@ describe('motion.attach drag', () => {
     fire('pointermove', { x: 300, t: 20 });
     fire('pointerup', { x: 300, t: 20 });
     expect(motion.state.target).toBe(6);
+  });
+
+  it('does not take the row back when the hand itself has drawn it further than a flick may carry', () => {
+    const { clock, motion, fire } = setup();
+    fire('pointerdown', { x: 900, t: 0 });
+    fire('pointermove', { x: 500, t: 400 });
+    fire('pointermove', { x: 60, t: 800 });
+    expect(motion.state.position).toBeCloseTo(8.4, 10);
+    // Let go at rest eight volumes on: the row settles where the hand left it, not on the sixth.
+    fire('pointerup', { x: 60, t: 1000 });
+    expect(motion.state.target).toBe(8);
+    clock.advance(3000);
+    expect(motion.state.position).toBe(8);
+    // Thrown from that far, it stops on the volume it was let go on: the throw adds nothing past the limit.
+    fire('pointerdown', { x: 900, t: 5000 });
+    fire('pointermove', { x: 500, t: 5020 });
+    fire('pointermove', { x: 160, t: 5040 });
+    fire('pointerup', { x: 160, t: 5040 });
+    expect(motion.state.target).toBe(15);
   });
 
   it('a pointercancel returns to the nearest whole index without a flick', () => {
@@ -378,6 +424,41 @@ describe('motion.attach track', () => {
     expect(track).toHaveBeenCalledTimes(1);
     const expected = (curve(560) - curve(520)) / 40;
     expect(motion.state.velocity).toBeCloseTo(expected, 6);
+  });
+
+  /** The way a row that stands still tracks: a volume for each pitch of travel, never past its two ends. */
+  const standing =
+    (count: number): NonNullable<AttachOptions['track']> =>
+    (start) =>
+    (x) =>
+      Math.min(count - 1, Math.max(0, start.position - (x - start.x) / PITCH));
+
+  /** Drags a row of twelve that tracks like that by `dx` px in `ms`, lets go, and says where it came to rest. */
+  const thrown = (from: number, dx: number, ms: number): number => {
+    const { clock, motion, fire } = setup({ loop: false, initial: from }, undefined, standing(12));
+    fire('pointerdown', { x: 500, t: 0 });
+    for (let step = 1; step <= 4; step++) fire('pointermove', { x: 500 + (dx * step) / 4, t: (ms * step) / 4 });
+    fire('pointerup', { x: 500 + dx, t: ms });
+    clock.advance(3000);
+    expect(motion.state.settled).toBe(true);
+    expect(motion.state.overscroll).toBe(0);
+    return motion.state.position;
+  };
+
+  it('carries a row that stands still on at the speed it was let go with: a lazy swipe one volume, a hard throw several', () => {
+    // 40 px at 0.2 px a ms is no flick: the row is let go under way to the next volume and lands on it.
+    expect(thrown(2, -40, 200)).toBe(3);
+    expect(thrown(2, 40, 200)).toBe(1);
+    // 150 px at 1 px a ms: a volume and a half under the hand, and the throw carries it on to the fifth.
+    expect(thrown(2, -150, 150)).toBe(7);
+    expect(thrown(8, 150, 150)).toBe(3);
+    // The harder throw of the same length goes further.
+    expect(thrown(2, -150, 60)).toBeGreaterThan(thrown(2, -150, 150));
+  });
+
+  it('stops a throw into the end of such a row on its end volume', () => {
+    expect(thrown(10, -300, 100)).toBe(11);
+    expect(thrown(1, 300, 100)).toBe(0);
   });
 
   it('keeps the rubber band at the ends of a finite row on a tracked drag', () => {

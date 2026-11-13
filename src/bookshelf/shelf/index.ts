@@ -48,6 +48,9 @@ export {
 } from './variants';
 export type {
   Box,
+  FrameBookend,
+  FrameVolume,
+  ShelfFrame,
   CoverPlacement,
   Geometry,
   GrabStart,

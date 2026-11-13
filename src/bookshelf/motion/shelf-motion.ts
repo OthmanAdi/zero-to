@@ -153,15 +153,27 @@ function pushSample(samples: PositionSample[], time: number, position: number): 
   if (samples.length > POSITION_SAMPLES) samples.shift();
 }
 
-/** Items per millisecond over the samples no older than `windowMs` before `now`. Zero when they say nothing. */
-function sampleVelocity(samples: PositionSample[], now: number, windowMs: number): number {
+/**
+ * Items per millisecond over the samples no older than `windowMs` before `now`. Zero when they say nothing.
+ *
+ * With `bridge`, a single sample inside the window is measured against the one before it. Moves arrive with
+ * the frames, and a frame that comes late leaves only the last move of a throw inside the window: the
+ * pointer was moving all the same, at the speed of that last stretch. A pointer that rested has no sample
+ * inside the window at all, and still carries no speed.
+ */
+function sampleVelocity(samples: PositionSample[], now: number, windowMs: number, bridge = false): number {
   let first: PositionSample | undefined;
   let last: PositionSample | undefined;
+  let before: PositionSample | undefined;
   for (const sample of samples) {
-    if (now - sample.time > windowMs) continue;
+    if (now - sample.time > windowMs) {
+      before = sample;
+      continue;
+    }
     first ??= sample;
     last = sample;
   }
+  if (bridge && first && first === last && before) first = before;
   if (!first || !last || last.time <= first.time) return 0;
   return (last.position - first.position) / (last.time - first.time);
 }
@@ -482,14 +494,21 @@ export function createShelfMotion(options: ShelfMotionOptions): ShelfMotion {
           // A released drag always settles on the spring, whatever the travel timing: it has to feel held.
           travel = null;
           state.dragging = false;
-          const itemsPerMs = cancelled ? 0 : sampleVelocity(dragSamples, time, RELEASE_VELOCITY_WINDOW_MS);
+          const itemsPerMs = cancelled ? 0 : sampleVelocity(dragSamples, time, RELEASE_VELOCITY_WINDOW_MS, true);
           const isFlick = !cancelled && Math.abs(itemsPerMs) * pitch() >= FLICK_SPEED && Math.abs(dragTravel) >= FLICK_MIN_TRAVEL;
           let destination = Math.round(state.position + itemsPerMs * (isFlick ? FLICK_DECAY_MS : RELEASE_PROJECTION_MS));
           if (isFlick && destination === dragStartTarget) {
             // A flick always moves at least one volume in its direction.
             destination = dragStartTarget + (itemsPerMs > 0 ? 1 : -1);
           }
-          destination = clamp(destination, dragStartTarget - FLICK_MAX_ITEMS, dragStartTarget + FLICK_MAX_ITEMS);
+          // A throw carries the row no further than this from where the drag began. A hand that has itself
+          // taken the row further than that is not undone: the row never goes back behind where it was let go.
+          const here = Math.round(state.position);
+          destination = clamp(
+            destination,
+            Math.min(dragStartTarget - FLICK_MAX_ITEMS, here),
+            Math.max(dragStartTarget + FLICK_MAX_ITEMS, here),
+          );
           setTarget(destination);
           state.velocity = cancelled || state.reduced ? 0 : itemsPerMs;
           if (state.reduced) {

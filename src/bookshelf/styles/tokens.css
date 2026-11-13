@@ -114,8 +114,8 @@
   --bb-hairline: 1px;
 
   /*
-   * Motion: three curves and four durations, nothing else. The spring curve overshoots a
-   * little and is for things that rise toward the hand.
+   * Motion: three curves and four durations for the page, and one pair for things that rise toward
+   * the hand. The spring curve overshoots a little.
    */
   --bb-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --bb-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -124,6 +124,17 @@
   --bb-dur-2: 220ms; /* hover, a small change of state */
   --bb-dur-3: 360ms; /* menus, dialogs, arrivals */
   --bb-dur-4: 600ms; /* large moves */
+
+  /*
+   * Rising toward the hand and settling back are two different moves. Something rises only once the
+   * pointer has stayed on it for the dwell, goes a little past its place and comes back. It settles
+   * faster than it rose and never past its rest, so nothing that stands on a floor dips under it.
+   */
+  --bb-dwell: 70ms;
+  --bb-dur-rise: 200ms;
+  --bb-ease-rise: cubic-bezier(0.3, 1.5, 0.6, 1);
+  --bb-dur-settle: 150ms;
+  --bb-ease-settle: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* layers: the first three order things inside one component, the rest order the page */
   --bb-z-shelf: 1;

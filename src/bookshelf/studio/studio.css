@@ -1,0 +1,99 @@
+/*
+ * Studio paints the volumes in a canvas behind the row. The DOM volumes stay where they are, as large as
+ * they are, so every press, drag and focus still lands on them; only what they paint is taken away.
+ * Focus rings are separate planes and stay visible.
+ */
+
+.bb-studio {
+  position: absolute;
+  left: 0;
+  display: block;
+  pointer-events: none;
+  /* The canvas is wider than any one volume and never takes a press. */
+  touch-action: none;
+  /* It comes up once its first whole frame is drawn, so the change from the CSS drawing is not a cut. */
+  opacity: 0;
+}
+
+.bb-studio.is-shown {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bb-studio.is-shown {
+    transition: opacity 250ms ease-out;
+  }
+
+  /*
+   * While Studio arrives, the CSS faces fade away over the canvas that is coming up behind them: a
+   * dissolve from one drawing to the other, volume for volume, in the same places.
+   */
+  .bb-shelf[data-studio='arriving'] .bb-book__spine,
+  .bb-shelf[data-studio='arriving'] .bb-book__board,
+  .bb-shelf[data-studio='arriving'] .bb-book__slip,
+  .bb-shelf[data-studio='arriving'] .bb-shelf__bookend,
+  .bb-shelf[data-studio='arriving'] .bb-shelf__floor,
+  .bb-shelf[data-studio='arriving'] .bb-shelf__row::before,
+  .bb-shelf[data-studio='arriving'] .bb-book::after {
+    animation: bb-studio-arriving 250ms linear forwards;
+  }
+}
+
+@keyframes bb-studio-arriving {
+  to {
+    opacity: 0;
+  }
+}
+
+/*
+ * In forced colours the CSS faces carry the system colours and solid borders a person asked for, so they
+ * stay painted there, over the canvas.
+ */
+@media not (forced-colors: active) {
+  .bb-shelf[data-paint='studio'] .bb-book__spine,
+  .bb-shelf[data-paint='studio'] .bb-book__board {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+  }
+
+  .bb-shelf[data-paint='studio'] .bb-book__spine > *,
+  .bb-shelf[data-paint='studio'] .bb-book__board > *,
+  .bb-shelf[data-paint='studio'] .bb-book__slip,
+  .bb-shelf[data-paint='studio'] .bb-shelf__bookend,
+  .bb-shelf[data-paint='studio'] .bb-shelf__floor {
+    visibility: hidden;
+  }
+
+  /*
+   * Studio paints the board the row stands on, the shadows at the foot of each volume and, at night, the
+   * pool of the lamp. What a look draws for these in CSS lies in the row, over the canvas: the board of the
+   * Oak look would cover the tails of the painted volumes, and the pool of the Night look would lie on top
+   * of the lit one. So they go, in every look. A backdrop stays: it is behind the canvas, where a wall is.
+   */
+  .bb-shelf[data-paint='studio'] .bb-book::after,
+  .bb-shelf[data-paint='studio'] .bb-shelf__row::before {
+    display: none;
+  }
+}
+
+/*
+ * A volume in the air between the row and the page is shown in a small canvas that travels with it, over
+ * the layer of the CSS flight. The flat cover of that flight is underneath and takes over as the volume
+ * lands; the spine edge and highlight the CSS flight paints beside and over a flat cover are not needed
+ * while the volume is lit.
+ */
+.bb-studio-flight {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.bb-flight[data-paint='studio'] .bb-flight__spine,
+.bb-flight[data-paint='studio'] .bb-book__sheen {
+  visibility: hidden;
+}

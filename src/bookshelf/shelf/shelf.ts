@@ -14,6 +14,7 @@ import {
   type BookNode,
 } from './book';
 import { stayers } from './body-order';
+import { carriedTurn, leanShare, stepFollower, stepRock, waveAt, waveDelay, type Sprung, type WaveSample } from './weight';
 import { fitTitle, forgetTitleWidths, type TitleFont } from './title-fit';
 import {
   blendPose,
@@ -41,7 +42,19 @@ import {
 } from './layout';
 import { faceShades, resolveLight, sheenOf, sweepOf } from './light';
 import { resolveVariant } from './variants';
-import type { Geometry, Light, Pose, ShelfHandle, ShelfIntent, ShelfItem, ShelfOptions, Variant } from './types';
+import type {
+  FrameBookend,
+  FrameVolume,
+  Geometry,
+  Light,
+  Pose,
+  ShelfFrame,
+  ShelfHandle,
+  ShelfIntent,
+  ShelfItem,
+  ShelfOptions,
+  Variant,
+} from './types';
 
 const DEG = Math.PI / 180;
 /** Room kept above the books for a leaning or lifted volume, and below for the contact shadow. */
@@ -59,11 +72,41 @@ const PRINT_FAR = 2.5;
 /**
  * Standing volumes have weight: while the row travels their heads trail a little behind their feet. The
  * lean is this many degrees for each volume a second the row moves, and never more than `SWAY_MOST`.
- * It follows the speed over `SWAY_EASE_MS`, so it comes on and goes without a step.
+ * The heads are on a spring (acceleration = stiffness x distance - damping x speed, in seconds), so the
+ * lean comes on without a step and rocks back past upright once when the row stops.
  */
-const SWAY_PER_SPEED = 0.1;
-const SWAY_MOST = 1.5;
-const SWAY_EASE_MS = 90;
+const SWAY_PER_SPEED = 0.24;
+const SWAY_MOST = 3.2;
+const SWAY_STIFFNESS = 180;
+const SWAY_DAMPING = 15;
+/** A lean and a speed of the heads, in degrees and degrees a second, below which they stand upright. */
+const SWAY_REST = 0.02;
+const SWAY_REST_SPEED = 0.25;
+/**
+ * The lean runs down the row as a wave: each volume takes it up this long after the one before it,
+ * counted from the middle of the row, and none later than `WAVE_MOST_MS`. That much of the lean is kept.
+ */
+const WAVE_PER_SLOT_MS = 18;
+const WAVE_MOST_MS = 144;
+/** The spine width, in px at scale 1, that takes the whole lean. A thicker volume stands firmer. */
+const SWAY_EVEN_SPINE = 60;
+/**
+ * A turning volume has weight too: its turn and lean are carried by a follower on a spring of this
+ * stiffness and damping ratio, which keeps its speed when the row slows. `TURN_GAIN` of what the follower
+ * is ahead goes into the drawn turn, never more than `TURN_MOST` of a full turn. The row's own position
+ * is not touched: it still arrives without swinging past.
+ */
+const TURN_STIFFNESS = 170;
+const TURN_DAMPING_RATIO = 0.78;
+const TURN_GAIN = 0.2;
+const TURN_MOST = 1.03;
+/** A follower this close to a fully turned volume, and this slow, has arrived. */
+const TURN_REST = 0.002;
+const TURN_REST_SPEED = 0.02;
+/** A turn that changes by more than this in one frame is a jump, not a travel: nothing is carried through it. */
+const TURN_JUMP = 0.4;
+/** The frame assumed to have passed when something starts from rest, in ms. */
+const FIRST_STEP_MS = 16;
 /** A change of shade smaller than this cannot be seen. */
 const SHADE_STEP = 0.002;
 /**
@@ -84,13 +127,17 @@ const BOOKEND_TALL = 0.62;
 const LAMP_STEP = 0.5;
 /** Space in px a standing row keeps between each bookend and the edge of the scene. */
 const BOOKEND_AIR = 4;
-/** A row that stands still gives at most this far under a hand that pulls it sideways, in px. */
+/**
+ * A row that stands still is pulled along by the hand a volume for each pitch of travel. Pulled past its
+ * first or last volume it has nowhere to go, and gives at most this far, in px.
+ */
 const GIVE_MOST = 28;
-/** A pull of this many px takes such a row about two thirds of the way to that limit. */
+/** A pull of this many px past an end takes such a row about two thirds of the way to that limit. */
 const GIVE_REACH = 90;
 /**
- * A pull on such a row let go faster than this many px per ms, after at least this many px, is a swipe to
- * the next volume. The speed is that of the last of the pull, this many ms of it.
+ * Where nothing may move by itself such a row does not follow the hand. A pull let go faster than this
+ * many px per ms, after at least this many px, is then a swipe to the next volume. The speed is that of
+ * the last of the pull, this many ms of it.
  */
 const SWIPE_SPEED = 0.35;
 const SWIPE_TRAVEL = 24;
@@ -100,6 +147,16 @@ const TAP_SLOP = 10;
 const TAP_MAX_MS = 700;
 /** After a touch that was held too long to be a tap, the click the browser still sends is ignored for this long, in ms. */
 const HELD_CLICK_MS = 400;
+/**
+ * A mouse that crosses the scene faster than this many px per ms is on its way somewhere else, and no spine
+ * rises to it. Its speed is taken over stretches of at least `PASSING_SPAN_MS`. It goes on counting as
+ * passing until `PASSING_REST_MS` have gone by without such a stretch: by then it has slowed down or
+ * stopped. Moves further apart than `PASSING_STALE_MS` say nothing about speed.
+ */
+const PASSING_SPEED = 0.4;
+const PASSING_SPAN_MS = 16;
+const PASSING_REST_MS = 60;
+const PASSING_STALE_MS = 150;
 /** A touch that begins this close to the side of the window is the system's own edge swipe, in px. */
 const EDGE_PX = 20;
 const MIN_SCALE = 0.5;
@@ -168,7 +225,10 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
   let variant: Variant = resolveVariant(options.variant);
   let light: Light = resolveLight(variant.light);
   let loop = options.loop ?? variant.loop;
-  /** The row does not travel: it stands in the scene, whole and in the middle where it fits. */
+  /**
+   * The row does not travel: it stands in the scene, whole and in the middle where it fits. A hand that
+   * drags it moves the position along it all the same, so the volumes turn as they are pulled.
+   */
   let fixed = false;
   /** How far from the middle of the scene the presented volume of such a row may stand, in px. */
   let standWithin = Number.POSITIVE_INFINITY;
@@ -183,8 +243,17 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
   let shown = 0;
   let heading = 0;
   /** How far standing volumes lean behind the travel right now, in degrees, and when that was worked out. */
-  let sway = 0;
+  const sway: Sprung = { value: 0, speed: 0 };
   let swayAt = 0;
+  /** That lean over the last moments, oldest first: volumes further from the middle take it up later. */
+  const wave: WaveSample[] = [];
+  /**
+   * What each turning volume carries, by slot: its follower, the turn the layout gave it last frame, and
+   * the frame that last drew it. A volume at rest has none and is drawn exactly as the layout says.
+   */
+  const turns = new Map<number, Sprung & { weight: number; seen: number }>();
+  let turnAt = 0;
+  let frameCount = 0;
   /**
    * Where a lamp stands along the scene, in px from its centre: over the presented volume. A travelling
    * row brings that volume to the centre; in a row that stands still the lamp goes to the volume.
@@ -219,10 +288,13 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
   /** Where the lamp travels from after the row changed, and when that began. */
   let lampFrom: number | null = null;
   let lampFromAt = 0;
-  /** How far the whole row is drawn aside right now, in px: a row that stands still gives under a pull. */
+  /** How far the whole row is drawn aside right now, in px: a row that stands still gives when pulled past an end. */
   let rowGive = 0;
-  /** The hand pulling such a row, with where it has been lately. Null when nothing holds the row. */
-  let pull: { from: number; samples: Array<{ time: number; x: number }> } | null = null;
+  /**
+   * The hand pulling such a row, with where it has been lately. `steps` says the row stays as it is under
+   * the hand and a swipe is to be reported as a step. Null when nothing holds the row.
+   */
+  let pull: { from: number; steps: boolean; samples: Array<{ time: number; x: number }> } | null = null;
   /** The row on its way back after the hand let go: how far it had given, how fast it moved, and when. */
   let giveBack: { from: number; speed: number; at: number } | null = null;
   let giveFrame: number | null = null;
@@ -242,6 +314,10 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
   let wroteEmpty: boolean | null = null;
   let wroteOpen = '0';
   const listeners = new Set<(intent: ShelfIntent) => void>();
+  const frameListeners = new Set<(frame: ShelfFrame) => void>();
+  /** The volumes of the frame being drawn, collected only while a frame listener is attached. */
+  let frameVolumes: FrameVolume[] | null = null;
+  let lastFrame: ShelfFrame | null = null;
   /** Set once mounting is done, so a host is never called back before it has the handle. */
   let mounted = false;
   /** Keyboard focus was in the row when its volumes were placed again: make sure it ends on the centre. */
@@ -474,8 +550,9 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
   }
 
   /**
-   * The hand lets go of a row that stands still. Let go at speed, the pull was a swipe and the row steps
-   * to the next volume that way; let go at rest, nothing changes. Either way the row settles back.
+   * The hand lets go of a row that stands still. Whoever follows the drag carries the row on from the
+   * position and the speed it was let go with; a row that had given past an end settles back. Where the
+   * row did not follow the hand, a pull let go at speed was a swipe, and the row steps to the next volume.
    */
   function letGo(cancelled: boolean): void {
     const held = pull;
@@ -487,7 +564,7 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
     const last = recent[recent.length - 1];
     const speed = first && last && last.time > first.time ? (last.x - first.x) / (last.time - first.time) : 0;
     const travel = (held.samples[held.samples.length - 1]?.x ?? held.from) - held.from;
-    if (!cancelled && Math.abs(speed) >= SWIPE_SPEED && Math.abs(travel) >= SWIPE_TRAVEL && speed * travel > 0) {
+    if (held.steps && !cancelled && Math.abs(speed) >= SWIPE_SPEED && Math.abs(travel) >= SWIPE_TRAVEL && speed * travel > 0) {
       const direction = speed < 0 ? 1 : -1;
       // Once whatever recognised the drag has finished with this release: it would put the row back.
       later(() => emit({ type: 'step', direction }), 0);
@@ -822,6 +899,7 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
     const count = items.length;
     frameNow = -1;
     travelling = false;
+    frameVolumes = frameListeners.size > 0 ? [] : null;
     if (wroteEmpty !== (count === 0)) {
       wroteEmpty = count === 0;
       empty.hidden = count > 0;
@@ -844,6 +922,7 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
       presented = null;
       root.dataset.focus = '';
       root.dataset.focusId = '';
+      emitFrame([]);
       return;
     }
 
@@ -876,16 +955,49 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
     if (disordered) orderRow();
 
     // Heads trail the feet: moving up the row takes the volumes left, so they lean right.
-    const speed = pose.reduced ? 0 : (pose.velocity ?? 0);
-    if (speed !== 0 || sway !== 0) {
-      const wanted = still() ? 0 : swayOf(speed, SWAY_PER_SPEED, SWAY_MOST);
-      const elapsed = Math.min(64, Math.max(0, travelNow() - swayAt));
-      swayAt = travelNow();
-      sway += (wanted - sway) * (1 - Math.exp(-elapsed / SWAY_EASE_MS));
-      if (wanted === 0 && Math.abs(sway) < 0.004) sway = 0;
+    const weighty = !still();
+    const speed = weighty ? (pose.velocity ?? 0) : 0;
+    if (!weighty) {
+      // Nothing moves by itself: no lean, no wave and nothing carried.
+      sway.value = 0;
+      sway.speed = 0;
+      wave.length = 0;
+      turns.clear();
+    } else if (speed !== 0 || wave.length > 0) {
+      const now = travelNow();
+      const elapsed = wave.length === 0 ? FIRST_STEP_MS : now - swayAt;
+      if (elapsed > 0) {
+        swayAt = now;
+        const wanted = swayOf(speed, SWAY_PER_SPEED, SWAY_MOST);
+        stepRock(sway, wanted, elapsed, SWAY_STIFFNESS, SWAY_DAMPING);
+        if (Math.abs(sway.value) > SWAY_MOST) {
+          // Held at the limit, the heads gather no more speed to throw them back with.
+          sway.value = Math.sign(sway.value) * SWAY_MOST;
+          sway.speed = 0;
+        }
+        if (wanted === 0 && Math.abs(sway.value) < SWAY_REST && Math.abs(sway.speed) < SWAY_REST_SPEED) {
+          sway.value = 0;
+          sway.speed = 0;
+        }
+        wave.push({ time: now, value: sway.value });
+        // One sample from before the longest delay is kept, so the furthest volume still reads between two.
+        while (wave.length > 2 && wave[1]!.time <= now - WAVE_MOST_MS) wave.shift();
+        if (sway.value === 0 && sway.speed === 0 && wave.every((sample) => sample.value === 0)) wave.length = 0;
+      }
       // The row may have come to rest while its volumes are still straightening up.
-      if (sway !== 0) travelling = true;
+      if (wave.length > 0) travelling = true;
     }
+    const frameId = ++frameCount;
+    let turnStep = -1;
+    /** The time the followers are stepped by in this frame, read once and only when one is. */
+    const turnElapsed = (): number => {
+      if (turnStep < 0) {
+        const now = travelNow();
+        turnStep = turns.size === 0 || now - turnAt > 100 ? FIRST_STEP_MS : Math.max(0, now - turnAt);
+        turnAt = now;
+      }
+      return turnStep;
+    };
 
     const opening = pose.open > 0;
     if (opening && openSlot === null) openSlot = centre;
@@ -938,6 +1050,7 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
         node.element.classList.remove('is-away');
       }
       let slotPose = live;
+      const before = node.drawn;
       if (node.from) {
         // After the row changed around it, a volume travels and turns from where it stood to where it belongs.
         const t = (travelNow() - node.fromAt) / TRAVEL_MS;
@@ -969,16 +1082,77 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
         style.visibility = wrote.out ? 'hidden' : '';
       }
       // Only volumes standing at rest lean with the travel: the presented one and the two beside it hold still.
-      const tilt = sway === 0 ? 0 : sway * swayShare(distance);
+      // The lean reaches a volume later the further it stands from the middle, and a thick one takes less of it.
+      const share = wave.length === 0 ? 0 : swayShare(distance);
+      const rocked =
+        share === 0
+          ? 0
+          : waveAt(wave, travelNow() - waveDelay(distance, WAVE_PER_SLOT_MS, WAVE_MOST_MS)) *
+            share *
+            leanShare(sizeOf(slotPose.slot).spineWidth / scale, SWAY_EVEN_SPINE);
+      const tilt = Math.abs(rocked) < 0.0005 ? 0 : Math.min(SWAY_MOST, Math.max(-SWAY_MOST, rocked));
       const leaning = tilt === 0 ? '' : `rotateZ(${tilt.toFixed(3)}deg) `;
+
+      // A volume that turns in a travelling row carries its turn and lean a little past where the row puts them.
+      let angle = slotPose.angle;
+      let lean = slotPose.lean;
+      let turn = turns.get(slotPose.slot);
+      const stepped = Math.abs(slotPose.weight - (turn ? turn.weight : before ? before.weight : slotPose.weight));
+      if (!weighty || slotPose !== live || slotPose.weight <= 0 || stepped > TURN_JUMP) {
+        // At rest out of the turn, on its way to a new place, or put somewhere at once: as the layout says.
+        if (turn) turns.delete(slotPose.slot);
+      } else {
+        // Under a hand the row has no speed of its own, and a volume held there is not carried past it.
+        if (!turn && speed !== 0 && stepped > 0 && before && before.slot === slotPose.slot) {
+          turnElapsed();
+          turn = { value: before.weight, speed: 0, weight: before.weight, seen: frameId };
+          turns.set(slotPose.slot, turn);
+        }
+        if (turn) {
+          stepFollower(turn, turn.weight, slotPose.weight, turnElapsed(), TURN_STIFFNESS, TURN_DAMPING_RATIO);
+          turn.weight = slotPose.weight;
+          turn.seen = frameId;
+          if (slotPose.weight === 1 && Math.abs(turn.value - 1) < TURN_REST && Math.abs(turn.speed) < TURN_REST_SPEED) {
+            turns.delete(slotPose.slot);
+          } else {
+            const carried = carriedTurn(slotPose.weight, turn.value, TURN_GAIN, TURN_MOST) / slotPose.weight;
+            angle = Math.round(slotPose.angle * carried * 1000) / 1000;
+            lean = Math.round(slotPose.lean * carried * 1000) / 1000;
+            travelling = true;
+          }
+        }
+      }
       const transform =
         slotPose.lean === 0
-          ? `translate3d(${slotPose.x + away}px, ${-slotPose.lift}px, ${slotPose.z}px) ${leaning}rotateY(${-slotPose.angle}deg)`
+          ? `translate3d(${slotPose.x + away}px, ${-slotPose.lift}px, ${slotPose.z}px) ${leaning}rotateY(${-angle}deg)`
           : `translate3d(${slotPose.x + slotPose.corner + away}px, ${-slotPose.lift}px, ${slotPose.z}px) ` +
-            `rotateZ(${slotPose.lean}deg) translateX(${-slotPose.corner}px) ${leaning}rotateY(${-slotPose.angle}deg)`;
+            `rotateZ(${lean}deg) translateX(${-slotPose.corner}px) ${leaning}rotateY(${-angle}deg)`;
       if (wrote.transform !== transform) {
         wrote.transform = transform;
         style.transform = transform;
+      }
+      if (frameVolumes) {
+        const size = sizeOf(slotPose.slot);
+        frameVolumes.push({
+          id: node.item.id,
+          index: node.index,
+          slot: slotPose.slot,
+          item: node.item,
+          element: node.element,
+          spineWidth: size.spineWidth,
+          bookHeight: size.bookHeight,
+          coverWidth: size.coverWidth,
+          x: slotPose.x + away,
+          corner: slotPose.lean === 0 ? 0 : slotPose.corner,
+          lean,
+          tilt,
+          angle,
+          lift: slotPose.lift,
+          z: slotPose.z,
+          weight: slotPose.weight,
+          centre: slotPose.slot === centre,
+          hidden: wrote.out,
+        });
       }
       if (wrote.raised !== slotPose.weight > 0) {
         wrote.raised = slotPose.weight > 0;
@@ -987,21 +1161,20 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
 
       // Distance of the volume's middle from the lamp, in cover widths.
       const along = light.lamp
-        ? (slotPose.x - lampX + away + (geometry.coverWidth * Math.sin(slotPose.angle * DEG)) / 2) / geometry.coverWidth
+        ? (slotPose.x - lampX + away + (geometry.coverWidth * Math.sin(angle * DEG)) / 2) / geometry.coverWidth
         : 0;
-      const shades = faceShades(light, slotPose.angle, along);
+      const shades = faceShades(light, angle, along);
       writeShade(node, 0, node.spineShade, shades.spine);
       writeShade(node, 1, node.coverShade, shades.front);
       writeShade(node, 2, node.backShade, shades.back);
-      const turn = Math.sin(slotPose.angle * DEG);
       if (slotPose.weight > 0 || node.turn !== 0) {
         const turning = slotPose.weight > 0;
-        const turned = turning ? turn : 0;
+        const turned = turning ? Math.sin(angle * DEG) : 0;
         if (turned !== node.turn || wrote.sheen === '') {
           node.turn = turned;
           style.setProperty('--bb-turn', String(turned));
         }
-        const sheen = turning ? sheenOf(light, slotPose.angle, along).toFixed(4) : '0';
+        const sheen = turning ? sheenOf(light, angle, along).toFixed(4) : '0';
         if (wrote.sheen !== sheen) {
           wrote.sheen = sheen;
           style.setProperty('--bb-sheen', sheen);
@@ -1023,13 +1196,45 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
     }
     placeBookend(bookends.start, start);
     placeBookend(bookends.end, end);
+    // A volume that was not drawn in this frame carries nothing into the next one it is drawn in.
+    for (const [slot, turn] of turns) if (turn.seen !== frameId) turns.delete(slot);
 
     const open = pose.open <= 0 ? '0' : pose.open >= 1 ? '1' : 'moving';
     if (open !== wroteOpen) {
       wroteOpen = open;
       root.dataset.open = open;
     }
+    if (frameVolumes) emitFrame(frameVolumes);
     if (travelling) requestFrame();
+  }
+
+  /** Hands the frame just drawn to whoever paints it a second time. */
+  function emitFrame(volumes: FrameVolume[]): void {
+    frameVolumes = null;
+    if (frameListeners.size === 0) return;
+    const ends: FrameBookend[] = [];
+    const endHeight = geometry.bookHeight * BOOKEND_TALL;
+    for (const bookend of [bookends.start, bookends.end]) {
+      if (bookend.x === null || bookend.element.hidden) continue;
+      ends.push({ x: bookend.x, width: bookendWidth(), height: endHeight, depth: geometry.coverWidth * 0.55 });
+    }
+    const current: ShelfFrame = {
+      scene,
+      width: sceneWidth,
+      height: scene.clientHeight || 400,
+      floorY: FLOOR_ROOM,
+      perspective: geometry.perspective,
+      rowGive,
+      gap: geometry.gap,
+      volumes,
+      bookends: ends,
+      light,
+      lampX,
+      open: pose.open,
+      variant: variant.name,
+    };
+    lastFrame = current;
+    for (const listener of frameListeners) listener(current);
   }
 
   function bookendWidth(): number {
@@ -1083,8 +1288,40 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
     if (book) touchDown = { id: event.pointerId, x: event.clientX, y: event.clientY, time: event.timeStamp, book };
   };
 
+  /** Where the mouse was when its speed was last taken, and the wait that ends its passing. */
+  let passingFrom: { x: number; y: number; time: number } | null = null;
+  let passingTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Tells a mouse that is crossing the row from one that has come to a volume. While it is passing the
+   * shelf says so in `data-passing`, and the style sheet raises no spine: a sweep along the row would
+   * otherwise play the spines like piano keys.
+   */
+  function notePassing(event: PointerEvent): void {
+    if (event.pointerType !== 'mouse') return;
+    const from = passingFrom;
+    const span = from ? event.timeStamp - from.time : Number.POSITIVE_INFINITY;
+    if (span < PASSING_SPAN_MS) return;
+    passingFrom = { x: event.clientX, y: event.clientY, time: event.timeStamp };
+    if (!from || span > PASSING_STALE_MS) return;
+    if (Math.hypot(event.clientX - from.x, event.clientY - from.y) / span < PASSING_SPEED) return;
+    if (passingTimer === null) root.dataset.passing = '1';
+    else {
+      timers.delete(passingTimer);
+      clearTimeout(passingTimer);
+    }
+    const wait = setTimeout(() => {
+      timers.delete(wait);
+      passingTimer = null;
+      delete root.dataset.passing;
+    }, PASSING_REST_MS);
+    passingTimer = wait;
+    timers.add(wait);
+  }
+
   // A touch that ever leaves the slop radius is a drag for good, even if it comes back to where it started.
   const onPointerMove = (event: PointerEvent): void => {
+    notePassing(event);
     if (!touchDown || touchDown.id !== event.pointerId) return;
     if (Math.hypot(event.clientX - touchDown.x, event.clientY - touchDown.y) > TAP_SLOP) touchDown = null;
   };
@@ -1253,22 +1490,51 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
       // A swipe in from the side of the window belongs to the system: the row stays where it is.
       if (fromEdge) return () => start.position;
       if (fixed) {
-        // A row that stands still does not travel with the hand: it gives a little, and a swipe steps along it.
-        if (giveFrame !== null) cancelAnimationFrame(giveFrame);
-        giveFrame = null;
-        giveBack = null;
-        const quiet = still();
-        // Caught on its way back, the row carries on from as far as it still gives.
-        const before = pullOf(rowGive, GIVE_MOST, GIVE_REACH);
-        const held = { from: start.x, samples: [{ time: performance.now(), x: start.x }] };
+        const held = { from: start.x, steps: still(), samples: [{ time: performance.now(), x: start.x }] };
         pull = held;
+        const feel = (x: number): boolean => {
+          if (pull !== held || fingers.size > 1) return false;
+          held.samples.push({ time: performance.now(), x });
+          if (held.samples.length > 8) held.samples.shift();
+          return true;
+        };
+        if (held.steps) {
+          // Nothing may move by itself: the row stays as it is under the hand, and a swipe is a step.
+          return (x) => {
+            feel(x);
+            return start.position;
+          };
+        }
+        const sized = sizes ? sizeOf : undefined;
+        const last = items.length - 1;
+        const within = (position: number): number => Math.min(last, Math.max(0, position));
+        // The row stands where it is, so no volume can stay under the hand. The position goes with the hand
+        // instead, a volume for each pitch of travel, and the volumes turn as they are pulled.
+        let at = within(start.position);
+        /** Where the hand asks for, in volumes: past an end it runs on, and the row gives by that much. */
+        let asked = at;
+        if (rowGive !== 0 && (rowGive < 0 ? at >= last : at <= 0)) {
+          // Caught on its way back from an end, the row carries on from as far as it still gives.
+          if (giveFrame !== null) cancelAnimationFrame(giveFrame);
+          giveFrame = null;
+          giveBack = null;
+          asked = at - pullOf(rowGive, GIVE_MOST, GIVE_REACH) / pitchAt(at, geometry, sized);
+        }
+        let lastX = start.x;
         return (x) => {
-          if (pull === held && fingers.size < 2) {
-            held.samples.push({ time: performance.now(), x });
-            if (held.samples.length > 8) held.samples.shift();
-            if (!quiet) drawGive(giveOf(before + x - start.x, GIVE_MOST, GIVE_REACH));
+          if (!feel(x)) return at;
+          const pitch = pitchAt(at, geometry, sized);
+          asked -= (x - lastX) / pitch;
+          lastX = x;
+          at = within(asked);
+          // A row on its way back from an earlier pull is left to finish unless this pull reaches an end.
+          if (asked !== at || giveBack === null) {
+            if (giveFrame !== null) cancelAnimationFrame(giveFrame);
+            giveFrame = null;
+            giveBack = null;
+            drawGive(asked === at ? 0 : giveOf((at - asked) * pitch, GIVE_MOST, GIVE_REACH));
           }
-          return start.position;
+          return at;
         };
       }
       const sized = sizes ? sizeOf : undefined;
@@ -1347,6 +1613,14 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onFrame(listener) {
+      frameListeners.add(listener);
+      // The row may be standing still: draw once so the new listener has a frame to paint.
+      lastFrame = null;
+      render();
+      if (lastFrame === null && frameListeners.has(listener)) emitFrame([]);
+      return () => frameListeners.delete(listener);
+    },
     refresh,
     destroy() {
       alive = false;
@@ -1366,6 +1640,7 @@ export function mountShelf(host: HTMLElement, options: ShelfOptions): ShelfHandl
       previous.removeEventListener('click', onPrevious);
       next.removeEventListener('click', onNext);
       listeners.clear();
+      frameListeners.clear();
       root.remove();
     },
   };

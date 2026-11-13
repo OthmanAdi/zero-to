@@ -4,7 +4,7 @@ zero-to is licensed under Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE
 
 ## three.js
 
-- Use: draws the 3D scene (the table, the compass, the paper mountains, the map and the walker).
+- Use: draws the 3D scene (the table, the compass, the paper mountains, the map and the walker) and the Studio shelf.
 - Copyright © 2010-2026 three.js authors.
 - Licence: MIT. Full text: [public/licenses/three.js-MIT.txt](public/licenses/three.js-MIT.txt).
 - Source: https://github.com/mrdoob/three.js, version 0.187.0 from npm.
@@ -38,7 +38,7 @@ zero-to is licensed under Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE
 
 ## Bookmark Bookshelf modules
 
-- Use: the resource shelf in the corner of the map and the reader page of each source (the shelf, motion and reader modules, the design tokens and the travelling cover), in `src/bookshelf/`, copied unchanged. A few rules of its base and composition stylesheets are in `src/shelf/`, scoped to the shelf. [PROVENANCE.md](PROVENANCE.md) lists every file.
+- Use: the Classic and Studio resource shelf, reader, motion, design tokens and travelling cover, copied into `src/bookshelf/`. Rules from the base and composition stylesheets are scoped to the shelf in `src/shelf/`. [PROVENANCE.md](PROVENANCE.md) lists the source paths.
 - Copyright 2026 Ahmad Othman Ammar Adi (OthmanAdi), the author of zero-to.
 - Licence: Apache-2.0, the licence of zero-to. Full text: [LICENSE](LICENSE).
-- Source: https://github.com/OthmanAdi/bookmark-bookshelf, tag v0.2.0, commit 498626dd44b0f676faa389fdbf558d0fd1a3672d.
+- Source: https://github.com/OthmanAdi/bookmark-bookshelf, version 0.3.0, commit 3c93653b477aa32f5190a8ac3ace93b2fd4475d1.

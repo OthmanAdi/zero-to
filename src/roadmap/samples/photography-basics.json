@@ -1,0 +1,575 @@
+{
+  "schema": "zero-to/1",
+  "id": "photography-basics",
+  "title": "Photography basics: exposure, light and composition",
+  "topic": "photography basics (exposure, light, composition) for a phone or camera owner",
+  "summary": "Two stages for phone and camera owners: how exposure works with aperture, shutter speed and ISO, then how to see light and arrange a frame. You finish with a set of twelve photos.",
+  "lang": "en",
+  "checkedOn": "2026-11-13",
+  "freshness": "slow",
+  "brief": {
+    "audience": "self",
+    "goal": "Take photos with deliberate exposure, light and framing instead of leaving everything to auto.",
+    "startLevel": "zero",
+    "targetTier": "silver",
+    "hoursPerWeek": 3,
+    "startDate": "2026-11-16",
+    "deadline": "2026-12-20",
+    "style": "build",
+    "budget": {
+      "max": 0,
+      "currency": "EUR"
+    },
+    "resourceLangs": [
+      "en"
+    ],
+    "projects": "capstone",
+    "gating": "open"
+  },
+  "capstone": {
+    "title": "Twelve photos, one subject",
+    "brief": "An exposure ladder in the first stage, then a set of twelve photos of one subject in the second."
+  },
+  "map": {
+    "terrain": "plateau",
+    "trail": "traverse",
+    "surfaces": "auto"
+  },
+  "stages": [
+    {
+      "id": "exposure",
+      "title": "Exposure: aperture, shutter, ISO",
+      "tier": "bronze",
+      "summary": "Learn what makes a photo bright or dark, and what each of the three settings does to the picture besides brightness.",
+      "waypoints": [
+        {
+          "id": "see-exposure",
+          "title": "What exposure means",
+          "note": "Exposure is how much light reaches the sensor. On a phone you change it with a tap and a drag, on a camera with three settings.",
+          "predict": "A photo comes out too dark. Which settings on a camera could you change to brighten it?",
+          "do": "Photograph one scene three times with your phone: tap the darkest area, tap the brightest area, and drag the exposure slider to the middle. Compare the three photos and write one sentence on what changed.",
+          "takeaways": [
+            "Exposure is the amount of light the sensor collects. Too little is underexposed, too much is overexposed.",
+            "Three settings control it: aperture (how wide the opening is), shutter speed (how long it is open) and ISO (how sensitive the sensor is).",
+            "Many combinations give the same exposure, but each also changes something else: depth of field, motion blur or noise.",
+            "On an iPhone, tap to focus and drag up or down next to the focus area to change exposure. Touch and hold to lock it (AE/AF Lock)."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 30,
+          "resources": [
+            "exposure-cic",
+            "apple-camera-tools"
+          ],
+          "checks": [
+            {
+              "q": "A photo is too dark. Name the three settings that could brighten it.",
+              "kind": "recall",
+              "answer": "A wider aperture, a slower shutter speed or a higher ISO. Each has a side effect: less depth of field, more motion blur or more noise."
+            }
+          ]
+        },
+        {
+          "id": "shutter",
+          "title": "Shutter speed and motion",
+          "note": "Shutter speed decides whether movement looks frozen or blurred.",
+          "predict": "Which shutter speed do you need to freeze a runner: 1/30, 1/250 or 1/1000 second?",
+          "do": "Photograph something that moves (running water, a walking friend, a spinning fan) at several speeds. On a camera use shutter priority (S or Tv) at 1/30, 1/250 and 1/1000 second. On a phone take the shot in bright light and again in dim light and compare the blur.",
+          "takeaways": [
+            "Shutter speed is how long the sensor is exposed. A faster speed means a shorter exposure time.",
+            "Doubling the exposure time doubles the light that enters the camera.",
+            "Hand-held without zoom, about 1/50 to 1/100 second works. To freeze everyday action use about 1/250 to 1/500 second.",
+            "Speeds of half a second and longer usually need a tripod and can make flowing water look silky."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "exposure-cic",
+            "shutter-pl"
+          ],
+          "checks": [
+            {
+              "q": "You want to freeze a running dog. Is 1/30 second fast enough?",
+              "kind": "apply",
+              "options": [
+                "Yes",
+                "No"
+              ],
+              "correct": 1,
+              "answer": "No. Everyday action needs about 1/250 to 1/500 second. At 1/30 second the dog will be blurred."
+            }
+          ]
+        },
+        {
+          "id": "aperture-dof",
+          "title": "Aperture and depth of field",
+          "note": "Aperture changes how much of the scene is sharp. A wide opening blurs the background, a narrow one keeps everything sharp.",
+          "predict": "Is f/2 a wider or a narrower opening than f/16?",
+          "do": "Put a mug close to you and a door far away in one frame. On a camera shoot at the widest and the narrowest aperture. On a phone move close to the mug, tap it, then tap the far object, and compare the background. Try Portrait mode if you have it.",
+          "takeaways": [
+            "Aperture is written as an f-stop. A lower number means a wider opening: f/2 is wider than f/16.",
+            "A wide aperture (low f-number) gives a shallow depth of field. A narrow aperture (high f-number) keeps more of the scene sharp.",
+            "Each standard step (f/2.8, f/4, f/5.6, f/8, f/11, f/16) halves or doubles the light.",
+            "Depth of field is the range of distance that looks acceptably sharp. It does not end abruptly but fades."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "dof-cic",
+            "aperture-pl"
+          ],
+          "checks": [
+            {
+              "q": "You want a blurred background behind a portrait. Choose f/2 or f/16?",
+              "kind": "apply",
+              "options": [
+                "f/2",
+                "f/16"
+              ],
+              "correct": 0,
+              "answer": "f/2. The wide opening gives a shallow depth of field, so the background blurs."
+            }
+          ]
+        },
+        {
+          "id": "iso-noise",
+          "title": "ISO and noise",
+          "note": "ISO brightens a photo without changing the shutter or aperture, but it adds grain.",
+          "predict": "If you double the ISO, what happens to the brightness and what is the price?",
+          "do": "On a camera take the same dim scene at ISO 100, 800 and 3200 on a steady surface and zoom to 100 percent. On a phone shoot a dim room and a bright window scene and compare the grain. Phones raise ISO themselves in the dark.",
+          "takeaways": [
+            "ISO is the sensitivity of the sensor. Doubling it doubles the exposure.",
+            "Higher ISO adds noise, a grain in the picture, so use the lowest ISO that gives the shutter speed and aperture you need.",
+            "Raise ISO only when a slower shutter or a wider aperture would not work, for example because the subject would blur."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "iso-pl",
+            "exposure-cic"
+          ]
+        },
+        {
+          "id": "histogram",
+          "title": "Read the histogram",
+          "note": "The histogram shows how bright the pixels are. It tells you about exposure without trusting your eyes on a bright screen.",
+          "predict": "Where on a histogram do you expect the pixels of a very dark photo to pile up?",
+          "do": "Open the histogram view on your camera or in a photo app. Check it for an underexposed, a correct and an overexposed photo of the same scene, and sketch the three shapes.",
+          "takeaways": [
+            "A histogram counts the pixels at each brightness from 0 (black) to 255 (white) for an 8-bit image.",
+            "There is no single ideal histogram. It should match the tones of the scene you shot.",
+            "The histogram can tell you whether a photo is properly exposed and whether the light is harsh or flat."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 22,
+          "optional": true,
+          "resources": [
+            "hist-cic"
+          ]
+        },
+        {
+          "id": "exposure-drill",
+          "title": "Trade settings, keep the exposure",
+          "note": "Practice the central skill: change one setting and compensate with another so the brightness stays the same.",
+          "do": "Work out five conversions on paper (for example f/8 at 1/125 second equals what at f/4?). Then use the Sunny 16 rule to guess a daylight setting, shoot it, and check the result. On a phone, predict what the exposure slider will do before you drag it.",
+          "takeaways": [
+            "Opening the aperture by one stop lets you halve the shutter time for the same exposure.",
+            "Sunny 16: on a sunny day use f/16 and a shutter speed of about 1/ISO, for example 1/100 second at ISO 100.",
+            "Choose the setting that matters most for the picture first (blur, motion or grain) and let the others follow."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 40,
+          "resources": [
+            "sunny16",
+            "exposure-cic"
+          ],
+          "checks": [
+            {
+              "q": "f/8 at 1/125 second is correctly exposed. What shutter speed gives the same exposure at f/4?",
+              "kind": "apply",
+              "answer": "About 1/500 second. f/4 is two stops wider than f/8, so it lets in four times the light, and the shutter time must be a quarter."
+            }
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Exposure camp",
+        "show": [
+          "Show one scene shot at three different exposure settings, and say what changed in each.",
+          "Show a photo with frozen motion and one with motion blur of the same subject.",
+          "Show a photo with a blurred background and one with everything sharp, and name the setting behind each."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "An exposure ladder",
+        "brief": "One object photographed at a range of exposures, so you see the effect of each step.",
+        "minutes": 40,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Photograph one object at five exposures, from two stops too dark to two stops too bright (or five slider positions on a phone), and pick the best."
+          },
+          {
+            "level": "changed",
+            "task": "Repeat in a backlit scene, such as a subject in front of a window, and explain how the best exposure differs."
+          }
+        ],
+        "criteria": [
+          "Five clearly different exposures",
+          "You can say which one is best and why"
+        ]
+      }
+    },
+    {
+      "id": "light-composition",
+      "title": "Light and composition",
+      "tier": "silver",
+      "summary": "Look at the light before you shoot, and arrange what is in the frame on purpose.",
+      "waypoints": [
+        {
+          "id": "light-quality",
+          "title": "Quality and direction of light",
+          "note": "The same subject looks different at midday, in the evening and under cloud. Learn to see why.",
+          "predict": "Is midday sun usually the best light for photographs? Why or why not?",
+          "do": "Photograph the same spot at midday, in the late afternoon and, if you can, under cloud. Note the contrast, the colour of the shadows and the direction of the light in one line for each photo.",
+          "takeaways": [
+            "Three things shape natural light: time of day, camera direction and weather.",
+            "Midday sun is hard, high-contrast and neutral in colour. It is usually the least flattering light.",
+            "Near sunrise and sunset the light is lower in contrast and warmer, as in the golden hour.",
+            "Clouds shift the balance from direct sunlight to diffuse skylight, which lowers the contrast."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "light-cic"
+          ],
+          "checks": [
+            {
+              "q": "Why does light look warmer near sunrise and sunset?",
+              "kind": "explain",
+              "answer": "The sun is low, so its light passes through more atmosphere, which filters out more blue light. The light is lower in contrast and warmer."
+            }
+          ]
+        },
+        {
+          "id": "thirds",
+          "title": "The rule of thirds",
+          "note": "A grid in your viewfinder helps you place the subject off centre, which often looks more balanced.",
+          "predict": "Where in the frame would you put a person who is looking to the right?",
+          "do": "Turn on the grid in your camera settings. Photograph one subject five times: once in the centre, and four times at the crossings of the grid lines. Choose the best and say why.",
+          "takeaways": [
+            "The rule of thirds divides the frame with imaginary lines into thirds, horizontally and vertically.",
+            "Placing the subject on those lines or where they cross often gives balance without making the image static.",
+            "It is a guideline. Break it on purpose when a centred or symmetrical picture suits the mood.",
+            "On an iPhone, turn on the grid in Settings, Camera, with Grid and Level."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 32,
+          "resources": [
+            "thirds-cic",
+            "apple-camera-tools"
+          ],
+          "checks": [
+            {
+              "q": "The horizon runs through the exact middle of your landscape. What do you try instead?",
+              "kind": "apply",
+              "answer": "Put the horizon on the upper or lower third line, so the sky or the ground gets two thirds of the frame."
+            }
+          ]
+        },
+        {
+          "id": "arrange",
+          "title": "Arrange the frame",
+          "note": "Composition is the arrangement of the elements in your photo. Decide what stays in and where it sits.",
+          "predict": "Before you press the shutter: what is in the frame that should not be?",
+          "do": "Take ten photos of one subject from ten positions: low, high, close, far, through a gap. Choose the best two and write one sentence on what each arrangement does for the subject.",
+          "takeaways": [
+            "Composition is the arrangement of the elements in the photo. You choose what to include and what to leave out.",
+            "Lines and repeated colours can link objects and lead the eye through the picture.",
+            "Keep it simple. Start with what the photo contains and arrange it so it supports the subject.",
+            "The photographer Edward Weston called good composition \"the strongest way of seeing\"."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 36,
+          "resources": [
+            "comp-pl"
+          ]
+        },
+        {
+          "id": "phone-tips",
+          "title": "Phone tips for light and framing",
+          "note": "A phone shoots best when you use its strengths: light, framing and a quick tap for exposure.",
+          "do": "Read the phone tips and try two you had not used before, for example a silhouette at sunrise or sunset. Compare the results with your usual shots.",
+          "takeaways": [
+            "Silhouettes are easy with a phone at sunrise and sunset.",
+            "Recent phones let you set exposure for the scene and even shoot RAW."
+          ],
+          "minutes": 30,
+          "practiceMinutes": 22,
+          "optional": true,
+          "resources": [
+            "phone-pl"
+          ]
+        },
+        {
+          "id": "shoot-the-set",
+          "title": "Shoot twelve photos of one subject",
+          "note": "Bring exposure, light and framing together in one small set, and say why you made each choice.",
+          "do": "Pick one subject, such as a street corner, a plant or a person. Take twelve photos in an hour: four to explore light, four to explore exposure, four to explore framing. Choose the best three and write a three-line caption for each naming the exposure, the light and the framing choice.",
+          "takeaways": [
+            "Say what you wanted before you shoot. Then you can judge whether the picture did it.",
+            "Name the choice behind each photo: the exposure setting, the light and the framing.",
+            "Choose the keepers by your intention and delete the rest. A small set of good photos shows your skill better than a large one."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 65,
+          "resources": [
+            "comp-pl",
+            "light-cic"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Light camp",
+        "show": [
+          "Show the same subject in two kinds of light and say what changed.",
+          "Show a photo composed on the rule of thirds and one where you broke it on purpose.",
+          "Show your best three photos with a caption on exposure, light and framing for each."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Twelve photos, one subject",
+        "brief": "A small set where every choice is yours and you can explain it.",
+        "minutes": 60,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Shoot the set of twelve described in the last step and pick three."
+          },
+          {
+            "level": "changed",
+            "task": "Do it again with a different subject and a different kind of light."
+          },
+          {
+            "level": "own",
+            "task": "Tell a story in five photos, with one caption per photo that names the exposure, the light and the framing."
+          }
+        ],
+        "criteria": [
+          "Exposure is deliberate in every picture",
+          "You can name the kind of light in each",
+          "You can say why each frame is arranged the way it is"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "exposure-cic",
+      "title": "Understanding Camera Exposure: Aperture, ISO & Shutter Speed",
+      "by": "Cambridge in Colour",
+      "url": "https://www.cambridgeincolour.com/tutorials/camera-exposure.htm",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "The exposure triangle with a table of shutter speeds, f-stops and ISO, and which side effect each setting has.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "apple-camera-tools",
+      "title": "Apple Support: Use iPhone camera tools to set up your shot",
+      "by": "Apple",
+      "url": "https://support.apple.com/guide/iphone/use-camera-tools-iph3dc593597/ios",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "Shows how to tap to focus, drag to change exposure, lock it with AE/AF Lock, and turn on the grid. Other phones have similar controls.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "shutter-pl",
+      "title": "Understanding Shutter Speed for Beginners",
+      "by": "Photography Life",
+      "url": "https://photographylife.com/what-is-shutter-speed-in-photography",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Explains shutter speed as the time the shutter is open and how it freezes or blurs motion.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "dof-cic",
+      "title": "Understanding Depth of Field",
+      "by": "Cambridge in Colour",
+      "url": "https://www.cambridgeincolour.com/tutorials/depth-of-field.htm",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "Defines depth of field as the range of distance that looks acceptably sharp and how aperture changes it.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "aperture-pl",
+      "title": "What is Aperture? Understanding Aperture in Photography",
+      "by": "Photography Life",
+      "url": "https://photographylife.com/what-is-aperture-in-photography",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Compares aperture to the pupil of the eye and shows the blurred-background and everything-sharp extremes.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "iso-pl",
+      "title": "What is ISO? Understanding ISO for Beginners",
+      "by": "Photography Life",
+      "url": "https://photographylife.com/what-is-iso-in-photography",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Explains that raising ISO brightens a photo but adds noise, so it is the last setting to raise.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "hist-cic",
+      "title": "Understanding Histograms, Part 1: Tones & Contrast",
+      "by": "Cambridge in Colour",
+      "url": "https://www.cambridgeincolour.com/tutorials/histograms1.htm",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Explains the histogram of brightness values from 0 to 255 and what it says about exposure.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "sunny16",
+      "title": "Sunny 16 rule (Wikipedia)",
+      "by": "Wikipedia",
+      "url": "https://en.wikipedia.org/wiki/Sunny_16_rule",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 10,
+      "why": "The only source found that states the rule in one place: f/16 and a shutter speed of 1/ISO on a sunny day. A last resort source.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "light-cic",
+      "title": "Making the Most of Natural Light in Photography",
+      "by": "Cambridge in Colour",
+      "url": "https://www.cambridgeincolour.com/tutorials/natural-light-photography.htm",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Explains how time of day and weather change the contrast and colour of natural light, from midday to golden hour.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "thirds-cic",
+      "title": "Composition: Using the Rule of Thirds",
+      "by": "Cambridge in Colour",
+      "url": "https://www.cambridgeincolour.com/tutorials/rule-of-thirds.htm",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "States the rule of thirds with examples and says when it is fine to break it.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "comp-pl",
+      "title": "What is Composition in Photography?",
+      "by": "Photography Life",
+      "url": "https://photographylife.com/what-is-composition-photography",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Defines composition as the arrangement of the elements in the frame and explains how to arrange them with meaning.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "phone-pl",
+      "title": "Smartphone Photography Tips",
+      "by": "Photography Life",
+      "url": "https://photographylife.com/smartphone-photography-tips",
+      "type": "article",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 15,
+      "why": "Tips for phone photography, including setting exposure and shooting silhouettes at sunrise and sunset.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    }
+  ]
+}

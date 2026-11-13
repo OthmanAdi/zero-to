@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: compass</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f17;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #hud {
+        position: fixed;
+        left: 16px;
+        bottom: 14px;
+        margin: 0;
+        color: #8d97a8;
+        font: 12px/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        white-space: pre;
+        pointer-events: none;
+      }
+      body.still #hud {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+    <pre id="hud"></pre>
+    <script type="module" src="./compass.ts"></script>
+  </body>
+</html>

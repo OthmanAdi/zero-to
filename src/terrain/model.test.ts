@@ -1,8 +1,23 @@
-import { InstancedMesh, Matrix4, Mesh, Raycaster, Vector3, type MeshStandardMaterial, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from 'three';
+import {
+  Color,
+  InstancedMesh,
+  Matrix4,
+  Mesh,
+  Raycaster,
+  Vector3,
+  type DataTexture,
+  type MeshStandardMaterial,
+  type Texture,
+  type Vector2,
+  type Vector4,
+  type WebGLProgramParametersWithUniforms,
+  type WebGLRenderer,
+} from 'three';
 import { describe, expect, it } from 'vitest';
 import type { SceneEnvironment } from '../scene/contract';
+import { PALETTE } from '../scene/palette';
 import { levelIndexAt } from './contours';
-import { MAX_CARDS, ROUTE_LINE, createTerrainModel, terrainMaterials, type TerrainPart } from './model';
+import { MAX_CARDS, ROUTE_LINE, TERRAIN_HOVER, createTerrainModel, terrainMaterials, type TerrainPart } from './model';
 
 const phone: SceneEnvironment = { envMap: null, maxTexture: 1024, phone: true };
 
@@ -172,19 +187,86 @@ describe('createTerrainModel', () => {
     part.dispose();
   });
 
-  it('lifts the hovered card and those above it, and puts them back', () => {
+  it('lifts the hovered card and those above it, lets them glow, inks its outline, and puts them back', () => {
     const part = build();
+    const cards = part.object.getObjectByName('terrain-cards') as Mesh;
+    const shader = {
+      uniforms: {},
+      vertexShader: '#include <common>\n#include <begin_vertex>',
+      fragmentShader: '#include <common>\n#include <color_fragment>',
+    } as unknown as WebGLProgramParametersWithUniforms;
+    (cards.material as MeshStandardMaterial).onBeforeCompile(shader, null as unknown as WebGLRenderer);
+    const u = shader.uniforms as unknown as {
+      uCard: { value: Vector4[] };
+      uContour: { value: Texture };
+      uContourCard: { value: Vector4 };
+      uContourInk: { value: Vector4 };
+      uHoverInk: { value: Color };
+      uHoverLine: { value: Vector2 };
+    };
+    const channel = (card: number): number => u.uContourCard.value.toArray().indexOf(card);
+    const inkOf = (card: number): number => (channel(card) < 0 ? 0 : (u.uContourInk.value.toArray()[channel(card)] as number));
+
+    // GLSL refuses a name declared twice in one block, and only a real GPU compile would say so: check it here.
+    const declared = [...shader.fragmentShader.matchAll(/\b(?:float|vec2|vec3|vec4)\s+([A-Za-z_]\w*)\s*=/g)].map((m) => m[1]);
+    expect(declared.filter((name, i) => declared.indexOf(name) !== i)).toEqual([]);
+    // The lifted cards light up, the hovered outline is inked, and nothing is drawn while no card is hovered.
+    expect(shader.fragmentShader).toContain('totalEmissiveRadiance += paper * vCardGlow;');
+    expect(shader.fragmentShader).toMatch(/paper = mix\(paper, uHoverInk \* [^;]*, contour\);/);
+    expect(u.uHoverInk.value.r).toBeCloseTo(new Color(PALETTE.signal).r * TERRAIN_HOVER.ink, 6);
+    expect(u.uHoverLine.value.toArray()).toEqual([2.2, 4.6]);
+    expect(u.uContourCard.value.toArray()).toEqual([-1, -1, -1, -1]);
+
     const count = part.levels.length;
     const before = part.cardTop(count - 1);
     const below = part.cardTop(2);
+    const third = part.cardTop(3);
     part.setHover(3);
-    for (let i = 0; i < 120; i += 1) part.update(frame(1 / 60));
-    expect(part.cardTop(count - 1)).toBeGreaterThan(before + 0.015);
-    expect(part.cardTop(3)).toBeGreaterThan(below + part.cardThickness + 0.015);
+    // The glow eases toward its goal at 12 per second: after 0.1 s it has come 1 - e^-1.2 of the way.
+    for (let i = 0; i < 6; i += 1) part.update(frame(1 / 60));
+    expect(u.uCard.value[3]?.w).toBeCloseTo(TERRAIN_HOVER.glow * (1 - Math.exp(-1.2)), 4);
+    for (let i = 0; i < 114; i += 1) part.update(frame(1 / 60));
+    // SPEC 1.5: the hovered card and every card above it lift 0.064 and glow 0.26.
+    expect(part.cardTop(count - 1) - before).toBeCloseTo(0.064, 6);
+    expect(part.cardTop(3) - third).toBeCloseTo(0.064, 6);
     expect(part.cardTop(2)).toBeCloseTo(below, 6);
+    for (let card = 0; card < count; card += 1) expect(u.uCard.value[card]?.w).toBeCloseTo(card >= 3 ? 0.26 : 0, 6);
+    expect(inkOf(3)).toBe(1);
+    const field = u.uContour.value as DataTexture;
+    expect(field.isDataTexture).toBe(true);
+    expect(field.image.width).toBe(256);
+
+    // A pick further down: the cards between come up on their own springs, and the old outline fades out.
+    part.setHover(1);
+    part.update(frame(1 / 60));
+    expect(inkOf(1)).toBeGreaterThan(0);
+    expect(inkOf(1)).toBeLessThan(0.5);
+    expect(inkOf(3)).toBeGreaterThan(0.5);
+    expect(part.cardTop(1)).toBeLessThan(part.cardTop(0) + part.cardThickness + 0.064);
+    for (let i = 0; i < 120; i += 1) part.update(frame(1 / 60));
+    expect(inkOf(1)).toBe(1);
+    expect(inkOf(3)).toBe(0);
+    expect(u.uCard.value[1]?.w).toBeCloseTo(0.26, 6);
+    expect(u.uCard.value[0]?.w).toBe(0);
+
     part.setHover(null);
     for (let i = 0; i < 180; i += 1) part.update(frame(1 / 60));
-    expect(part.cardTop(count - 1)).toBeCloseTo(before, 5);
+    expect(part.cardTop(count - 1)).toBeCloseTo(before, 6);
+    for (let card = 0; card < count; card += 1) expect(u.uCard.value[card]?.w).toBe(0);
+    expect(u.uContourInk.value.toArray()).toEqual([0, 0, 0, 0]);
+    part.dispose();
+  });
+
+  it('jumps to the hover and back under reduced motion', () => {
+    const part = build();
+    const count = part.levels.length;
+    const before = part.cardTop(count - 1);
+    part.setHover(2);
+    part.update(frame(1 / 60, true));
+    expect(part.cardTop(count - 1) - before).toBeCloseTo(TERRAIN_HOVER.lift, 6);
+    part.setHover(null);
+    part.update(frame(1 / 60, true));
+    expect(part.cardTop(count - 1)).toBeCloseTo(before, 6);
     part.dispose();
   });
 
@@ -292,6 +374,14 @@ describe('createTerrainModel', () => {
     expect(line.y).toBeGreaterThan(0);
     expect(line.y).toBeLessThan(line.x);
     expect(line.z).toBe(ROUTE_LINE.minPixels / 2);
+
+    // Down a cut edge the only ink is the stroke that joins the two pieces of a dash. It is read from the green
+    // channel, which marks the crossings, never from the red one, which would paint the whole edge under a dash.
+    expect(shader.fragmentShader).toMatch(/float stitch = [^;]*route\.g\)[^;]*\* \(1\.0 - printed\)[^;]*;/);
+    expect(shader.fragmentShader).not.toMatch(/route\.r[^;]*\(1\.0 - printed\)/);
+    expect(shader.fragmentShader).toMatch(/paper = mix\(paper, ink \* [^;]*, stitch \* [0-9.]+\);/);
+    // A card that still lies in the print has no edge to ink.
+    expect(shader.fragmentShader).toMatch(/float stitch = [^;]*smoothstep\([0-9.]+, [0-9.]+, rise\);/);
     part.dispose();
   });
 

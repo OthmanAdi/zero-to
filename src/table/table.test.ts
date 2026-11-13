@@ -1,9 +1,12 @@
-import { PerspectiveCamera, Ray, Vector3 } from 'three';
+import { Color, PerspectiveCamera, Ray, Vector3, type Group, type Mesh, type MeshStandardMaterial } from 'three';
 import { afterEach, describe, expect, it } from 'vitest';
+import { THEME } from '../look/theme';
+import { orbitDirection } from '../paper/motion';
+import { heroPose, heroShot } from './camera';
 import { draft, sampleRoadmap } from '../roadmap/testing';
 import type { Roadmap } from '../roadmap/types';
 import type { SceneEnvironment } from '../scene/contract';
-import { FIELD_OFFSET } from './cover';
+import { COVER, COVER_EYE, COVER_REACH, FIELD_OFFSET } from './cover';
 import type { ReadoutParts } from './readout';
 import type { SheetSpec } from './sheet-data';
 import { AUTO_TURN, EXIT, INTRO, createTable, type TablePart } from './table';
@@ -131,6 +134,75 @@ describe('createTable', { timeout: 60_000 }, () => {
     expect(Math.abs(part.phi)).toBeLessThan(0.1);
   });
 
+  it('keeps the room dark until the lamp lights it: the environment map, the sheets and the compass come up in turn', () => {
+    const part = make({ sheets: sheets(5) });
+    const mesh = (name: string): Mesh => part.object.getObjectByName(name) as Mesh;
+    const cloth = mesh('table-cloth').material as MeshStandardMaterial;
+    const wood = (mesh('table-top').material as MeshStandardMaterial[])[1] as MeshStandardMaterial;
+    const cover = (mesh('sheet-3-map').material as MeshStandardMaterial[])[0] as MeshStandardMaterial;
+    let brass: MeshStandardMaterial | null = null;
+    part.compass.object.traverse((child) => {
+      const material = (child as Mesh).material as MeshStandardMaterial | undefined;
+      if (!brass && material && typeof material.envMapIntensity === 'number' && material.envMapIntensity > 0.5) brass = material;
+    });
+    const own = { cloth: cloth.envMapIntensity, wood: wood.envMapIntensity, brass: (brass as MeshStandardMaterial | null)?.envMapIntensity ?? 0 };
+    expect(own.wood).toBeGreaterThan(0);
+    expect(own.brass).toBeGreaterThan(0);
+    const light = (material: MeshStandardMaterial): number => material.color.r + material.color.g + material.color.b;
+
+    // The first frame: the lamp has hardly begun, so the room gives next to nothing, and no sheet can be read.
+    run(part, FRAME);
+    expect(part.roomLight).toBeLessThan(0.02);
+    expect(wood.envMapIntensity).toBeLessThan(own.wood * 0.02);
+    expect(cloth.envMapIntensity).toBeLessThan(own.cloth * 0.02);
+    expect((brass as MeshStandardMaterial | null)?.envMapIntensity).toBe(0);
+    expect(light(cover)).toBeLessThan(0.01);
+
+    // The lamp is on before the table turns in; the sheets still lie in the dark, the compass is only rising.
+    run(part, INTRO.hold - 0.1);
+    expect(part.roomLight).toBe(1);
+    expect(wood.envMapIntensity).toBeCloseTo(own.wood);
+    expect(light(cover)).toBeLessThan(0.01);
+    expect((brass as MeshStandardMaterial | null)?.envMapIntensity ?? 0).toBeLessThan(own.brass * 0.1);
+
+    // Once the intro is over everything has its own light again.
+    run(part, INTRO.end);
+    expect(part.roomLight).toBe(1);
+    expect(cloth.envMapIntensity).toBeCloseTo(own.cloth);
+    expect(wood.envMapIntensity).toBeCloseTo(own.wood);
+    expect((brass as MeshStandardMaterial | null)?.envMapIntensity).toBeCloseTo(own.brass);
+    expect(light(cover)).toBeGreaterThan(0.1);
+  });
+
+  it('brings the sheets out of the dark only as the table turns in, so the lit roadmap is the first one read', () => {
+    const part = make({ sheets: sheets(5) });
+    /** The light a sheet keeps right now, read off its cover: printed covers are tinted grey, plain ones are the board. */
+    const kept = (index: number): number => {
+      const material = ((part.object.getObjectByName(`sheet-${index}-map`) as Mesh).material as MeshStandardMaterial[])[0] as MeshStandardMaterial;
+      if (material.map) return material.color.r;
+      return material.color.r / new Color(THEME.cover[part.sheetData(index)?.tier ?? 'gold']).r;
+    };
+    run(part, FRAME);
+    for (let index = 0; index < 5; index += 1) expect(kept(index)).toBeLessThan(0.01);
+    // Every other sheet that passes under the lamp on the way in stays dark while it passes.
+    let passing = 0;
+    let seen = 0;
+    for (let frame = 0; frame < INTRO.grow / FRAME && Math.abs(part.phi) > 25; frame += 1) {
+      run(part, FRAME);
+      for (let index = 1; index < 5; index += 1) {
+        const angle = ((((part.phi - index * 72) % 360) + 540) % 360) - 180;
+        if (Math.abs(angle) < 20) {
+          seen += 1;
+          passing = Math.max(passing, kept(index));
+        }
+      }
+    }
+    expect(seen).toBeGreaterThan(0);
+    expect(passing).toBeLessThan(0.15);
+    run(part, INTRO.end);
+    expect(kept(0)).toBeCloseTo(1, 2);
+  });
+
   it('holds still under reduced motion and answers a pick at once', () => {
     const part = make({ sheets: sheets(5) });
     run(part, 0.5, true);
@@ -165,6 +237,105 @@ describe('createTable', { timeout: 60_000 }, () => {
     expect(gallery.selected).toBe(0);
     run(gallery, 1);
     expect(gallery.selected).toBe(1);
+  });
+
+  it('stops turning by itself for the visit once somebody presses a key; Tab and a lone modifier do not count', () => {
+    const gallery = make({ sheets: sheets(5), intro: false, autoTurn: true });
+    for (const key of ['Tab', 'Shift', 'Control']) document.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    expect(gallery.acted).toBe(false);
+    run(gallery, AUTO_TURN.first + 0.2);
+    expect(gallery.selected).toBe(1);
+    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'b', bubbles: true }));
+    expect(gallery.acted).toBe(true);
+    expect(gallery.autoTurning).toBe(false);
+    run(gallery, 30);
+    expect(gallery.selected).toBe(1);
+    // The host's switch does not undo it.
+    gallery.setAutoTurn(true);
+    run(gallery, 30);
+    expect(gallery.selected).toBe(1);
+  });
+
+  it('waits while a control holds the keyboard focus, so what that control points at does not change under it', () => {
+    const button = document.createElement('button');
+    document.body.append(button);
+    try {
+      const gallery = make({ sheets: sheets(5), intro: false, autoTurn: true });
+      button.focus();
+      expect(document.activeElement).toBe(button);
+      run(gallery, 30);
+      expect(gallery.selected).toBe(0);
+      expect(gallery.acted).toBe(false);
+      button.blur();
+      run(gallery, AUTO_TURN.afterHover - 0.2);
+      expect(gallery.selected).toBe(0);
+      run(gallery, 0.4);
+      expect(gallery.selected).toBe(1);
+    } finally {
+      button.remove();
+    }
+  });
+
+  it('stays on the roadmap somebody went into: back from the walk, the table never turns by itself', () => {
+    const gallery = make({ sheets: sheets(5), intro: false, autoTurn: true });
+    run(gallery, 1);
+    gallery.setExit(0.3);
+    expect(gallery.acted).toBe(true);
+    // The walk: scene time runs on far past the next turn.
+    run(gallery, 20);
+    gallery.setExit(0);
+    run(gallery, 40);
+    expect(gallery.selected).toBe(0);
+  });
+
+  it('puts the next turn off when the host asks, and watches no page when told not to', () => {
+    const gallery = make({ sheets: sheets(5), intro: false, autoTurn: true, watch: null });
+    run(gallery, 1);
+    gallery.holdAutoTurn(10);
+    run(gallery, 9.8);
+    expect(gallery.selected).toBe(0);
+    run(gallery, 0.4);
+    expect(gallery.selected).toBe(1);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(gallery.acted).toBe(false);
+    gallery.act();
+    expect(gallery.autoTurning).toBe(false);
+  });
+
+  it('is seen by the hero camera from where the cover reckons it (COVER_EYE), and no window looks much flatter', () => {
+    const desk = createTable({ envMap: null, maxTexture: 2048, phone: false }, { sheets: sheets(5), intro: false, lang: 'en', pixelRatio: 1, watch: null });
+    try {
+      desk.update({ dt: FRAME, t: FRAME, reduced: false });
+      desk.object.updateMatrixWorld(true);
+      const mount = desk.mapRoot(0) as Group;
+      const eyeAt = (width: number, height: number): Vector3 => {
+        const pose = heroPose(desk.framePoints(), width, height);
+        const shot = heroShot(width, height);
+        const toward = orbitDirection(shot.elevation, shot.yaw);
+        const eye = new Vector3(pose.target.x + toward.x * pose.distance, pose.target.y + toward.y * pose.distance, pose.target.z + toward.z * pose.distance);
+        return mount.worldToLocal(eye);
+      };
+      const desktop = eyeAt(1440, 900);
+      expect(desktop.x).toBeCloseTo(COVER_EYE.x, 1);
+      expect(Math.abs(desktop.y - COVER_EYE.y)).toBeLessThan(0.2);
+      expect(Math.abs(desktop.z - COVER_EYE.z)).toBeLessThan(0.2);
+      // How flat a window looks onto the far edge of the field: run over rise. The cover's margin covers the rest.
+      const farEdge = FIELD_OFFSET - COVER.field / 2;
+      const flatness = (eye: { x: number; y: number; z: number }): number => (eye.z - farEdge) / eye.y;
+      for (const [width, height] of [
+        [1280, 720],
+        [1920, 1080],
+        [2560, 1080],
+        [1366, 768],
+        [800, 900],
+        [1024, 1366],
+        [390, 844],
+      ] as const) {
+        expect(flatness(eyeAt(width, height)), `${width} by ${height}`).toBeLessThanOrEqual(flatness(COVER_EYE) * COVER_REACH.margin);
+      }
+    } finally {
+      desk.dispose();
+    }
   });
 
   it('hands the camera the lit sheet, its mountain and the compass, wherever the table is', () => {
@@ -241,6 +412,59 @@ describe('createTable', { timeout: 60_000 }, () => {
     part.setExit(0);
     run(part, 0.2);
     expect(part.compass.object.visible).toBe(true);
+  });
+
+  it('holds the lit mountain flat for the way back from a walk, and grows it again when let go', () => {
+    const part = make({ sheets: sheets(5), intro: false });
+    run(part, 0.5);
+    expect(part.grow).toBe(1);
+    expect(part.flat).toBe(false);
+    const stood: number[] = [];
+    part.onStand((index) => stood.push(index));
+
+    // Laid down at once: no sinking, no pin, no mountain standing, and the lamp off its rake.
+    part.holdFlat(true, true);
+    expect(part.flat).toBe(true);
+    expect(part.grow).toBe(0);
+    expect(part.standing).toBe(-1);
+    expect(part.height).toBe(0);
+    run(part, 2);
+    // Held: a still table does not grow it, the dive's exit does not raise it, a turn and back changes nothing.
+    expect(part.grow).toBe(0);
+    part.setExit(EXIT.mountain.to);
+    run(part, 0.3);
+    expect(part.grow).toBe(0);
+    part.setExit(0);
+    expect(stood).toEqual([-1]);
+    const camera = new PerspectiveCamera(32, 1.6, 0.1, 200);
+    camera.position.set(0, 14, 24);
+    camera.lookAt(0, 0.5, 3);
+    camera.updateMatrixWorld(true);
+    part.object.updateMatrixWorld(true);
+    expect(part.pinScreen(camera).visible).toBe(false);
+
+    // Let go: it grows in its usual 1.25 s and the pin stands again.
+    part.holdFlat(false);
+    run(part, 0.6);
+    expect(part.standing).toBe(0);
+    expect(part.grow).toBeGreaterThan(0.2);
+    expect(part.grow).toBeLessThan(1);
+    run(part, 1.4);
+    expect(part.grow).toBe(1);
+    part.object.updateMatrixWorld(true);
+    expect(part.pinScreen(camera).visible).toBe(true);
+    expect(stood).toEqual([-1, 0]);
+  });
+
+  it('lets a held mountain sink on its own when it is not laid down at once', () => {
+    const part = make({ sheets: sheets(5), intro: false });
+    run(part, 0.5);
+    part.holdFlat(true);
+    run(part, 0.1);
+    expect(part.grow).toBeGreaterThan(0);
+    expect(part.grow).toBeLessThan(1);
+    run(part, 1.2);
+    expect(part.grow).toBe(0);
   });
 
   it('projects the pin and the anchors of the overlay', () => {

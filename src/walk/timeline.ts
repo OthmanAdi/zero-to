@@ -137,6 +137,14 @@ export function railAt(p: number, count: number, windows: StageWindows = evenWin
   return 1 + stage + easeInOutCubic(seg(f, WALK.hold, 1));
 }
 
+/**
+ * How far the walk's lights are in their finale state at walk progress `p`, 0 to 1: they open up over the wide
+ * shot and close again while everything folds down.
+ */
+export function finaleLightAt(p: number): number {
+  return smooth(seg(p, WALK.wide.from, WALK.wide.to)) * (1 - smooth(seg(p, WALK.down.from, WALK.down.to)));
+}
+
 /** How far the map is open at walk progress `p`: 0 shut, 1 lying open. */
 export function mapOpenAt(p: number): number {
   if (p < WALK.shut.from) return clamp01((p - WALK.open.from) / (WALK.open.to - WALK.open.from));

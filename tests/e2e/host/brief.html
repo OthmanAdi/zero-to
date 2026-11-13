@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to test host: the trip brief</title>
+    <style>
+      html {
+        background: #05070b;
+      }
+      body {
+        margin: 0;
+        background: var(--zt-night, #0b0f17);
+        color: var(--zt-text, #eef0f2);
+        font: 16px/1.5 var(--zt-font-text, system-ui, sans-serif);
+      }
+      /* A stand-in for the page header: the mark and the slot the index tabs hang in. */
+      .host-header {
+        position: fixed;
+        z-index: 30;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 0;
+      }
+      .host-brand {
+        position: absolute;
+        top: 28px;
+        left: 48px;
+        color: var(--zt-text);
+      }
+      .host-nav {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      /* A stand-in for the hero. The real one is the turntable. */
+      .host-hero {
+        box-sizing: border-box;
+        height: 100vh;
+        padding: 190px 46px 0;
+      }
+      @media (max-width: 899px) {
+        .host-brand {
+          top: 16px;
+          left: 16px;
+        }
+        .host-hero {
+          padding: 104px 16px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="host-header">
+      <a class="host-brand" id="brand" href="#top" aria-label="zero-to, back to the top"></a>
+      <div class="host-nav" id="nav-slot"></div>
+    </header>
+    <div class="host-hero" id="top">
+      <h1 class="zt-headline">A stand-in for the table.</h1>
+    </div>
+    <main id="sections"></main>
+    <script type="module" src="./brief.ts"></script>
+  </body>
+</html>

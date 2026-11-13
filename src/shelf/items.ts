@@ -3,7 +3,7 @@
  */
 import { uiLang, type UiLang } from '../i18n';
 import { formatDay, formatHours } from '../look/format';
-import { CLOTHS, hashText, PATTERNS, type ClothName, type PatternName } from '../bookshelf/shelf';
+import { CLOTHS, hashText, PATTERNS, type ClothName, type PatternName, type ShelfItem } from '../bookshelf/shelf';
 import { TIER_NAMES } from '../scene/palette';
 import type { Price, Resource, ResourceType, Roadmap } from '../roadmap/types';
 import { say } from './strings';
@@ -179,6 +179,34 @@ export function toShelfItems(entries: readonly ShelfEntry[], progress?: UsedLook
       main: entry.main,
     };
   });
+}
+
+/**
+ * A volume's accessible name in the interface language: "Title. host. Volume 2 of 5", then "Marked as read" or
+ * "40 percent read". The English is word for word what the Bookshelf row writes itself, which only speaks
+ * English; the dock writes this over it (a test holds the two together).
+ */
+export function volumeLabel(item: ShelfItem, index: number, count: number, ui: UiLang = uiLang()): string {
+  const parts = [item.title];
+  if (item.source) parts.push(item.source);
+  parts.push(say('volumeAt', { index: index + 1, count }, ui));
+  const progress = item.progress ?? 0;
+  if (item.done) parts.push(say('volumeDone', undefined, ui));
+  else if (progress > 0) parts.push(say('volumeRead', { percent: Math.round(progress * 100) }, ui));
+  return parts.join('. ');
+}
+
+/** The shelf's own live line after one of its arrows moved the row ("Title, 2 of 5"), in the interface language. */
+const RESTED = /^([\s\S]*), (\d+) of (\d+)$/;
+
+/**
+ * The Bookshelf row's "where the row came to rest" line in the interface language, or null when `text` is not
+ * that line as the shelf writes it (for example because it was already rewritten).
+ */
+export function restedLine(text: string, ui: UiLang = uiLang()): string | null {
+  const match = RESTED.exec(text);
+  if (!match) return null;
+  return say('restedAt', { title: match[1] ?? '', index: Number(match[2]), count: Number(match[3]) }, ui);
 }
 
 /**

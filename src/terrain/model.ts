@@ -37,7 +37,7 @@ import {
 import { fork, range } from '../core/random';
 import type { FrameTime, SceneEnvironment, ScenePart } from '../scene/contract';
 import { PALETTE, type SurfaceKind } from '../scene/palette';
-import { levelHeights, levelIndexAt, traceContours, type ContourLevel, type ContourPolygon } from './contours';
+import { levelHeights, levelIndexAt, outlineDistance, traceContours, type ContourLevel, type ContourPolygon } from './contours';
 import { generateHeightfield, type Heightfield, type TerrainSpec } from './heightfield';
 import { ROUTE_RAMP, createCanvas, paintGrain, paintGround, paintRoute, routeBleed } from './paper';
 import { assignSurfaces } from './surfaces';
@@ -96,15 +96,51 @@ export interface TerrainPart extends ScenePart<Group> {
   grow(amount: number, immediate?: boolean): void;
   /** Lets the model grow from flat to standing, bottom card first. */
   playGrow(seconds?: number): void;
-  /** Lifts a card and everything above it a little and inks its edge in the route colour. Null puts it back. */
+  /**
+   * Lifts a card and every card above it, lets them glow and inks the cut edge of the card itself in the signal
+   * colour (`TERRAIN_HOVER`). Null puts them back.
+   */
   setHover(card: number | null): void;
 }
 
 const BOARD_HEIGHT = 0.07;
 /** Thickness of a card that still lies in the print. Not zero, so stacked flat cards do not flicker. */
 const FLAT = 0.0009;
-const HOVER_LIFT = 0.025;
 const GROW_SECONDS = 1.25;
+
+/**
+ * The hover on the standing model (SPEC 1.5). The hovered card and every card above it lift on a spring and glow;
+ * the cut edge of the hovered card is inked in the signal colour as a soft line that keeps its width on the screen.
+ */
+export const TERRAIN_HOVER = {
+  /** How far the cards lift, in scene units. A little more than one card, so the cut can be seen from the side. */
+  lift: 0.064,
+  /** The lift spring: stiffness and damping. */
+  k: 260,
+  c: 24,
+  /** Light the lifted cards give off, as a share of their own colour. */
+  glow: 0.26,
+  /** Glow and ink ease toward their goal at this rate per second. */
+  ease: 12,
+  /** The ink of the hovered contour is the signal colour times this. */
+  ink: 1.15,
+  /** The line is solid this many screen pixels in from the cut edge and fades out by the second. */
+  line: [2.2, 4.6],
+} as const;
+
+/**
+ * The distance field the hover line is read from: how far it reaches in from the edge and out from it, in scene
+ * units. At the smallest the table shows a model (about 45 pixels to a unit on a narrow screen) this is still more
+ * than the 4.6 pixels of the line.
+ */
+const CONTOUR_REACH = 0.12;
+/** How many cards' outlines the field keeps at once, one per colour channel, so a line can fade out as the next comes in. */
+const CONTOUR_SLOTS = 4;
+/**
+ * Texels along each side of the distance field. On the table one texel is about a pixel, and a distance field read
+ * between texels stays exact along a straight edge, so a grid of 512 draws the same line at several times the cost.
+ */
+const CONTOUR_GRID = 256;
 /**
  * The printed route, in scene units: the width of the line, the dot under a stop, and the width in screen pixels
  * below which the line is not allowed to thin out when the model is small on the screen.
@@ -129,6 +165,7 @@ varying vec4 vCardInfo;
 varying vec3 vPaperPos;
 varying float vCardGlow;
 varying float vCardUp;
+varying float vCardIndex;
 `;
 
 /** Places a vertex by its card's row: where the card starts and how thick it is right now. */
@@ -146,6 +183,7 @@ vPaperPos = vec3(position.x, transformed.y, position.z);
 vCardGlow = cardNow.w;
 // How far the face looks up: 1 on the top of a card, about 0.7 on the bevel of its cut edge, 0 on the edge itself.
 vCardUp = normal.y;
+vCardIndex = aCard;
 `;
 
 const CARD_FRAGMENT_HEAD = /* glsl */ `
@@ -159,11 +197,18 @@ uniform vec3 uInk;
 uniform vec3 uCore;
 uniform vec3 uSheet;
 uniform vec3 uRouteLine;
+uniform sampler2D uContour;
+uniform vec4 uContourCard;
+uniform vec4 uContourInk;
+uniform float uContourReach;
+uniform vec3 uHoverInk;
+uniform vec2 uHoverLine;
 varying vec2 vPrintUv;
 varying vec4 vCardInfo;
 varying vec3 vPaperPos;
 varying float vCardGlow;
 varying float vCardUp;
+varying float vCardIndex;
 `;
 
 const CARD_FRAGMENT_BODY = /* glsl */ `
@@ -183,8 +228,8 @@ const CARD_FRAGMENT_BODY = /* glsl */ `
   paper *= mix(1.0, ground.g, top);
   // The cut edge: an ink line while the card is flat, the pale core of the paper once it stands.
   float rim = (1.0 - ground.b) * top;
-  vec3 rimColor = mix(mix(uInk, uCore, smoothstep(0.15, 0.7, rise)), uSignal, vCardGlow);
-  paper = mix(paper, rimColor, rim * mix(0.5, 0.7, max(rise, vCardGlow)));
+  vec3 rimColor = mix(uInk, uCore, smoothstep(0.15, 0.7, rise));
+  paper = mix(paper, rimColor, rim * mix(0.5, 0.7, rise));
   // The card above presses a soft shadow on this one.
   paper *= 1.0 - (1.0 - ground.r) * top * 0.6 * smoothstep(0.0, 0.6, riseAbove);
   // Walls are darker at the foot and catch the light at the top edge.
@@ -193,6 +238,21 @@ const CARD_FRAGMENT_BODY = /* glsl */ `
   vec2 fibreUv = mix(vPaperPos.xz, vec2(vPaperPos.x + vPaperPos.z, vPaperPos.y * 2.5), wall) * 1.7;
   float fibre = texture2D(uGrain, fibreUv).r;
   paper *= 0.86 + 0.28 * fibre;
+
+  // The hovered contour: a soft line of signal ink just inside the cut edge of the hovered card, on its face and on
+  // the bevel of the edge, as wide on the screen however near or far the model is. Each channel of uContour holds the
+  // signed distance to the outline of one card (positive on the card, in units of the reach). That value over its
+  // own change from one pixel to the next is the distance in pixels. Where the field runs flat (on the ridge of a
+  // narrow tongue of card, or past the reach) the change is held at what one pixel of the print gives.
+  vec4 outline = texture2D(uContour, vPrintUv) * 2.0 - 1.0;
+  vec4 outlineX = dFdx(outline);
+  vec4 outlineY = dFdy(outline);
+  float printPixel = min(length(dFdx(vPrintUv)), length(dFdy(vPrintUv))) / uContourReach;
+  vec4 outlinePixels = outline / max(sqrt(outlineX * outlineX + outlineY * outlineY), vec4(max(0.6 * printPixel, 1e-6)));
+  vec4 line = smoothstep(vec4(-1.5), vec4(-0.5), outlinePixels) * (1.0 - smoothstep(vec4(uHoverLine.x), vec4(uHoverLine.y), outlinePixels));
+  vec4 ownLine = step(abs(vec4(vCardIndex) - uContourCard), vec4(0.5)) * uContourInk * line;
+  float contour = max(max(ownLine.x, ownLine.y), max(ownLine.z, ownLine.w)) * smoothstep(0.35, 0.6, vCardUp);
+  paper = mix(paper, uHoverInk * (0.9 + 0.2 * fibre), contour);
 
   // The route. The canvas holds a distance ramp, so the edge stays sharp however close the camera comes.
   // Seen from far away the line would thin out to nothing. There its edge is moved out along the ramp, so the line
@@ -209,7 +269,17 @@ const CARD_FRAGMENT_BODY = /* glsl */ `
   float walked = smoothstep(-0.004, 0.004, uProgress - route.b);
   vec3 ink = mix(uSignal, uWalked, walked) * (0.76 + 0.3 * fibre);
   paper = mix(paper, ink, inked * 0.96);
+  // Where a dash steps over a cut edge, one stroke of the same pen joins its two pieces down the edge: as wide as
+  // the line where its middle crosses, however slanted the crossing is. So the edge under a dash is never a slab of
+  // colour, and a line on steep ground still reads as one line. The green channel marks those crossings.
+  float stepSoft = clamp(fwidth(route.g) * 0.8, 0.02, min(0.3, edge - 0.05));
+  float stitch = smoothstep(edge - stepSoft, edge + stepSoft, route.g) * (1.0 - printed) * smoothstep(0.2, 0.75, rise);
+  // The stroke lies in the shade of the edge it runs down.
+  paper = mix(paper, ink * mix(0.74, 1.0, smoothstep(0.0, 0.9, vCardInfo.y)), stitch * 0.9);
 
+  // The hovered card and the cards above it give off a little light of their own colour, so the lifted part of the
+  // stack stands out of the shade as well as out of the lamp.
+  totalEmissiveRadiance += paper * vCardGlow;
   diffuseColor.rgb = paper;
 }
 `;
@@ -227,6 +297,17 @@ interface CardUniforms {
   uCore: { value: Color };
   uSheet: { value: Color };
   uRouteLine: { value: Vector3 };
+  /** Signed distance to the outline of up to four cards, one per channel. */
+  uContour: { value: Texture };
+  /** The card in each channel of uContour, -1 for none. */
+  uContourCard: { value: Vector4 };
+  /** How strongly each channel's outline is inked right now, 0 to 1. */
+  uContourInk: { value: Vector4 };
+  /** The reach of the distance field in print coordinates. */
+  uContourReach: { value: number };
+  uHoverInk: { value: Color };
+  /** Where the hover line is solid and where it is gone, in screen pixels from the cut edge. */
+  uHoverLine: { value: Vector2 };
 }
 
 function patchCardVertex(shader: WebGLProgramParametersWithUniforms, uniforms: CardUniforms, withVaryings: boolean): void {
@@ -340,7 +421,7 @@ function buildCards(levels: readonly ContourLevel[], half: number, thickness: nu
   geometry.setAttribute('aCard', new Float32BufferAttribute(cards, 1));
   geometry.setAttribute('aWall', new Float32BufferAttribute(wallFlags, 1));
   // The shader moves the vertices, so the bounds are set by hand to cover the standing model.
-  const height = BOARD_HEIGHT + levels.length * thickness + HOVER_LIFT;
+  const height = BOARD_HEIGHT + levels.length * thickness + TERRAIN_HOVER.lift;
   geometry.boundingSphere = new Sphere(new Vector3(0, height / 2, 0), Math.hypot(half * Math.SQRT2, height / 2));
   return geometry;
 }
@@ -487,7 +568,7 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
   let routeTexture: Texture = plainTexture(0, 0, 0);
   const route = createCanvas(textureSize);
   if (route) {
-    paintRoute(route.context, { size: textureSize, unit, half, trail, lineWidth, stopRadius });
+    paintRoute(route.context, { size: textureSize, unit, half, trail, lineWidth, stopRadius, levels });
     routeTexture = numberTexture(route.canvas, false, anisotropy);
   }
   keep(grainTexture);
@@ -507,6 +588,13 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
     uCore: { value: coreColor },
     uSheet: { value: topColors[0]?.clone() ?? new Color(PALETTE.paper) },
     uRouteLine: { value: new Vector3((lineWidth / 2) / (2 * half), (lineWidth * ROUTE_RAMP) / (2 * half), ROUTE_LINE.minPixels / 2) },
+    // Until a card is hovered the field says "far beside every outline", so nothing is inked.
+    uContour: { value: keep(plainTexture(0, 0, 0)) },
+    uContourCard: { value: new Vector4(-1, -1, -1, -1) },
+    uContourInk: { value: new Vector4(0, 0, 0, 0) },
+    uContourReach: { value: CONTOUR_REACH / (2 * half) },
+    uHoverInk: { value: new Color(PALETTE.signal).multiplyScalar(TERRAIN_HOVER.ink) },
+    uHoverLine: { value: new Vector2(TERRAIN_HOVER.line[0], TERRAIN_HOVER.line[1]) },
   };
 
   // The cards: one mesh, one material. It stays a standard material, so lamps and shadow maps keep working.
@@ -527,7 +615,7 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
       .replace('#include <common>', `#include <common>\n${CARD_FRAGMENT_HEAD}`)
       .replace('#include <color_fragment>', CARD_FRAGMENT_BODY);
   };
-  cardMaterial.customProgramCacheKey = () => 'zero-to-terrain-card';
+  cardMaterial.customProgramCacheKey = () => 'zero-to-terrain-card-3';
   // The shadow pass has to move the cards the same way, or the shadows would stay behind while the model grows.
   const depthMaterial = keep(new MeshDepthMaterial({ depthPacking: RGBADepthPacking }));
   depthMaterial.onBeforeCompile = (shader) => patchCardVertex(shader, uniforms, false);
@@ -650,13 +738,59 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
   let grown = 1;
   let playing = false;
   let playSeconds = GROW_SECONDS;
-  let hoverCard = -1;
-  let hoverWanted = 0;
-  let hoverNow = 0;
-  let hoverSpeed = 0;
   let awake = true;
 
   const wanted = (card: number): number => clamp((grown * (cardCount - 1 + spread) - card) / spread, 0, 1);
+
+  // Hover: each card has its own lift spring and its own glow, so a pick that moves up or down the stack lets the
+  // cards between the two settle one by one instead of jumping.
+  let hoverCard = -1;
+  const lift = new Float32Array(cardCount);
+  const liftSpeed = new Float32Array(cardCount);
+  const glow = new Float32Array(cardCount);
+  const raised = (card: number): number => (hoverCard >= 0 && card >= hoverCard ? 1 : 0);
+
+  // The outlines the hover line is read from: computed when a card is first hovered, kept in one channel each.
+  const contourSize = CONTOUR_GRID;
+  const contourCards = [-1, -1, -1, -1];
+  const contourInk = new Float32Array(CONTOUR_SLOTS);
+  let contourData: Uint8Array | null = null;
+  let contourTexture: DataTexture | null = null;
+  const inked = (slot: number): number => (hoverCard >= 0 && contourCards[slot] === hoverCard ? 1 : 0);
+
+  const showContour = (card: number): void => {
+    if (contourCards.includes(card)) return;
+    if (!contourData || !contourTexture) {
+      contourData = new Uint8Array(contourSize * contourSize * 4);
+      contourTexture = keep(new DataTexture(contourData, contourSize, contourSize));
+      contourTexture.colorSpace = NoColorSpace;
+      contourTexture.magFilter = LinearFilter;
+      contourTexture.minFilter = LinearFilter;
+      contourTexture.generateMipmaps = false;
+      uniforms.uContour.value = contourTexture;
+    }
+    // The channel whose line is faintest, an empty one first.
+    let slot = 0;
+    for (let s = 1; s < CONTOUR_SLOTS; s += 1) {
+      const empty = contourCards[s] === -1;
+      const best = contourCards[slot] === -1;
+      if ((empty && !best) || (empty === best && (contourInk[s] as number) < (contourInk[slot] as number))) slot = s;
+    }
+    const level = levels[card];
+    const reach = CONTOUR_REACH / half;
+    const field = level ? outlineDistance(level, contourSize, reach) : new Float32Array(contourSize * contourSize).fill(-reach);
+    for (let i = 0; i < field.length; i += 1) {
+      contourData[i * 4 + slot] = Math.round(clamp(((field[i] as number) / reach) * 0.5 + 0.5, 0, 1) * 255);
+    }
+    contourTexture.needsUpdate = true;
+    contourCards[slot] = card;
+    contourInk[slot] = 0;
+  };
+
+  const writeContour = (): void => {
+    uniforms.uContourCard.value.set(contourCards[0] as number, contourCards[1] as number, contourCards[2] as number, contourCards[3] as number);
+    uniforms.uContourInk.value.set(contourInk[0] as number, contourInk[1] as number, contourInk[2] as number, contourInk[3] as number);
+  };
 
   const matrix = new Matrix4();
   const position = new Vector3();
@@ -671,8 +805,8 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
       // Past its target the spring carries the card a little too far, and that overshoot is shown larger.
       const f = r <= 1 ? easeInOutCubic(Math.max(0, r)) : 1 + (r - 1) * 1.2;
       const now = Math.max(FLAT, thickness * f);
-      const lifted = hoverCard >= 0 && card >= hoverCard ? hoverNow * HOVER_LIFT : 0;
-      (uniforms.uCard.value[card] as Vector4).set(y + lifted, now, f, card === hoverCard ? hoverNow : 0);
+      const lifted = (lift[card] as number) * TERRAIN_HOVER.lift;
+      (uniforms.uCard.value[card] as Vector4).set(y + lifted, now, f, (glow[card] as number) * TERRAIN_HOVER.glow);
       tops[card] = y + lifted + now;
       shown[card] = smooth(0.5, 1, f);
       y += now;
@@ -741,15 +875,18 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
     };
     stand(treeMesh, trees, false);
     stand(stoneMesh, stones, true);
+    writeContour();
   };
 
   const settle = (): void => {
     for (let card = 0; card < cardCount; card += 1) {
       rise[card] = wanted(card);
       speed[card] = 0;
+      lift[card] = raised(card);
+      liftSpeed[card] = 0;
+      glow[card] = raised(card);
     }
-    hoverNow = hoverWanted;
-    hoverSpeed = 0;
+    for (let slot = 0; slot < CONTOUR_SLOTS; slot += 1) contourInk[slot] = inked(slot);
     place();
   };
   settle();
@@ -804,12 +941,8 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
     setHover(card) {
       const next = card === null || !Number.isFinite(card) || card < 0 ? -1 : Math.round(clamp(card, 0, cardCount - 1));
       if (next === hoverCard) return;
-      if (next >= 0) {
-        hoverCard = next;
-        hoverWanted = 1;
-      } else {
-        hoverWanted = 0;
-      }
+      hoverCard = next;
+      if (next >= 0) showContour(next);
       awake = true;
     },
 
@@ -819,13 +952,13 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
         if (playing) grown = 1;
         playing = false;
         settle();
-        if (hoverWanted === 0) hoverCard = -1;
         awake = false;
         return;
       }
       const dt = clamp(frame.dt, 0, 0.1);
       const steps = Math.max(1, Math.ceil(dt / (1 / 120)));
       const h = dt / steps;
+      const ease = 1 - Math.exp(-TERRAIN_HOVER.ease * h);
       let moving = playing;
       for (let step = 0; step < steps; step += 1) {
         if (playing) {
@@ -843,14 +976,24 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
           rise[card] = r;
           speed[card] = v;
           if (Math.abs(goal - r) > 5e-4 || Math.abs(v) > 5e-3) moving = true;
+
+          const up = raised(card);
+          const pull = (up - (lift[card] as number)) * TERRAIN_HOVER.k - (liftSpeed[card] as number) * TERRAIN_HOVER.c;
+          liftSpeed[card] = (liftSpeed[card] as number) + pull * h;
+          lift[card] = (lift[card] as number) + (liftSpeed[card] as number) * h;
+          glow[card] = (glow[card] as number) + (up - (glow[card] as number)) * ease;
+          if (Math.abs(up - (lift[card] as number)) > 5e-4 || Math.abs(liftSpeed[card] as number) > 5e-3 || Math.abs(up - (glow[card] as number)) > 1e-3) {
+            moving = true;
+          }
         }
-        hoverSpeed += ((hoverWanted - hoverNow) * 260 - hoverSpeed * 24) * h;
-        hoverNow += hoverSpeed * h;
-        if (Math.abs(hoverWanted - hoverNow) > 5e-4 || Math.abs(hoverSpeed) > 5e-3) moving = true;
+        for (let slot = 0; slot < CONTOUR_SLOTS; slot += 1) {
+          const goal = inked(slot);
+          contourInk[slot] = (contourInk[slot] as number) + (goal - (contourInk[slot] as number)) * ease;
+          if (Math.abs(goal - (contourInk[slot] as number)) > 1e-3) moving = true;
+        }
       }
       if (!moving) {
         settle();
-        if (hoverWanted === 0) hoverCard = -1;
         awake = false;
         return;
       }

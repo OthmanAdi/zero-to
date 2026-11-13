@@ -2,7 +2,7 @@ import { createRandom } from '../core/random';
 import type { UiLang } from '../i18n';
 import { createWordmark } from '../look/brand';
 import { AUDIENCES, HOURS, TOPIC_MAX, ticketCommand, ticketReady, type Audience, type TicketChoice } from './command';
-import { copyText, h, svg } from './dom';
+import { HIDDEN, copyText, h, svg } from './dom';
 import { say, type SectionKey } from './strings';
 
 /**
@@ -147,7 +147,7 @@ export function createTicket(options: TicketOptions): TicketView {
   );
 
   const form = h('form', { class: 'zs-ticket zt-on-paper', novalidate: true, 'aria-label': s('ticketName') }, main, stub);
-  const slot = h('div', { class: 'zs-slot', 'aria-hidden': 'true' });
+  const slot = h('div', { class: 'zs-slot', ...HIDDEN });
   const element = h('div', { class: 'zs-ticket-wrap' }, slot, h('div', { class: 'zs-ticket-rise' }, form));
 
   let torn = false;

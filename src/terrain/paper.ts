@@ -1,7 +1,7 @@
 import type { Random } from '../core/random';
 import { range } from '../core/random';
 import type { SurfaceKind } from '../scene/palette';
-import { levelIndexAt, type ContourLevel, type Ring } from './contours';
+import { levelIndexAt, type ContourLevel, type Point2, type Ring } from './contours';
 import { markTrail, type Trail, type TrailMark } from './trail';
 
 /**
@@ -15,6 +15,8 @@ import { markTrail, type Trail, type TrailMark } from './trail';
  *
  * route canvas (black means "nothing here")
  *   red    distance to the route marks, 0.5 exactly on their edge, so the shader can draw a sharp edge at any zoom
+ *   green  the same kind of ramp round every point where a dash steps from one card to another: the shader reads it
+ *          on the cut edge below and draws the pen stroke that joins the two pieces of the dash
  *   blue   how far along the trail the nearest piece of route is, 0..1
  *
  * Both canvases look straight down on the model: canvas x is the footprint's x, canvas y is its z.
@@ -329,6 +331,8 @@ export interface RoutePrint {
   readonly lineWidth: number;
   /** Radius of the large dot printed under each stop, in scene units. */
   readonly stopRadius: number;
+  /** The cards of the model. With them, the print marks where the line steps from card to card. */
+  readonly levels?: readonly ContourLevel[];
 }
 
 /**
@@ -345,17 +349,56 @@ export function routeMarks(trail: Trail, half: number): TrailMark[] {
   return markTrail(trail, { dash: ROUTE_DASH.dash / half, gap: ROUTE_DASH.gap / half, dotEvery: 0 });
 }
 
+/**
+ * Where the line steps over a cut edge, the edge carries a stroke of the same pen. This is half its width as a share
+ * of the line's width: a little under half, because a cut edge faces the viewer and the cards' faces lie back.
+ */
+export const ROUTE_STEP = 0.42;
+
+/** A dash that only grazes a card and is back on its own within this many of its points does not step. */
+const STEP_GRAZE = 3;
+
+/**
+ * The points where the dashes of the route step from one card to another, in footprint units. The centre line of
+ * every dash is followed from card to card, and each change of card is narrowed down to the cut edge itself.
+ */
+export function routeSteps(marks: readonly TrailMark[], levels: readonly ContourLevel[]): Point2[] {
+  const steps: Point2[] = [];
+  for (const mark of marks) {
+    if (mark.kind !== 'dash') continue;
+    const cards = mark.points.map((point) => levelIndexAt(levels, point.x, point.z));
+    for (let i = 0; i < mark.points.length - 1; i += 1) {
+      const from = cards[i] as number;
+      const to = cards[i + 1] as number;
+      if (from === to || from < 0 || to < 0) continue;
+      // A graze: the dash is back on the card it came from at once. Nothing to join there.
+      let back = false;
+      for (let k = i + 2; k <= Math.min(mark.points.length - 1, i + 1 + STEP_GRAZE); k += 1) if (cards[k] === from) back = true;
+      if (back) continue;
+      let a: Point2 = mark.points[i] as Point2;
+      let b: Point2 = mark.points[i + 1] as Point2;
+      for (let round = 0; round < 8; round += 1) {
+        const middle = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+        if (levelIndexAt(levels, middle.x, middle.z) === from) a = middle;
+        else b = middle;
+      }
+      steps.push({ x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 });
+    }
+  }
+  return steps;
+}
+
 /** How far, in scene units, the along-the-trail channel reaches past the centre of the line. */
 export function routeBleed(print: Pick<RoutePrint, 'lineWidth'>): number {
   return print.lineWidth / 2 + print.lineWidth * ROUTE_RAMP + 0.008;
 }
 
 /**
- * Paints the route canvas: dashes and stop dots as a distance field in red, and the position along the trail in
- * blue.
+ * Paints the route canvas: dashes and stop dots as a distance field in red, the steps from card to card as one in
+ * green, and the position along the trail in blue.
  */
 export function paintRoute(context: CanvasRenderingContext2D, print: RoutePrint): void {
-  const { size, unit, half, trail, lineWidth, stopRadius } = print;
+  const { size, unit, half, trail, lineWidth, stopRadius, levels } = print;
   const px: ToPixel = (value) => (value * 0.5 + 0.5) * size;
   context.globalCompositeOperation = 'source-over';
   context.fillStyle = '#000000';
@@ -427,6 +470,23 @@ export function paintRoute(context: CanvasRenderingContext2D, print: RoutePrint)
       context.arc(px(stop.x), px(stop.z), reach, 0, Math.PI * 2);
     });
     context.fill();
+  }
+
+  // Green: a dot of the same ramp wherever a dash steps over a cut edge.
+  const stepsOver = levels ? routeSteps(marks, levels) : [];
+  if (stepsOver.length > 0) {
+    for (let step = 1; step <= steps; step += 1) {
+      const value = step / steps;
+      const reach = lineWidth * ROUTE_STEP * unit + spread * (1 - 2 * value);
+      if (reach <= 0.3) continue;
+      context.fillStyle = `rgb(0,${Math.round(value * 255)},0)`;
+      context.beginPath();
+      for (const point of stepsOver) {
+        context.moveTo(px(point.x) + reach, px(point.z));
+        context.arc(px(point.x), px(point.z), reach, 0, Math.PI * 2);
+      }
+      context.fill();
+    }
   }
   context.globalCompositeOperation = 'source-over';
 }

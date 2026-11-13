@@ -133,6 +133,9 @@ export async function buildViewer(options: BuildViewerOptions = {}): Promise<Bui
       base: './',
       publicDir: false,
       logLevel: options.quiet ? 'silent' : 'warn',
+      // The viewer is the page the skill writes one person's roadmap into: it carries no gallery, so none of the
+      // example roadmaps and none of the code that would fetch them (see GALLERY in src/app/director.ts).
+      define: { __ZERO_TO_GALLERY__: 'false' },
       build: {
         outDir: work,
         emptyOutDir: true,

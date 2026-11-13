@@ -88,27 +88,26 @@ describe('the library of opened roadmaps', () => {
 
 describe('what lies on the table', () => {
   it('is the gallery alone when nothing is open', () => {
-    const entries = tableEntries(null, [], samples, 5);
+    const entries = tableEntries({ kind: 'gallery' }, samples, 5);
     expect(entries.map((entry) => entry.roadmap.id)).toEqual(samples.map((sample) => sample.id));
     expect(entries.every((entry) => entry.example)).toBe(true);
   });
 
-  it('puts the opened roadmap in slot 0, then what was opened before, then examples', () => {
+  it('is a given roadmap alone: no examples and nothing opened before beside it', () => {
     const library = createLibrary(memoryStorage());
     library.add(own('older'));
     library.add(own('mine'));
-    const entries = tableEntries(own('mine'), library.list(), samples, 5);
-    expect(entries.map((entry) => `${entry.roadmap.id}:${entry.example}`)).toEqual([
-      'mine:false',
-      'older:false',
-      'photography-basics:true',
-      'rust-for-a-python-dev:true',
-      'statistics-for-data-work:true',
-    ]);
+    const entries = tableEntries({ kind: 'given', roadmap: own('mine') }, samples, 5);
+    expect(entries.map((entry) => `${entry.roadmap.id}:${entry.example}`)).toEqual(['mine:false']);
   });
 
-  it('never shows a roadmap twice and never more than the table holds', () => {
-    const entries = tableEntries(samples[1] as Roadmap, [], samples, 2);
+  it('is a given roadmap alone also when it carries the id of an example', () => {
+    const entries = tableEntries({ kind: 'given', roadmap: samples[1] as Roadmap }, samples, 5);
+    expect(entries.map((entry) => `${entry.roadmap.id}:${entry.example}`)).toEqual(['rust-for-a-python-dev:false']);
+  });
+
+  it('puts the example a page was opened for first, never shows one twice and never more than the table holds', () => {
+    const entries = tableEntries({ kind: 'gallery', first: samples[1] as Roadmap }, samples, 2);
     expect(entries.map((entry) => `${entry.roadmap.id}:${entry.example}`)).toEqual(['rust-for-a-python-dev:false', 'photography-basics:true']);
   });
 });

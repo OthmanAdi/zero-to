@@ -201,15 +201,61 @@ export function factsList(facts: RoadmapFacts): HTMLElement {
 // ---------------------------------------------------------------------------------------------------------
 // Share
 
-/** The address of this page with a roadmap in its fragment. */
+/** The public site. A share link goes there when the page it was made on cannot open one. */
+export const PUBLIC_SITE = 'https://othmanadi.github.io/zero-to/';
+
+/** The element a page carries its own roadmap in: a prerendered roadmap page, a file the skill built. */
+const OWN_ROADMAP_ID = 'zero-to-roadmap';
+
+/** The parts of a page's address a share link is built from. `location` is one. */
+export interface PageAddress {
+  readonly protocol: string;
+  readonly origin: string;
+  readonly pathname: string;
+}
+
+/**
+ * The address a share link is built on. The link has to open the roadmap in its fragment, but a page reads the
+ * roadmap it carries itself before any fragment. So:
+ * - a prerendered roadmap page (`roadmaps/<id>/`) and the gallery give the site's root beside them, which carries none;
+ * - a file on a computer (`file:`), or any other page with its own roadmap, gives the public site;
+ * - every other page gives itself.
+ * The query is never part of it: `?road=`, `?ui=` and the debug switches belong to this visit.
+ */
+export function shareBase(page: PageAddress, ownRoadmap: boolean, site: string = PUBLIC_SITE): string {
+  if (page.protocol !== 'http:' && page.protocol !== 'https:') return site;
+  const root = page.pathname.replace(/(?:roadmaps\/[^/]+\/|gallery\/)(?:index\.html)?$/, '');
+  if (root !== page.pathname) return `${page.origin}${root}`;
+  return ownRoadmap ? site : `${page.origin}${page.pathname}`;
+}
+
+/** The share base of the page that is open. */
+export function pageShareBase(): string {
+  if (typeof location === 'undefined') return PUBLIC_SITE;
+  const own = typeof document !== 'undefined' && (document.getElementById(OWN_ROADMAP_ID)?.textContent?.trim() ?? '') !== '';
+  return shareBase(location, own);
+}
+
+/** A share link: the base (default: `pageShareBase()`) with the roadmap in its fragment. */
 export function shareUrl(fragment: string, base?: string): string {
-  const here = base ?? (typeof location === 'undefined' ? '' : `${location.origin}${location.pathname}${location.search}`);
-  return `${here}#r=${fragment}`;
+  return `${base ?? pageShareBase()}#r=${fragment}`;
+}
+
+/** "othmanadi.github.io/zero-to" for a link that opens on another site than this page, or null. */
+export function otherSite(base: string, page: { readonly origin: string } | undefined = typeof location === 'undefined' ? undefined : location): string | null {
+  let url: URL;
+  try {
+    url = new URL(base);
+  } catch {
+    return null;
+  }
+  if (page && url.origin === page.origin) return null;
+  return `${url.host}${url.pathname.replace(/\/+$/, '')}`;
 }
 
 export interface ShareOptions {
   readonly onDownload?: (roadmap: Roadmap) => void;
-  /** The address links are built on. Default: this page. */
+  /** The address links are built on. Default: `pageShareBase()`. */
   readonly base?: string;
 }
 
@@ -243,10 +289,14 @@ export async function fillShare(panel: Panel, roadmap: Roadmap, options: ShareOp
     );
   });
 
+  const base = options.base ?? pageShareBase();
+  // A page that cannot open a link itself (a file, a roadmap page) shares the site's address: say which.
+  const elsewhere = otherSite(base);
   fill(
     panel.body,
     roadText('p', roadmap.title, roadmap.lang, { class: 'zh-panel-road zt-title' }),
     el('p', { class: 'zt-small' }, say('shareIntro')),
+    elsewhere ? el('p', { class: 'zh-panel-note zt-small', 'data-share-site': '' }, say('shareElsewhere', { site: elsewhere })) : null,
     el('div', { class: 'zh-field-block' }, el('label', { class: 'zt-label', for: fieldId }, say('shareLink')), el('div', { class: 'zh-field-row' }, field, copy)),
     status,
     download,
@@ -256,7 +306,7 @@ export async function fillShare(panel: Panel, roadmap: Roadmap, options: ShareOp
 
   try {
     const fragment = await encodeRoadmap(roadmap);
-    field.value = shareUrl(fragment, options.base);
+    field.value = shareUrl(fragment, base);
     copy.disabled = false;
     setText(status, '');
   } catch (cause) {

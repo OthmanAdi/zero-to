@@ -11,9 +11,19 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 900,
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         home: resolve(root, 'index.html'),
+      },
+      output: {
+        codeSplitting: {
+          groups: [
+            // three.js changes only with its version, so its file stays in the browser's cache across releases.
+            { name: 'three', test: /[\\/]node_modules[\\/]three[\\/]/, priority: 20 },
+            // The gallery's roadmaps: data that changes on its own schedule, fetched beside the code.
+            { name: 'gallery', test: /[\\/]src[\\/]roadmap[\\/]samples[\\/][^\\/]+\.json$/, priority: 10 },
+          ],
+        },
       },
     },
   },

@@ -46,8 +46,12 @@ export {
 export { estimateTextWidth, layoutTitle, titleChunks, type TitleBox, type TitleLayout } from './title';
 export {
   COVER,
+  COVER_EYE,
+  COVER_REACH,
   FIELD_OFFSET,
+  clearTitle,
   coverLayout,
+  coverReach,
   paintCover,
   titleMeasure,
   type CoverLayout,

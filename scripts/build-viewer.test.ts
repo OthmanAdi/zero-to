@@ -1,8 +1,9 @@
 // @vitest-environment node
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { VIEWER_LICENCES, inlineAssets, inlineScript, inlineStyle, licenceComment, outsideReferences, withLicenceComment } from './build-viewer';
+import { VIEWER_LICENCES, buildViewer, inlineAssets, inlineScript, inlineStyle, licenceComment, outsideReferences, withLicenceComment } from './build-viewer';
 
 describe('the single-file viewer', () => {
   it('writes a script so it cannot close its own element or open a comment', () => {
@@ -64,6 +65,28 @@ describe('the single-file viewer', () => {
       expect.arrayContaining(['three.js-MIT.txt', 'Vite-MIT.txt', 'Fraunces-OFL-1.1.txt', 'Atkinson-Hyperlegible-Next-OFL-1.1.txt', 'IBM-Plex-Mono-OFL-1.1.txt']),
     );
   });
+
+  it('carries none of the gallery: no example roadmap, by id or by title', async () => {
+    const work = mkdtempSync(join(tmpdir(), 'zero-to-viewer-test-'));
+    try {
+      const out = join(work, 'zero-to.html');
+      await buildViewer({ out, quiet: true });
+      const html = readFileSync(out, 'utf8');
+      const folder = join(import.meta.dirname, '..', 'src', 'roadmap', 'samples');
+      const samples = readdirSync(folder)
+        .filter((name) => name.endsWith('.json'))
+        .map((name) => JSON.parse(readFileSync(join(folder, name), 'utf8')) as { id: string; title: string });
+      expect(samples.length).toBeGreaterThan(0);
+      for (const sample of samples) {
+        expect(html.includes(sample.id), sample.id).toBe(false);
+        expect(html.includes(sample.title), sample.title).toBe(false);
+      }
+      // The page still has its empty place for the roadmap the skill writes in.
+      expect(html).toMatch(/<script type="application\/json" id="zero-to-roadmap"><\/script>/);
+    } finally {
+      rmSync(work, { recursive: true, force: true });
+    }
+  }, 240_000);
 
   it('finds addresses in styles, and takes data addresses and links in code as harmless', () => {
     const html =

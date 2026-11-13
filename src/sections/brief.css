@@ -1,0 +1,582 @@
+/*
+ * Roadmap mode of the landing sections: what the stops need when they are the trip brief of a person's own
+ * roadmap. Every selector starts at `.zs-b-` or is scoped to `.zs-brief`, and the frame, the paper, the thread
+ * and the motion all come from `sections.css`. This file is fetched with the brief, so a gallery visitor never
+ * carries it.
+ *
+ * The rules of the look hold here too: the route colour means the route and "you are here" (the line for today),
+ * never a warning, so a late arrival and a deadline are set in ink.
+ */
+
+/* ---- 01 The route --------------------------------------------------------------------------------------- */
+
+/* The headline is the roadmap's own title: any length, any language. */
+.zs-b-title {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.zs-b-title.is-long {
+  font-size: clamp(27px, 1.25vw + 17px, 38px);
+  line-height: 1.1;
+}
+
+.zs-b-goal .zt-label {
+  margin-right: 10px;
+  color: var(--zt-text-faint);
+}
+
+/* An altitude the route never reaches: its peak stays on the sheet as a pale outline of itself. */
+.zs-brief .zs-peak.is-off {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.zs-live .zs-brief .zs-peak.is-off:not(.is-up) {
+  opacity: 0;
+}
+
+.zs-b-tier.is-off {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-tier.is-off::before {
+  opacity: 0.62;
+}
+
+.zs-b-tier.is-off .zs-blaze {
+  opacity: 0.45;
+}
+
+.zs-b-tier-sum {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-stages {
+  display: grid;
+  gap: 6px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid var(--zs-ink-rule);
+}
+
+.zs-b-stages li {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: 6px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.zs-b-stage-n {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-stage-title {
+  overflow-wrap: anywhere;
+}
+
+.zs-b-stage-h {
+  color: var(--zt-ink-soft);
+  white-space: nowrap;
+}
+
+/* ---- 02 Sources ----------------------------------------------------------------------------------------- */
+
+.zs-brief .zs-slips {
+  margin-top: 18px;
+}
+
+.zs-b-stat .zs-card-title {
+  margin-bottom: 2px;
+}
+
+.zs-b-big {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-bottom: 10px;
+}
+
+.zs-b-big .zs-step-n {
+  display: inline;
+  margin: 0;
+  font-size: 44px;
+}
+
+.zs-b-big .zt-label {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-rows {
+  display: grid;
+  gap: 3px;
+  margin: 0 0 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--zs-ink-rule);
+}
+
+.zs-b-rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.zs-b-rows dt {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-rows dd {
+  margin: 0;
+}
+
+.zs-b-stat > p.zt-small + p.zt-small {
+  margin-top: 5px;
+}
+
+/* The sources that are not verified, on the room beside the cards. */
+.zs-b-flagged {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.zs-b-flag {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 12px;
+  align-items: baseline;
+  padding-top: 12px;
+  border-top: 1px solid var(--zs-rule);
+  color: var(--zt-text-soft);
+}
+
+.zs-b-flag > .zs-slip {
+  white-space: nowrap;
+}
+
+.zs-b-flag-head {
+  min-width: 0;
+}
+
+.zs-b-flag-title {
+  color: var(--zt-text);
+  font-weight: 600;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.zs-b-flag-host {
+  margin-left: 8px;
+  color: var(--zt-text-faint);
+  white-space: nowrap;
+}
+
+.zs-b-flag > p {
+  grid-column: 2;
+  max-width: 46ch;
+}
+
+.zs-b-more {
+  margin-top: 12px;
+}
+
+.zs-b-more summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  color: var(--zt-text-soft);
+  cursor: pointer;
+}
+
+/* ---- 04 Pace -------------------------------------------------------------------------------------------- */
+
+.zs-b-control {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--zs-ink-rule);
+}
+
+.zs-b-control label {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-pace-value {
+  min-width: 2.6ch;
+  font-size: 32px;
+  text-align: right;
+  color: var(--zt-ink);
+}
+
+.zs-b-reset {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px dashed rgb(31 42 61 / 0.5);
+  border-radius: 2px;
+  background: none;
+  color: var(--zt-ink);
+  cursor: pointer;
+}
+
+.zs-b-range {
+  width: 100%;
+  height: 32px;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none;
+}
+
+.zs-b-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(31 42 61 / 0.3);
+}
+
+.zs-b-range::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(31 42 61 / 0.3);
+}
+
+.zs-b-range::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 2px solid var(--zt-paper-hi);
+  border-radius: 50%;
+  background: var(--zt-ink);
+  box-shadow: 0 1px 3px rgb(5 7 11 / 0.45);
+  appearance: none;
+}
+
+.zs-b-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--zt-paper-hi);
+  border-radius: 50%;
+  background: var(--zt-ink);
+  box-shadow: 0 1px 3px rgb(5 7 11 / 0.45);
+}
+
+.zs-b-grid {
+  padding-bottom: 48px;
+}
+
+.zs-b-weeks {
+  display: flex;
+  column-gap: 0;
+}
+
+.zs-b-weeks .zs-week {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 27px;
+  overflow: hidden;
+  box-shadow: inset -2px 0 0 var(--zt-paper);
+  white-space: nowrap;
+}
+
+.zs-b-row {
+  position: relative;
+  display: block;
+  height: 36px;
+}
+
+.zs-b-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--from, 0%);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: max(calc(var(--to, 0%) - var(--from, 0%)), 12px);
+  padding: 0 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.zs-b-strip[data-tier='diamond'] {
+  background: var(--zt-cover-diamond);
+}
+
+.zs-b-strip {
+  container-type: inline-size;
+}
+
+.zs-b-strip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.86;
+  letter-spacing: 0.06em;
+}
+
+/* A short strip keeps its number and lets go of its title. The title is in its tooltip and in stop 01. */
+@container (max-width: 108px) {
+  .zs-b-strip span {
+    display: none;
+  }
+}
+
+.zs-b-strip.is-out {
+  display: none;
+}
+
+/* A strip moves along the ruler when the hours change, and still falls into place with its row. */
+.zs-live .zs-b-grid .zs-b-row > .zs-b-strip {
+  transition:
+    transform 0.6s var(--zs-spring),
+    opacity 0.25s ease-out,
+    left 0.45s var(--zs-out),
+    width 0.45s var(--zs-out);
+}
+
+/* Where the stop is not pinned the rows are let go together, and each waits its turn. */
+.zs-live .zs-b-grid.is-flow .zs-b-row > .zs-b-strip,
+.zs-live .zs-b-grid.is-flow .zs-b-row > .zs-b-session {
+  transition-delay: calc(var(--i, 0) * 0.14s), calc(var(--i, 0) * 0.14s), 0s, 0s;
+}
+
+.zs-live .zs-b-grid.is-flow .zs-today {
+  transition-delay: 0.7s;
+}
+
+.zs-b-sessions {
+  height: 26px;
+}
+
+.zs-b-session {
+  position: absolute;
+  top: 0;
+  left: var(--at, 0%);
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -12px;
+  padding: 0;
+  background: var(--zt-paper);
+  font-size: 10.5px;
+}
+
+.zs-b-sessions.is-dense .zs-b-session {
+  width: 18px;
+  margin-left: -9px;
+  font-size: 9px;
+  letter-spacing: 0;
+}
+
+/* The session the class has reached. It is "you are here" for a class, so it takes the route colour. */
+.zs-b-session.is-here {
+  border: 1.5px solid var(--zt-signal-deep);
+  color: var(--zt-signal-deep);
+  font-weight: 500;
+}
+
+.zs-b-grid .zs-today {
+  bottom: 40px;
+}
+
+.zs-b-grid .zs-today.is-end .zs-today-flag {
+  transform: translateX(-100%);
+  padding-right: 0;
+}
+
+.zs-b-grid .zs-today.is-start .zs-today-flag {
+  transform: none;
+  padding-left: 0;
+}
+
+.zs-b-deadline {
+  border-left: 2px solid var(--zt-ink);
+}
+
+.zs-b-deadline .zs-today-flag {
+  color: var(--zt-ink);
+}
+
+.zs-b-deadline.is-low .zs-today-flag {
+  top: calc(100% + 17px);
+}
+
+/* ---- 05 The map ----------------------------------------------------------------------------------------- */
+
+.zs-b-named {
+  max-width: 44ch;
+  color: var(--zt-text-soft);
+}
+
+.zs-b-named strong {
+  color: var(--zt-text);
+  font-weight: 600;
+}
+
+.zs-b-map .zs-group {
+  margin-bottom: 14px;
+}
+
+/* ---- 06 Upkeep ------------------------------------------------------------------------------------------ */
+
+.zs-b-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.zs-b-action {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--zt-ink);
+  border-radius: 2px;
+  background: none;
+  color: var(--zt-ink);
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease-out,
+    color 0.18s ease-out;
+}
+
+@media (hover: hover) {
+  .zs-b-action:hover {
+    background: var(--zt-ink);
+    color: var(--zt-paper-hi);
+  }
+}
+
+/* ---- 07 Gaps -------------------------------------------------------------------------------------------- */
+
+.zs-b-gap-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--zt-status-gated);
+}
+
+.zs-q.zs-b-gap > p.zt-small {
+  padding-bottom: 8px;
+}
+
+.zs-q.zs-b-gap > .zs-b-gap-where {
+  padding-bottom: 16px;
+  color: var(--zt-ink-soft);
+}
+
+/* ---- 08 Start: the permit ------------------------------------------------------------------------------- */
+
+.zs-b-permit .zs-ticket-main {
+  align-content: start;
+}
+
+.zs-b-route {
+  align-items: baseline;
+}
+
+.zs-b-route-title {
+  display: block;
+  font-family: var(--zt-font-display);
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.2;
+  font-variation-settings: 'SOFT' 40, 'WONK' 0;
+  overflow-wrap: anywhere;
+}
+
+.zs-b-route-facts {
+  display: block;
+  margin-top: 4px;
+  color: var(--zt-ink-soft);
+}
+
+/* The day field stands on paper: the browser draws its own parts (the calendar glyph) for a light ground. */
+.zs-b-day {
+  max-width: 240px;
+  font-family: var(--zt-font-label);
+  font-size: 15px;
+  color-scheme: light;
+}
+
+.zs-b-plan-mark {
+  padding: 2px 5px;
+  border: 1px solid currentcolor;
+  border-radius: 2px;
+  font-size: 9px;
+  opacity: 0.75;
+}
+
+.zs-b-arrival {
+  display: block;
+  min-height: 1.15em;
+  font-size: 30px;
+  line-height: 1.15;
+  color: var(--zt-ink);
+}
+
+.zs-b-span,
+.zs-b-date {
+  color: var(--zt-ink-soft);
+}
+
+.zs-b-stub .zs-b-date:empty {
+  display: none;
+}
+
+/* A torn stub drops and turns. The room under its last line keeps that line clear of the slot. */
+.zs-b-stub {
+  padding-bottom: 40px;
+}
+
+/* ---- Narrow windows ------------------------------------------------------------------------------------- */
+
+@media (max-width: 899px) {
+  .zs-b-title.is-long {
+    font-size: clamp(26px, 7.2vw, 36px);
+  }
+
+  .zs-b-control {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .zs-b-control label {
+    grid-column: 1 / -1;
+  }
+
+  .zs-b-strip {
+    padding: 0 5px;
+  }
+
+  .zs-b-strip span {
+    display: none;
+  }
+
+  .zs-b-session,
+  .zs-b-sessions.is-dense .zs-b-session {
+    width: 14px;
+    margin-left: -7px;
+    font-size: 0;
+  }
+
+  .zs-b-flag {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .zs-b-flag > .zs-slip {
+    justify-self: start;
+  }
+
+  .zs-b-flag > p {
+    grid-column: 1;
+  }
+
+  .zs-b-day {
+    max-width: none;
+  }
+}

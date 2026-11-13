@@ -218,6 +218,72 @@ describe('the reader page of a volume', () => {
   });
 });
 
+describe('the words of the row', () => {
+  const hintOf = (root: ParentNode): HTMLElement => root.querySelector<HTMLElement>('.bb-shelf__hint')!;
+
+  it('are the Bookshelf words unchanged in English', () => {
+    const s = setup(fixtureRoadmap(), { reducedMotion: true });
+    s.dock.setEntries(resourcesFor(s.roadmap, 'fixture-stage').slice(0, 3));
+    expect(hintOf(s.host).textContent).toBe('Arrow keys move along the shelf, Enter opens.');
+    expect(control(s.host, 'fixture-docs').getAttribute('aria-label')).toBe('Fixture docs. example.org. Volume 1 of 3');
+  });
+
+  it('says the row hint and every volume name in German, and each volume is described by that hint', () => {
+    const s = setup(fixtureRoadmap(), { reducedMotion: true, ui: 'de' });
+    const entries = resourcesFor(s.roadmap, 'fixture-stage');
+    s.dock.setEntries(entries);
+    const hint = hintOf(s.host);
+    expect(hint.textContent).toBe('Pfeiltasten bewegen dich am Regal entlang, Enter öffnet.');
+    const all = controls(s.host);
+    expect(all).toHaveLength(entries.length);
+    for (const button of all) {
+      const index = Number(button.closest<HTMLElement>('.bb-book')!.dataset.index);
+      expect(button.getAttribute('aria-label')).toMatch(new RegExp(`\\. Band ${index + 1} von ${entries.length}$`));
+      expect(button.getAttribute('aria-label')).not.toContain('Volume');
+      expect(button.getAttribute('aria-describedby')).toBe(hint.id);
+    }
+    // The row's own arrows and empty line are never shown in the dock; they carry the dock's words all the same.
+    expect(s.host.querySelector('.bb-shelf__empty')!.textContent).toBe('Keine Quellen für diesen Schritt.');
+    expect(s.host.querySelector('.bb-shelf__arrow--prev')!.getAttribute('aria-label')).toBe('Vorherige Quelle');
+    expect(s.host.querySelector('.bb-shelf__arrow--next')!.getAttribute('aria-label')).toBe('Nächste Quelle');
+
+    // A shorter row renames every volume, in German.
+    s.dock.setEntries(entries.slice(0, 2));
+    expect(controls(s.host).map((button) => button.getAttribute('aria-label'))).toEqual([
+      'Fixture docs. example.org. Band 1 von 2',
+      expect.stringMatching(/\. Band 2 von 2$/),
+    ]);
+  });
+
+  it('names a volume marked as used in German', () => {
+    const s = setup(fixtureRoadmap(), { reducedMotion: true, ui: 'de' });
+    s.dock.setEntries(resourcesFor(s.roadmap, 'fixture-stage').slice(0, 3));
+    s.session.setUsed('fixture-docs', true);
+    expect(control(s.host, 'fixture-docs').getAttribute('aria-label')).toBe('Fixture docs. example.org. Band 1 von 3. Als genutzt markiert');
+  });
+
+  it('says a name the row writes again on its own in German once more', async () => {
+    const s = setup(fixtureRoadmap(), { reducedMotion: true, ui: 'de' });
+    s.dock.setEntries(resourcesFor(s.roadmap, 'fixture-stage').slice(0, 3));
+    const button = control(s.host, 'fixture-book');
+    const german = button.getAttribute('aria-label');
+    button.setAttribute('aria-label', 'Fixture book. example.org. Volume 3 of 3');
+    await vi.waitFor(() => expect(button.getAttribute('aria-label')).toBe(german));
+    expect(german).toMatch(/Band 3 von 3$/);
+  });
+
+  it('says where the row came to rest in German after one of the row arrows moved it', async () => {
+    const s = setup(fixtureRoadmap(), { reducedMotion: true, ui: 'de' });
+    s.dock.setEntries(resourcesFor(s.roadmap, 'fixture-stage').slice(0, 3));
+    // The dock hides the row's own arrows and draws its own; this is the path a host with them shown takes.
+    s.host.querySelector<HTMLButtonElement>('.bb-shelf__arrow--next')!.click();
+    s.clock.advance(50);
+    const status = s.host.querySelector<HTMLElement>('.bb-shelf__status')!;
+    expect(status.getAttribute('aria-live')).toBe('polite');
+    await vi.waitFor(() => expect(status.textContent).toBe('Fixture reference, 2 von 3'), { timeout: 2000 });
+  });
+});
+
 describe('the phone sheet', () => {
   it('is a round button named after the count that opens and shuts the sheet, and Escape gives focus back', async () => {
     const s = setup(fixtureRoadmap(), { reducedMotion: true, phoneQuery: '(min-width: 1px)' });

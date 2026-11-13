@@ -27,7 +27,42 @@ export const PROFILE = {
   bend: 0.55,
   /** The readout is written again when the walker has moved by more than this share of an hour. */
   readoutStep: 0.02,
+  /**
+   * A side trail: the dotted spur of an optional step. It leaves the line `half` before the step (never more
+   * than `gapShare` of the gap to the step beside it), stands `rise` off the line at the step and comes back.
+   * It keeps `room` from the edge of the plot, and turns downward where there is no room above.
+   */
+  spur: { half: 12, gapShare: 0.3, rise: 18, room: 3 },
+  /**
+   * Marks that stay buttons are at least this far apart, centre to centre, in pixels: 24 for a mouse (WCAG
+   * 2.5.8), 44 for a finger (section 7.4). A mark closer than that to one that stays is drawn but not pressed;
+   * the slider and a drag along the strip reach its place.
+   */
+  pitch: { fine: 24, coarse: 44 },
 } as const;
+
+/** A mark as `spacedMarks` weighs it: its id and its place along the route, 0 to 1. */
+export interface SpacedMark {
+  readonly id: string;
+  readonly along: number;
+}
+
+/**
+ * The marks that stay buttons on a plot `width` pixels wide: taken in the order given, which is their priority,
+ * each one kept when it is at least `pitch` pixels from every mark kept before it. All are kept while the width
+ * is unknown.
+ */
+export function spacedMarks(marks: readonly SpacedMark[], width: number, pitch: number): Set<string> {
+  const out = new Set<string>();
+  const kept: number[] = [];
+  for (const mark of marks) {
+    const x = clamp01(mark.along) * width;
+    if (width > 0 && kept.some((at) => Math.abs(at - x) < pitch - 1e-6)) continue;
+    kept.push(x);
+    out.add(mark.id);
+  }
+  return out;
+}
 
 export interface ProfilePoint {
   readonly along: number;
@@ -42,10 +77,24 @@ export interface ProfileCamp extends ProfilePoint {
   readonly tier: TierName;
 }
 
+/** A step. An optional one is drawn at the far point of its spur (x, y); `on` is its place on the line. */
 export interface ProfileMark extends ProfilePoint {
   readonly id: string;
   readonly stageId: string;
   readonly optional: boolean;
+  readonly on: { readonly x: number; readonly y: number };
+}
+
+/** The side trail of an optional step: a dotted arc that leaves the line and comes back to it. */
+export interface ProfileSpur {
+  readonly id: string;
+  /** Where it leaves and where it rejoins, as shares of the route. */
+  readonly from: number;
+  readonly to: number;
+  /** True when it stands above the line. */
+  readonly up: boolean;
+  /** The arc as an SVG path. */
+  readonly d: string;
 }
 
 export interface ProfileBand {
@@ -67,6 +116,8 @@ export interface ProfileGeometry {
   readonly stageAreas: readonly { readonly tier: TierName; readonly from: number; readonly to: number; readonly d: string }[];
   readonly camps: readonly ProfileCamp[];
   readonly waypoints: readonly ProfileMark[];
+  /** One per optional step that has room for it. */
+  readonly spurs: readonly ProfileSpur[];
   /** `x` of a share of the route. Linear: the strip never bends time. */
   x(along: number): number;
   /** `y` of an altitude, 0 at the foot and 1 at the top of Diamond. */
@@ -137,12 +188,32 @@ export function profileGeometry(trek: Trek): ProfileGeometry {
     camps.push({ ...last, stageId: stage.id, stage: index, tier: stage.tier });
   });
 
-  const waypoints: ProfileMark[] = trek.waypoints.map((wp) => ({
-    ...point(wp.along, altitudeAt(wp.along)),
-    id: wp.id,
-    stageId: wp.stageId,
-    optional: wp.optional,
-  }));
+  const spurs: ProfileSpur[] = [];
+  const waypoints: ProfileMark[] = trek.waypoints.map((wp, index) => {
+    const on = point(wp.along, altitudeAt(wp.along));
+    const mark = { ...on, id: wp.id, stageId: wp.stageId, optional: wp.optional, on: { x: on.x, y: on.y } };
+    if (!wp.optional) return mark;
+    const before = trek.waypoints[index - 1]?.along ?? 0;
+    const after = trek.waypoints[index + 1]?.along ?? 1;
+    const { half, gapShare, rise, room } = PROFILE.spur;
+    const reach = Math.min(half / PROFILE.width, gapShare * (wp.along - before), gapShare * (after - wp.along));
+    if (!(reach > 1e-4)) return mark;
+    const up = on.y - rise >= room;
+    const top = up ? on.y - rise : Math.min(PROFILE.height - room, on.y + rise);
+    if (Math.abs(top - on.y) < rise / 3) return mark;
+    const from = point(wp.along - reach, altitudeAt(wp.along - reach));
+    const to = point(wp.along + reach, altitudeAt(wp.along + reach));
+    const apex = round2(top);
+    // Two quarter arcs: straight off the line, level at the step, and back.
+    spurs.push({
+      id: wp.id,
+      from: from.along,
+      to: to.along,
+      up,
+      d: `M${from.x} ${from.y}Q${from.x} ${apex} ${on.x} ${apex}Q${to.x} ${apex} ${to.x} ${to.y}`,
+    });
+    return { ...mark, y: apex };
+  });
 
   const bands: ProfileBand[] = TIER_NAMES.map((tier, i) => ({
     tier,
@@ -159,6 +230,7 @@ export function profileGeometry(trek: Trek): ProfileGeometry {
     stageAreas,
     camps,
     waypoints,
+    spurs,
     x,
     y,
     altitudeAt,
@@ -198,14 +270,19 @@ export interface Profile {
   readonly geometry: ProfileGeometry;
   /** Where the walker (the reading cursor) is, 0 to 1. The walked part of the line turns solid. */
   setWalker(along: number): void;
+  /**
+   * The stage the note says the walker is in, or null. At a signpost and a camp he stands on the line between
+   * two stages, and the readout then names this one. It is ignored when he is not in or at the edge of it.
+   */
+  setStage(index: number | null): void;
   /** You are here, 0 to 1, or null when the route is finished. */
   setHere(along: number | null): void;
   /** Where the plan puts the learner today, and the day of arrival. Null hides either. */
   setPace(along: number | null, arrival: string | null): void;
   /** The steps whose review is due. Each gets a ringed cairn. */
   setDue(list: readonly ProfileDue[]): void;
-  /** Where the class is today, or null. */
-  setClass(along: number | null): void;
+  /** Where the class is today, or null. `note` names the session for the flag's label: it is roadmap text. */
+  setClass(along: number | null, note?: string): void;
   /** Minutes finished per waypoint as a rating 1 to 4, or 0 for done without a rating: tints the stage's wash. */
   setRatings(ratings: Readonly<Record<string, number>>): void;
   /** Shows or hides the chip that offers the four choices. */
@@ -231,13 +308,17 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
   const clipId = uid('zh-clip');
 
   let walker = 0;
+  let stageHint: number | null = null;
   let here: number | null = null;
   let paceAlong: number | null = null;
   let arrival: string | null = null;
   let classAlong: number | null = null;
+  let classNote = '';
   let due: readonly ProfileDue[] = [];
   let ratings: Readonly<Record<string, number>> = {};
   let readoutAt = Number.NaN;
+  let printedAt = Number.NaN;
+  let stageWritten = -1;
   let writes = 0;
 
   // ---- The drawing
@@ -270,7 +351,10 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
   clip.append(clipRect);
   const ahead = svg('path', { d: geometry.path, class: 'zh-profile-line is-ahead' });
   const walked = svg('path', { d: geometry.path, class: 'zh-profile-line is-walked', 'clip-path': `url(#${clipId})` });
-  drawing.append(svg('defs', {}, clip), bandLayer, washLayer, doneLayer, ahead, walked);
+  // Side trails: dotted, under the line, so the line closes each of them.
+  const spurLayer = svg('g', { class: 'zh-profile-spurs' });
+  for (const spur of geometry.spurs) spurLayer.append(svg('path', { d: spur.d, class: `zh-profile-spur${spur.up ? '' : ' is-down'}`, 'data-waypoint': spur.id }));
+  drawing.append(svg('defs', {}, clip), bandLayer, washLayer, doneLayer, spurLayer, ahead, walked);
 
   // ---- Marks: real buttons over the drawing
   const marks = el('div', { class: 'zh-profile-marks' });
@@ -331,6 +415,49 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
     });
     marks.append(cursor, paceMark, classMark, hereMark, walkerMark);
     syncDue();
+    // New buttons: they are spaced from scratch.
+    spacedKey = '';
+    spaceMarks();
+  };
+
+  /**
+   * Keeps the buttons apart. The step you are at comes first, then the summit and the other camps, then the due
+   * reviews, then the other steps in route order. A mark that is too close to one of those stays on the drawing
+   * but leaves the keyboard's path and lets a press through to the strip, which seeks to its place.
+   */
+  let plotWidth = 0;
+  let spacedKey = '';
+  function spaceMarks(): void {
+    const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+    const pitch = coarse ? PROFILE.pitch.coarse : PROFILE.pitch.fine;
+    const camps = geometry.camps.map((camp) => ({ id: `camp:${camp.stageId}`, along: camp.along }));
+    const summit = camps.pop();
+    const dueIds = new Set(due.map((item) => item.waypointId));
+    const hereId = here === null ? null : (geometry.waypoints.find((wp) => Math.abs(wp.along - (here as number)) < 1e-6)?.id ?? null);
+    const steps = geometry.waypoints.map((wp) => ({ id: wp.id, along: wp.along }));
+    const order: SpacedMark[] = [
+      ...steps.filter((s) => s.id === hereId),
+      ...(summit ? [summit] : []),
+      ...camps,
+      ...steps.filter((s) => s.id !== hereId && dueIds.has(s.id)),
+      ...steps.filter((s) => s.id !== hereId && !dueIds.has(s.id)),
+    ];
+    const key = `${Math.round(plotWidth)}|${pitch}|${hereId ?? ''}|${[...dueIds].join(',')}|${stepButtons.size}`;
+    if (key === spacedKey) return;
+    spacedKey = key;
+    const keep = spacedMarks(order, plotWidth, pitch);
+    for (const [id, button] of stepButtons) button.inert = !keep.has(id);
+    geometry.camps.forEach((camp, i) => {
+      const button = campButtons[i];
+      if (button) button.inert = !keep.has(`camp:${camp.stageId}`);
+    });
+  }
+
+  const measure = (): void => {
+    const width = plot.getBoundingClientRect().width;
+    if (Math.abs(width - plotWidth) < 0.5) return;
+    plotWidth = width;
+    spaceMarks();
   };
 
   const paceMark = el('span', { class: 'zh-mark zh-mark-pace', hidden: true }, el('span', { class: 'zh-mark-pace-tick', 'aria-hidden': 'true' }));
@@ -366,14 +493,30 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
   root.setAttribute('aria-label', say('profile'));
 
   const stageOf = (along: number): number => geometry.stageAt(along);
-  const hoursOf = (along: number): string => formatNumber(roundHours(clamp01(along) * geometry.totalMinutes), { fraction: 1 });
+  /** The walker's stage. Between two stages the note's stage counts, when he is in it or on its edge. */
+  const walkerStage = (): number => {
+    const index = stageOf(walker);
+    const hinted = stageHint === null ? undefined : trek.stages[stageHint];
+    if (!hinted || stageHint === index) return index;
+    const minute = clamp01(walker) * geometry.totalMinutes;
+    return minute >= hinted.startMinute - 1e-6 && minute <= hinted.endMinute + 1e-6 ? (stageHint as number) : index;
+  };
+  // The minutes are rounded first: a share of the route times its minutes can come out a hair under a quarter
+  // of an hour, and the readout would then say half an hour less than the note beside it.
+  const printedHours = (along: number): number => roundHours(Math.round(clamp01(along) * geometry.totalMinutes * 1e6) / 1e6);
+  const hoursOf = (along: number): string => formatNumber(printedHours(along), { fraction: 1 });
   const totalHours = (): string => formatNumber(roundHours(geometry.totalMinutes), { fraction: 1 });
 
   const writeReadout = (force = false): void => {
     const hours = (clamp01(walker) * geometry.totalMinutes) / 60;
-    if (!force && Math.abs(hours - readoutAt) <= PROFILE.readoutStep) return;
+    const printed = printedHours(walker);
+    const index = walkerStage();
+    // A small move is not written, unless it is the one that changes the hour or the stage the readout prints:
+    // he may come to rest a hundredth of an hour past the place where the last text was written.
+    if (!force && Math.abs(hours - readoutAt) <= PROFILE.readoutStep && printed === printedAt && index === stageWritten) return;
     readoutAt = hours;
-    const index = stageOf(walker);
+    printedAt = printed;
+    stageWritten = index;
     const stage = trek.stages[index];
     const text = [
       say('readoutHour', { n: hoursOf(walker), total: totalHours() }),
@@ -421,9 +564,12 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
     classMark.hidden = classAlong === null;
     if (classAlong === null) return;
     place(classMark, pointAt(classAlong));
-    classMark.setAttribute('title', say('classFlag'));
-    classMark.setAttribute('aria-label', say('classFlag'));
+    const name = classNote ? `${say('classFlag')}: ${classNote}` : say('classFlag');
+    classMark.setAttribute('title', name);
+    classMark.setAttribute('aria-label', name);
     classMark.setAttribute('role', 'img');
+    // Near the right edge the cloth flies back over the strip.
+    classMark.classList.toggle('is-back', classAlong > 0.97);
   };
 
   function syncDue(): void {
@@ -515,9 +661,15 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
   plot.addEventListener('pointerup', onUp);
   plot.addEventListener('pointercancel', onUp);
 
+  // The spacing of the buttons follows the width of the plot.
+  const sizes = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measure()) : null;
+  sizes?.observe(plot);
+  window.addEventListener('resize', measure);
+
   relabel();
   syncWalker();
   host.append(root);
+  measure();
 
   return {
     element: root,
@@ -528,9 +680,16 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
       walker = next;
       syncWalker();
     },
+    setStage(index) {
+      const next = index === null || !Number.isInteger(index) || index < 0 || index >= trek.stages.length ? null : index;
+      if (next === stageHint) return;
+      stageHint = next;
+      writeReadout(true);
+    },
     setHere(along) {
       here = along === null ? null : clamp01(along);
       syncHere();
+      spaceMarks();
     },
     setPace(along, day) {
       paceAlong = along === null ? null : clamp01(along);
@@ -540,9 +699,11 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
     setDue(list) {
       due = list;
       syncDue();
+      spaceMarks();
     },
-    setClass(along) {
+    setClass(along, note = '') {
       classAlong = along === null ? null : clamp01(along);
+      classNote = note;
       syncClass();
     },
     setRatings(next) {
@@ -565,6 +726,8 @@ export function createProfile(host: HTMLElement, trek: Trek, options: ProfileOpt
     relabel,
     destroy() {
       seekers.clear();
+      sizes?.disconnect();
+      window.removeEventListener('resize', measure);
       root.remove();
     },
   };

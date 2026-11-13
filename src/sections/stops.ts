@@ -1,7 +1,7 @@
 import type { UiLang, StringVars } from '../i18n';
 import { spring, stepSpringKC, settleSpring } from '../paper/motion';
 import { CARRY_ART, CARRY_KEYS, COMPASS, PEAKS, SIGNPOST, STEP_ART, groundPrint, type CarryKey, type Drawing } from './art';
-import { copyText, h, rich, svg, type Child } from './dom';
+import { HIDDEN, copyText, h, rich, svg, type Child } from './dom';
 import { STOPS, type StopId, type StopSpec, type StopState } from './model';
 import { say, type SectionKey } from './strings';
 import { createTicket, type TicketState, type TicketView } from './ticket';
@@ -88,6 +88,8 @@ export interface StopView {
   readonly steps: HTMLElement[][];
   /** Called with every new state, after the classes are set. */
   onState?(state: StopState, reduced: boolean): void;
+  /** The label of the stop in the index tabs, when it is not the one the stop has in the gallery. */
+  readonly nav?: string;
   /** The ticket of the last stop. */
   readonly ticket?: TicketView;
   /** The part of the map stop the print goes into, and its caption. */
@@ -95,42 +97,49 @@ export interface StopView {
   dispose?(): void;
 }
 
-type Say = (key: SectionKey, vars?: StringVars) => string;
+export type Say<K extends string = SectionKey> = (key: K, vars?: StringVars) => string;
 
 /** `twin-peaks` as `TwinPeaks`: the part of a string key that names an option. */
 export const camel = (id: string): string => id.replace(/(^|-)([a-z])/g, (_whole, _dash: string, letter: string) => letter.toUpperCase());
 
-const art = (drawing: Drawing, className = ''): SVGSVGElement => svg(drawing.viewBox, drawing.body, className);
+export const art = (drawing: Drawing, className = ''): SVGSVGElement => svg(drawing.viewBox, drawing.body, className);
 
-function shell(ctx: StopContext, id: StopId, s: Say, tagKey: SectionKey, titleKey: SectionKey, copy: Child[], station: Child[], after: Child[] = []): StopView {
+/**
+ * The frame every stop has: the numbered tag, the headline, the copy beside the station and what follows it.
+ * `title` is a key of the words, or the headline's own nodes when it is not one of them.
+ */
+export function shell<K extends string>(ctx: StopContext, id: StopId, s: Say<K | 'stopOf'>, tagKey: K, title: K | Node, copy: Child[], station: Child[], after: Child[] = []): StopView {
   const index = STOPS.findIndex((stop) => stop.id === id);
   const spec = STOPS[index] as StopSpec;
   const anchor = `${ctx.idPrefix}${spec.anchor}`;
   const number = String(index + 1).padStart(2, '0');
-  const title = h('h2', { class: 'zt-headline zs-title', id: `${anchor}-title`, tabindex: -1 }, rich(s(titleKey)));
+  const heading = h('h2', { class: 'zt-headline zs-title', id: `${anchor}-title`, tabindex: -1 }, typeof title === 'string' ? rich(s(title)) : title);
   const tag = h(
     'p',
     { class: 'zs-tag zt-label' },
     h('span', { class: 'zs-sr' }, `${s('stopOf', { n: index + 1, count: STOPS.length })}: `),
-    h('span', { class: 'zs-tag-n', 'aria-hidden': 'true' }, number),
+    h('span', { class: 'zs-tag-n', ...HIDDEN }, number),
     h('span', {}, s(tagKey)),
   );
-  const copyEl = h('div', { class: 'zs-copy' }, tag, title, ...copy);
+  const copyEl = h('div', { class: 'zs-copy' }, tag, heading, ...copy);
   const stationEl = h('div', { class: 'zs-station' }, ...station);
   // What follows the station in reading order stands under the copy on a wide window.
   const box = h('div', { class: 'zs-box' }, copyEl, stationEl, after.length > 0 ? h('div', { class: 'zs-after' }, ...after) : null);
   const section = h('section', { class: `zs-stop zs-stop-${id}${spec.centred ? ' zs-centred' : ''}`, id: anchor, 'aria-labelledby': `${anchor}-title`, 'data-stop': id }, box);
   section.style.setProperty('--zs-hold', String(spec.hold));
-  return { spec, section, box, title, tag, station: stationEl, ups: [], steps: [] };
+  return { spec, section, box, title: heading, tag, station: stationEl, ups: [], steps: [] };
 }
 
-const lede = (text: string): HTMLElement => h('p', { class: 'zs-lede zt-body' }, rich(text));
-const body = (text: string, className = 'zs-text zt-body'): HTMLElement => h('p', { class: className }, rich(text));
+export const lede = (text: string): HTMLElement => h('p', { class: 'zs-lede zt-body' }, rich(text));
+export const body = (text: string, className = 'zs-text zt-body'): HTMLElement => h('p', { class: className }, rich(text));
+/** A paragraph in the small size. `extra` is more classes, with the space before them. */
+export const small = (text: string, extra = ''): HTMLElement => body(text, `zs-text zt-small${extra}`);
 
 // ---------------------------------------------------------------------------------------------------------
 // 01 What it is, with the four altitudes.
 
-function buildWhat(ctx: StopContext, s: Say): StopView {
+/** The paper station with the four peak cut-outs, one per altitude, each on its shadow. */
+export function peakTheatre(): { readonly theatre: HTMLElement; readonly peaks: HTMLElement[] } {
   const print = groundPrint(1);
   const ground = h('div', { class: 'zs-ground' }, h('div', { class: 'zs-ground-paper' }, svg(print.viewBox, print.body)));
   const peaks = PEAKS.map((drawing, index) => {
@@ -145,14 +154,17 @@ function buildWhat(ctx: StopContext, s: Say): StopView {
     ground.append(shadow, cut);
     return cut;
   });
-  const theatre = h('div', { class: 'zs-theatre zs-theatre-peaks', 'aria-hidden': 'true' }, ground);
+  return { theatre: h('div', { class: 'zs-theatre zs-theatre-peaks', ...HIDDEN }, ground), peaks };
+}
 
+function buildWhat(ctx: StopContext, s: Say): StopView {
+  const { theatre, peaks } = peakTheatre();
   const cards = TIERS.map((tier) => {
     const key = `tier${camel(tier)}` as SectionKey;
     const card = h(
       'li',
       { class: 'zs-tier zs-card zt-on-paper', 'data-tier': tier },
-      h('span', { class: 'zs-blaze', 'aria-hidden': 'true' }),
+      h('span', { class: 'zs-blaze', ...HIDDEN }),
       h('h4', { class: 'zs-card-title' }, s(key)),
       h('p', { class: 'zt-small' }, s(`${key}Body` as SectionKey)),
     );
@@ -165,7 +177,7 @@ function buildWhat(ctx: StopContext, s: Say): StopView {
     s,
     'whatTag',
     'whatTitle',
-    [lede(s('whatLede')), body(s('whatBody')), h('h3', { class: 'zs-sub' }, s('whatTiers')), body(s('whatTiersBody'), 'zs-text zt-small')],
+    [lede(s('whatLede')), body(s('whatBody')), h('h3', { class: 'zs-sub' }, s('whatTiers')), small(s('whatTiersBody'))],
     [theatre, h('ul', { class: 'zs-tiers' }, ...cards)],
   );
   view.ups.push(...peaks, ...cards);
@@ -181,8 +193,8 @@ function buildHow(ctx: StopContext, s: Say): StopView {
     h(
       'li',
       { class: 'zs-step zs-card zt-on-paper' },
-      h('span', { class: 'zs-step-art', 'aria-hidden': 'true' }, art(STEP_ART[n - 1] as Drawing)),
-      h('span', { class: 'zs-step-n zt-number', 'aria-hidden': 'true' }, String(n)),
+      h('span', { class: 'zs-step-art', ...HIDDEN }, art(STEP_ART[n - 1] as Drawing)),
+      h('span', { class: 'zs-step-n zt-number', ...HIDDEN }, String(n)),
       h('h3', { class: 'zs-card-title' }, s(`how${n}` as SectionKey)),
       h('p', { class: 'zt-small' }, rich(s(`how${n}Body` as SectionKey))),
     ),
@@ -196,7 +208,7 @@ function buildHow(ctx: StopContext, s: Say): StopView {
     'howTitle',
     [lede(s('howLede'))],
     [h('ol', { class: 'zs-steps' }, ...steps)],
-    [h('ul', { class: 'zs-slips zt-data', 'aria-hidden': 'true' }, ...slips), body(s('howReport'), 'zs-text zt-small')],
+    [h('ul', { class: 'zs-slips zt-data', ...HIDDEN }, ...slips), small(s('howReport'))],
   );
   view.ups.push(...steps);
   view.steps.push(...steps.map((step) => [step]));
@@ -208,33 +220,28 @@ function buildHow(ctx: StopContext, s: Say): StopView {
 
 const RING = { step: (72 * Math.PI) / 180, k: 15, c: 7.4, front: 1.32 } as const;
 
-function buildTrail(ctx: StopContext, s: Say): StopView {
-  const ringKeys = CARRY_KEYS.slice(0, 5) as CarryKey[];
-  const orbCards = ringKeys.map((key) => h('span', { class: 'zs-orb-card' }, h('span', { class: 'zs-orb-face' }, art(CARRY_ART[key]))));
-  const orbit = h('div', { class: 'zs-orbit', 'aria-hidden': 'true' }, h('span', { class: 'zs-orb-compass' }, art(COMPASS)), ...orbCards);
+/** The five things a roadmap carries, in the order of the ring. */
+export const RING_KEYS = CARRY_KEYS.slice(0, 5) as CarryKey[];
 
-  const item = (key: CarryKey, titleKey: SectionKey, level: 'h3' | 'h4') =>
-    h(
-      'li',
-      { class: 'zs-carry-item' },
-      h('span', { class: 'zs-carry-art', 'aria-hidden': 'true' }, art(CARRY_ART[key])),
-      h('div', {}, h(level, { class: 'zs-item-title' }, s(titleKey)), h('p', { class: 'zt-small' }, s(`${titleKey}Body` as SectionKey))),
-    );
-  const carried = ringKeys.map((key) => item(key, `carry${camel(key)}` as SectionKey, 'h3'));
-  const kept = [item('notebook', 'keepNotebook', 'h4'), item('cairns', 'keepCairns', 'h4')];
-
-  const view = shell(
-    ctx,
-    'trail',
-    s,
-    'trailTag',
-    'trailTitle',
-    [lede(s('trailLede'))],
-    [orbit, h('ul', { class: 'zs-carry zs-sheet zt-on-paper' }, ...carried)],
-    [h('h3', { class: 'zs-sub' }, s('keepTitle')), h('ul', { class: 'zs-keep' }, ...kept), body(s('trailRule'), 'zs-text zt-small zs-rule')],
+/** One row of the list beside the ring: a drawing, a title and a line. */
+export const carryItem = (key: CarryKey, title: string, text: string, level: 'h3' | 'h4'): HTMLLIElement =>
+  h(
+    'li',
+    { class: 'zs-carry-item' },
+    h('span', { class: 'zs-carry-art', ...HIDDEN }, art(CARRY_ART[key])),
+    h('div', {}, h(level, { class: 'zs-item-title' }, title), h('p', { class: 'zt-small' }, text)),
   );
-  view.ups.push(...orbCards, ...carried);
-  view.steps.push(...carried.map((element, index) => [element, orbCards[index] as HTMLElement]), ...kept.map((element) => [element]));
+
+/**
+ * The trail stop round its ring: five cards orbit a compass, and the list beside it names them. `rows` are the
+ * five things carried, `kept` the two things a learner keeps. The card of the step in front turns to the front.
+ */
+export function ringStop<K extends string>(ctx: StopContext, s: Say<K | 'stopOf'>, tagKey: K, titleKey: K, copy: Child[], rows: HTMLElement[], kept: HTMLElement[], after: Child[]): StopView {
+  const orbCards = RING_KEYS.map((key) => h('span', { class: 'zs-orb-card' }, h('span', { class: 'zs-orb-face' }, art(CARRY_ART[key]))));
+  const orbit = h('div', { class: 'zs-orbit', ...HIDDEN }, h('span', { class: 'zs-orb-compass' }, art(COMPASS)), ...orbCards);
+  const view = shell(ctx, 'trail', s, tagKey, titleKey, copy, [orbit, h('ul', { class: 'zs-carry zs-sheet zt-on-paper' }, ...rows)], after);
+  view.ups.push(...orbCards, ...rows);
+  view.steps.push(...rows.map((element, index) => [element, orbCards[index] as HTMLElement]), ...kept.map((element) => [element]));
 
   // The ring turns on a heavy, calm spring so the card of the current step comes to the front.
   const turn = spring(0);
@@ -288,6 +295,21 @@ function buildTrail(ctx: StopContext, s: Say): StopView {
   return view;
 }
 
+function buildTrail(ctx: StopContext, s: Say): StopView {
+  const item = (key: CarryKey, titleKey: SectionKey, level: 'h3' | 'h4') => carryItem(key, s(titleKey), s(`${titleKey}Body` as SectionKey), level);
+  const kept = [item('notebook', 'keepNotebook', 'h4'), item('cairns', 'keepCairns', 'h4')];
+  return ringStop(
+    ctx,
+    s,
+    'trailTag',
+    'trailTitle',
+    [lede(s('trailLede'))],
+    RING_KEYS.map((key) => item(key, `carry${camel(key)}` as SectionKey, 'h3')),
+    kept,
+    [h('h3', { class: 'zs-sub' }, s('keepTitle')), h('ul', { class: 'zs-keep' }, ...kept), small(s('trailRule'), ' zs-rule')],
+  );
+}
+
 // ---------------------------------------------------------------------------------------------------------
 // 04 For a class: a weeks ruler with one strip per altitude and the sessions under it.
 
@@ -320,7 +342,7 @@ function buildClass(ctx: StopContext, s: Say): StopView {
   const plan = h(
     'figure',
     { class: 'zs-plan zs-sheet zt-on-paper' },
-    h('div', { class: 'zs-plan-grid', 'aria-hidden': 'true' }, h('div', { class: 'zs-plan-row zs-plan-weeks' }, ...weeks), ...rows, today),
+    h('div', { class: 'zs-plan-grid', ...HIDDEN }, h('div', { class: 'zs-plan-row zs-plan-weeks' }, ...weeks), ...rows, today),
     h('figcaption', { class: 'zt-small' }, s('planCaption')),
   );
 
@@ -328,7 +350,7 @@ function buildClass(ctx: StopContext, s: Say): StopView {
     h('li', { class: 'zs-fact' }, h('h3', { class: 'zs-item-title' }, s(key)), h('p', { class: 'zt-small' }, s(`${key}Body` as SectionKey))),
   );
 
-  const view = shell(ctx, 'class', s, 'classTag', 'classTitle', [lede(s('classLede'))], [plan, h('ul', { class: 'zs-facts' }, ...facts)], [body(s('classFit'), 'zs-text zt-small zs-rule')]);
+  const view = shell(ctx, 'class', s, 'classTag', 'classTitle', [lede(s('classLede'))], [plan, h('ul', { class: 'zs-facts' }, ...facts)], [small(s('classFit'), ' zs-rule')]);
   view.ups.push(plan, ...facts);
   view.onState = (state, still) => {
     // One row goes down after another while the stop is held, then the flag marks where the class is.
@@ -345,8 +367,14 @@ function buildClass(ctx: StopContext, s: Say): StopView {
 /** How many panels the sheet is folded into. */
 export const FOLD_PANELS = 6;
 
-function buildMap(ctx: StopContext, s: Say): StopView {
-  const { map } = ctx.state;
+/** What the sheet shows until its real print has arrived: a few rings and a dashed route. */
+export const PLAIN_PRINT =
+  '<g fill="none" stroke="var(--zt-ink)" stroke-opacity=".2">' +
+  [1, 2, 3, 4, 5, 6].map((ring) => `<ellipse cx="320" cy="190" rx="${ring * 42}" ry="${ring * 26}" transform="rotate(-10 320 190)"/>`).join('') +
+  '</g><path d="M60 340C180 300 220 240 300 230s60-50 30-44" fill="none" stroke="var(--zt-signal)" stroke-width="2.6" stroke-dasharray="7 5"/>';
+
+/** The contour sheet cut into panels, folded like a road map, with the group its print goes into and its caption. */
+export function foldSheet(ctx: StopContext, captionText: string): { readonly figure: HTMLElement; readonly sheet: HTMLElement; readonly group: SVGGElement; readonly caption: HTMLElement } {
   const printId = `${ctx.idPrefix}zs-print`;
   const source = svg('0 0 600 400', `<defs><g id="${printId}"></g></defs>`, 'zs-print-source');
   const group = source.querySelector('g') as SVGGElement;
@@ -362,11 +390,16 @@ function buildMap(ctx: StopContext, s: Say): StopView {
     inner = panel;
   }
   const sheet = h('div', { class: 'zs-fold-sheet' }, inner);
-  const caption = h('figcaption', { class: 'zs-print-caption zt-small', 'aria-live': 'polite' }, s('mapPrintPlain'));
-  const figure = h('figure', { class: 'zs-fold' }, h('div', { class: 'zs-fold-stage', 'aria-hidden': 'true' }, source, sheet), caption);
+  const caption = h('figcaption', { class: 'zs-print-caption zt-small', 'aria-live': 'polite' }, captionText);
+  return { figure: h('figure', { class: 'zs-fold' }, h('div', { class: 'zs-fold-stage', ...HIDDEN }, source, sheet), caption), sheet, group, caption };
+}
+
+function buildMap(ctx: StopContext, s: Say): StopView {
+  const { map } = ctx.state;
+  const { figure, sheet, group, caption } = foldSheet(ctx, s('mapPrintPlain'));
 
   const describe = h('p', { class: 'zs-describe zt-small', 'aria-live': 'polite' });
-  const grounds = GROUNDS.map((ground) => h('li', { class: 'zs-swatch zt-data', 'data-ground': ground }, h('span', { class: 'zs-swatch-dot', 'aria-hidden': 'true' }), s(`ground${camel(ground)}` as SectionKey)));
+  const grounds = GROUNDS.map((ground) => h('li', { class: 'zs-swatch zt-data', 'data-ground': ground }, h('span', { class: 'zs-swatch-dot', ...HIDDEN }), s(`ground${camel(ground)}` as SectionKey)));
   const posts = POSTS.map((post) => h('li', { class: 'zs-post zt-data', 'data-post': post }, s(`post${camel(post)}` as SectionKey)));
 
   const refresh = () => {
@@ -436,7 +469,7 @@ function buildMap(ctx: StopContext, s: Say): StopView {
     'mapTitle',
     [lede(s('mapLede'))],
     [figure, options, describe],
-    [body(s('mapHeight'), 'zs-text zt-small'), body(`${s('mapThemeBody')} ${s('mapGroundBody')} ${s('mapSignpostsBody')}`, 'zs-text zt-small')],
+    [small(s('mapHeight')), small(`${s('mapThemeBody')} ${s('mapGroundBody')} ${s('mapSignpostsBody')}`)],
   );
   view.ups.push(options);
   view.onState = (state) => sheet.classList.toggle('is-open', state.form > 0.42);
@@ -446,7 +479,7 @@ function buildMap(ctx: StopContext, s: Say): StopView {
 // ---------------------------------------------------------------------------------------------------------
 // 06 Install.
 
-function copyButton(command: string, s: Say, onCopy?: (command: string) => void): HTMLButtonElement {
+function copyButton(command: string, s: Say<'copy' | 'copied' | 'copyOf'>, onCopy?: (command: string) => void): HTMLButtonElement {
   const label = h('span', {}, s('copy'));
   const button = h('button', { type: 'button', class: 'zs-copy-btn zt-label', 'aria-label': s('copyOf', { command }) }, label);
   let timer = 0;
@@ -466,7 +499,7 @@ function copyButton(command: string, s: Say, onCopy?: (command: string) => void)
   return button;
 }
 
-const commandLine = (command: string, s: Say, onCopy?: (command: string) => void): HTMLElement =>
+export const commandLine = (command: string, s: Say<'copy' | 'copied' | 'copyOf'>, onCopy?: (command: string) => void): HTMLElement =>
   h('div', { class: 'zs-cmd' }, h('code', { class: 'zt-data' }, command), copyButton(command, s, onCopy));
 
 function buildInstall(ctx: StopContext, s: Say): StopView {
@@ -484,8 +517,8 @@ function buildInstall(ctx: StopContext, s: Say): StopView {
     );
   });
   const examples = (['exampleTopic', 'exampleStart', 'exampleClass'] as const).map((key) => h('li', {}, commandLine(s(key), s, ctx.onCopy)));
-  const then = h('div', { class: 'zs-then' }, h('h3', { class: 'zs-sub' }, s('installThen')), body(s('installThenBody'), 'zs-text zt-small'), h('ul', { class: 'zs-examples' }, ...examples));
-  const view = shell(ctx, 'install', s, 'installTag', 'installTitle', [lede(s('installLede')), body(s('installHonest'), 'zs-text zt-small zs-rule')], [h('ul', { class: 'zs-agents' }, ...agents)], [then]);
+  const then = h('div', { class: 'zs-then' }, h('h3', { class: 'zs-sub' }, s('installThen')), small(s('installThenBody')), h('ul', { class: 'zs-examples' }, ...examples));
+  const view = shell(ctx, 'install', s, 'installTag', 'installTitle', [lede(s('installLede')), small(s('installHonest'), ' zs-rule')], [h('ul', { class: 'zs-agents' }, ...agents)], [then]);
   view.ups.push(...agents);
   return view;
 }
@@ -500,7 +533,7 @@ function buildQuestions(ctx: StopContext, s: Say): StopView {
     const details = h(
       'details',
       { class: 'zs-q', name: `${ctx.idPrefix}zs-faq` },
-      h('summary', {}, h('h3', { class: 'zs-item-title' }, s(`q${index + 1}` as SectionKey)), h('span', { class: 'zs-q-mark', 'aria-hidden': 'true' })),
+      h('summary', {}, h('h3', { class: 'zs-item-title' }, s(`q${index + 1}` as SectionKey)), h('span', { class: 'zs-q-mark', ...HIDDEN })),
       h('p', { class: 'zt-small' }, rich(s(`a${index + 1}` as SectionKey))),
     );
     details.open = ctx.state.faq === index;
@@ -510,7 +543,7 @@ function buildQuestions(ctx: StopContext, s: Say): StopView {
     });
     return details;
   });
-  const post = h('span', { class: 'zs-cut zs-post-art', 'aria-hidden': 'true' }, art(SIGNPOST));
+  const post = h('span', { class: 'zs-cut zs-post-art', ...HIDDEN }, art(SIGNPOST));
   const view = shell(ctx, 'questions', s, 'questionsTag', 'questionsTitle', [lede(s('questionsLede')), post], [h('div', { class: 'zs-faq zs-sheet zt-on-paper' }, ...items)]);
   view.ups.push(post, view.station.firstElementChild as HTMLElement);
   return view;
@@ -521,25 +554,17 @@ function buildQuestions(ctx: StopContext, s: Say): StopView {
 
 function buildStart(ctx: StopContext, s: Say): StopView {
   const ticket = createTicket({ lang: ctx.lang, state: ctx.state.ticket, idPrefix: ctx.idPrefix, ...(ctx.onCopy ? { onCopy: ctx.onCopy } : {}) });
-  const view = shell(ctx, 'start', s, 'startTag', 'startTitle', [lede(s('startLede'))], [ticket.element, body(s('stubLang'), 'zs-text zt-small zs-ticket-foot')]);
+  const view = shell(ctx, 'start', s, 'startTag', 'startTitle', [lede(s('startLede'))], [ticket.element, small(s('stubLang'), ' zs-ticket-foot')]);
   view.ups.push(ticket.element);
   return { ...view, ticket };
 }
 
-const BUILDERS: Readonly<Record<StopId, (ctx: StopContext, s: Say) => StopView>> = {
-  what: buildWhat,
-  how: buildHow,
-  trail: buildTrail,
-  class: buildClass,
-  map: buildMap,
-  install: buildInstall,
-  questions: buildQuestions,
-  start: buildStart,
-};
+/** The builders, in the order of `STOPS`. A test fails when the two orders differ. */
+const BUILDERS: readonly ((ctx: StopContext, s: Say) => StopView)[] = [buildWhat, buildHow, buildTrail, buildClass, buildMap, buildInstall, buildQuestions, buildStart];
 
 export function buildStops(ctx: StopContext): StopView[] {
   const s: Say = (key, vars) => say(key, vars, ctx.lang);
-  return STOPS.map((stop) => BUILDERS[stop.id](ctx, s));
+  return BUILDERS.map((build) => build(ctx, s));
 }
 
 /** The label of a stop in the index tabs. */

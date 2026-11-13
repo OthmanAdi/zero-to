@@ -55,7 +55,11 @@
   padding: 0;
 }
 
-.zh-hud :where(button) {
+/*
+ * Zero specificity, like the resets of the cards and the shelf: any class rule of a part mounted in the overlay
+ * (a card's strong button, a volume) wins over it, wherever its stylesheet lands in the cascade.
+ */
+:where(.zh-hud button) {
   font: inherit;
   color: inherit;
   cursor: pointer;
@@ -286,6 +290,11 @@
 .zh-start:focus-visible {
   outline-offset: 3px;
   clip-path: none;
+}
+
+/* The one-word label of a narrow window. */
+.zh-start-short {
+  display: none;
 }
 
 @media (hover: hover) {
@@ -814,11 +823,12 @@
 }
 
 .zh-note-paper {
+  --zh-tilt: -1.2deg;
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 250px);
   padding: 24px 20px 14px;
-  transform: rotate(-1.2deg);
+  transform: rotate(var(--zh-tilt));
   transform-origin: 50% 0;
   transition: transform 900ms cubic-bezier(0.2, 1.2, 0.35, 1);
 }
@@ -831,7 +841,7 @@
 /* A note that is being read is held straight. */
 .zh-note:hover .zh-note-paper,
 .zh-note:focus-within .zh-note-paper {
-  transform: rotate(0deg);
+  --zh-tilt: 0deg;
 }
 
 .zh-note-paper::before {
@@ -1138,49 +1148,45 @@
   }
 }
 
-/* Swap: the old lines leave upwards, the new ones rise out of their masks one after another. */
-.zh-note.is-out .zh-note-title {
-  transform: translate3d(0, -112%, 0);
-  transition: transform 400ms cubic-bezier(0.55, 0, 1, 0.45);
+/*
+ * Swap: a turn of the sheet. It hangs by its tape, so it turns about its top edge: away with the step that was
+ * on it, back with the next one. What is written on it changes while it is turned away. The step that was there
+ * is readable until the turn starts and the next one from the moment the sheet comes back, so the paper is
+ * never shown bare. The times are NOTE.out and NOTE.turn.
+ */
+.zh-note.is-out .zh-note-paper {
+  animation: zh-sheet-out 170ms cubic-bezier(0.5, 0, 0.9, 0.5) both;
 }
 
-.zh-note.is-out .zh-row,
-.zh-note.is-out .zh-ribbon {
-  opacity: 0;
-  transition: opacity 300ms ease;
+.zh-note.is-in .zh-note-paper {
+  animation: zh-sheet-in 380ms cubic-bezier(0.2, 0.9, 0.25, 1.14) backwards;
 }
 
-.zh-note.is-in .zh-note-title {
-  animation: zh-title-in 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.zh-note.is-in .zh-ribbon {
-  animation: zh-row-in 850ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
-}
-
-.zh-note.is-in .zh-row {
-  animation: zh-row-in 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.zh-note.is-in .zh-minimap {
-  animation-delay: 200ms;
-}
-.zh-note.is-in .zh-tabs {
-  animation-delay: 280ms;
-}
-.zh-note.is-in .zh-note-body {
-  animation-delay: 360ms;
-}
-.zh-note.is-in .zh-note-foot {
-  animation-delay: 440ms;
-}
-
-@keyframes zh-title-in {
+@keyframes zh-sheet-out {
   from {
-    transform: translate3d(0, 112%, 0);
+    opacity: 1;
+    transform: perspective(1200px) rotateX(0deg) rotate(var(--zh-tilt));
+  }
+  50% {
+    opacity: 1;
   }
   to {
-    transform: none;
+    opacity: 0;
+    transform: perspective(1200px) translate3d(0, -4px, 0) rotateX(-62deg) rotate(var(--zh-tilt));
+  }
+}
+
+@keyframes zh-sheet-in {
+  from {
+    opacity: 0;
+    transform: perspective(1200px) translate3d(0, -4px, 0) rotateX(-56deg) rotate(var(--zh-tilt));
+  }
+  28% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: perspective(1200px) rotateX(0deg) rotate(var(--zh-tilt));
   }
 }
 
@@ -1192,6 +1198,21 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* The same swap on a phone, where the note is a sheet at the bottom edge and does not turn. */
+@keyframes zh-lines-out {
+  to {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+@keyframes zh-lines-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
   }
 }
 
@@ -1213,6 +1234,32 @@
   left: 40px;
   right: calc(var(--zh-pad) + var(--zh-shelf-w) + 20px);
   bottom: 28px;
+}
+
+/*
+ * The list view scrolls text under the bottom row, so the strip and its readout lie on a band of night across the
+ * whole window. The band belongs to the strip: where the strip is not shown, neither is the band. The page keeps
+ * whatever has the focus above it (WCAG 2.4.11) and below the header.
+ */
+.zh-hud[data-mode='list'] .zh-profile-host::before {
+  content: '';
+  position: absolute;
+  inset: -14px -100vw -28px;
+  z-index: -1;
+  border-top: 1px solid var(--zh-rule);
+  background: var(--zt-night);
+  box-shadow: 0 -10px 18px rgb(5 7 11 / 0.55);
+}
+
+html:has(.zh-hud[data-mode='list']) {
+  scroll-padding: 96px 0 176px;
+}
+
+/* Below 1680 px the full shelf would reach the reading column, so in the list view it folds into its round button. */
+@media (min-width: 761px) and (max-width: 1679px) {
+  .zh-hud[data-mode='list'] .zh-profile-host {
+    right: calc(var(--zh-pad) + 52px + 24px);
+  }
 }
 
 .zh-profile {
@@ -1371,6 +1418,16 @@
   stroke-width: 2.4;
 }
 
+/* A side trail: dots where the route has dashes, so the two are told apart without colour. */
+.zh-profile-spur {
+  fill: none;
+  stroke: var(--zt-signal-deep);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.01 4.4;
+  vector-effect: non-scaling-stroke;
+}
+
 .zh-profile-marks {
   position: absolute;
   inset: 0;
@@ -1393,6 +1450,11 @@
   height: 36px;
   margin: -18px 0 0 -11px;
   border-radius: 6px;
+}
+
+/* Too close to a mark that stays a button: drawn only, and a press goes through to the strip, which seeks. */
+.zh-mark[inert] {
+  pointer-events: none;
 }
 
 .zh-mark-dot {
@@ -1486,14 +1548,29 @@
   background: rgb(251 248 241 / 0.7);
 }
 
+/*
+ * The class flag: a staff with a swallow-tailed cloth in ink. The summit's flag is a pointed pennant in the
+ * colour of the route, so the two differ in shape as well as in colour.
+ */
+.zh-mark-class {
+  z-index: 1;
+}
+
 .zh-mark-flag {
   position: absolute;
-  left: -0.5px;
+  left: -0.75px;
   bottom: 0;
-  width: 9px;
-  height: 14px;
-  background: var(--zt-ink-soft);
-  clip-path: polygon(0 0, 1.5px 0, 1.5px 1px, 100% 4px, 1.5px 7.5px, 1.5px 100%, 0 100%);
+  width: 13px;
+  height: 18px;
+  background: var(--zt-ink);
+  clip-path: polygon(0 0, 1.5px 0, 1.5px 0.5px, 100% 1.5px, calc(100% - 3.5px) 4.75px, 100% 8px, 1.5px 9px, 1.5px 100%, 0 100%);
+  filter: drop-shadow(0 0 1px var(--zt-paper-hi));
+}
+
+.zh-mark-class.is-back .zh-mark-flag {
+  left: auto;
+  right: -0.75px;
+  transform: scaleX(-1);
 }
 
 /* The walker is the reading cursor: a hairline through the plot and an ink dot on the line. */
@@ -2151,6 +2228,35 @@
     filter: drop-shadow(0 -8px 18px rgb(5 7 11 / 0.55));
   }
 
+  /* The sheet stays where it is. Its lines step aside for the next step's, quickly, one swap for all of them. */
+  .zh-note.is-out .zh-note-paper,
+  .zh-note.is-in .zh-note-paper {
+    animation: none;
+  }
+
+  .zh-note.is-out .zh-note-head,
+  .zh-note.is-out .zh-row {
+    animation: zh-lines-out 170ms cubic-bezier(0.5, 0, 0.9, 0.5) both;
+  }
+
+  .zh-note.is-in .zh-note-head,
+  .zh-note.is-in .zh-row {
+    animation: zh-lines-in 300ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  /* A side trail's mark is smaller here, so the two dots of its spur show beside it. */
+  .zh-mark-step.is-side .zh-mark-dot {
+    width: 5.5px;
+    height: 5.5px;
+    margin: -2.75px 0 0 -2.75px;
+    border-width: 1.25px;
+  }
+
+  .zh-profile-spur {
+    stroke-width: 1.7;
+    stroke-dasharray: 0.01 3.1;
+  }
+
   .zh-note .zt-tape {
     display: none;
   }
@@ -2236,6 +2342,14 @@
     right: 78px;
   }
 
+  .zh-hud[data-mode='list'] .zh-profile-host::before {
+    inset: -10px -100vw -12px;
+  }
+
+  html:has(.zh-hud[data-mode='list']) {
+    scroll-padding: 76px 0 120px;
+  }
+
   .zh-profile {
     gap: 6px;
   }
@@ -2287,6 +2401,48 @@
   }
 }
 
+/*
+ * On the table the folded section tab hangs between the brand and the start chip. Its longest label ("06
+ * Installation") needs 161 px, so on a narrow window the chip says one word, and up to 460 px the wordmark gives
+ * its room as well and the mark stands alone, as on the narrowest phones.
+ */
+@media (max-width: 520px) {
+  .zh-start-long {
+    display: none;
+  }
+
+  .zh-start-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 460px) {
+  .zh-hud[data-mode='table'] .zh-brand .zt-wordmark {
+    display: none;
+  }
+}
+
+/*
+ * A roadmap for a class has a sixth tool in the walk: the teacher's view. On a phone six buttons of 44 px and the
+ * brand are wider than the window, and the last one, the help, was cut off. They stand closer there.
+ */
+@media (max-width: 430px) {
+  .zh-hud[data-mode='walk'] .zh-tools:has([data-tool='teacher']:not([hidden])) {
+    gap: 0;
+  }
+
+  .zh-hud[data-mode='walk'] .zh-tools:has([data-tool='teacher']:not([hidden])) .zh-tool {
+    width: 38px;
+  }
+}
+
+/* Under 380 px even that is too wide beside the wordmark, so the mark stands alone, as it does on the narrowest phones. */
+@media (max-width: 380px) {
+  .zh-hud[data-mode='walk'] .zh-header:has([data-tool='teacher']:not([hidden])) .zh-brand .zt-wordmark {
+    display: none;
+  }
+}
+
 @media (max-width: 380px) {
   .zh-start {
     padding: 0 12px 0 10px;
@@ -2311,6 +2467,12 @@
   .zh-mark-camp {
     height: 44px;
     margin-top: -22px;
+  }
+  /* The marks that stay buttons are 44 px apart here (PROFILE.pitch), so each one can be a whole finger wide. */
+  .zh-mark-step:not([inert]),
+  .zh-mark-camp:not([inert]) {
+    width: 44px;
+    margin-left: -22px;
   }
   .zh-minimap-dot {
     width: 44px;

@@ -3,7 +3,7 @@ import { missingKeys } from '../i18n';
 import { deriveTrek } from '../roadmap/derive';
 import { validateRoadmap } from '../roadmap/validate';
 import { outlineHtml, outlineTree, renderOutline } from './outline';
-import { profileGeometry, profileSvg, PROFILE_WIDTH } from './profile';
+import { profileGeometry, profileSvg, PROFILE_SPUR, PROFILE_WIDTH } from './profile';
 import { OUTLINE_STRINGS } from './strings';
 import { studentCopy } from './student';
 import { textOf } from './tree';
@@ -159,6 +159,87 @@ describe('profile', () => {
     expect(marked.querySelector('[data-zo-mark="pace"]')).not.toBeNull();
     expect(marked.querySelectorAll('.zo-p-due')).toHaveLength(1);
     expect(marked.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('puts every optional step with room on a dotted spur that leaves the route and rejoins it', () => {
+    const { half, rise, room, least } = PROFILE_SPUR;
+    let spurs = 0;
+    let optional = 0;
+    for (const roadmap of all) {
+      for (const height of [240, 230, 250, 170]) {
+        const trek = deriveTrek(roadmap);
+        const g = profileGeometry(trek, height);
+        const label = `${roadmap.id} at ${height}`;
+        const byId = new Map(g.spurs.map((spur) => [spur.id, spur]));
+        const stops = [0, 1, ...trek.stages.map((stage) => g.share(stage.endMinute)), ...trek.waypoints.map((w) => w.along)];
+        for (const w of trek.waypoints) {
+          const spur = byId.get(w.id);
+          if (!w.optional) {
+            expect(spur, `${label}/${w.id}`).toBeUndefined();
+            continue;
+          }
+          if (height === 240) optional += 1;
+          if (!spur) continue;
+          if (height === 240) spurs += 1;
+          const tag = `${label}/${w.id}`;
+          // It leaves before the step and rejoins after it, both on the route.
+          expect(spur.from, tag).toBeLessThan(w.along);
+          expect(spur.to, tag).toBeGreaterThan(w.along);
+          expect((w.along - spur.from) * (g.x(1) - g.x(0)), tag).toBeLessThanOrEqual(half + 1e-9);
+          expect((spur.to - w.along) * (g.x(1) - g.x(0)), tag).toBeLessThanOrEqual(half + 1e-9);
+          expect((Math.min(w.along - spur.from, spur.to - w.along) * (g.x(1) - g.x(0))), tag).toBeGreaterThanOrEqual(least - 1e-9);
+          const numbers = spur.d.match(/-?[\d.]+/g)!.map(Number);
+          const [fx, fy] = numbers;
+          const [tx, ty] = numbers.slice(-2);
+          expect(fy, tag).toBeCloseTo(g.yAt(fx!), 0);
+          expect(ty, tag).toBeCloseTo(g.yAt(tx!), 0);
+          // Its far point is the step's place, off the route by at least half the rise, inside the drawing.
+          expect(spur.on.x, tag).toBeCloseTo(g.x(w.along), 9);
+          expect(spur.on.y, tag).toBeCloseTo(g.y(w.altitude), 9);
+          expect(spur.at.x, tag).toBe(spur.on.x);
+          expect(Math.abs(spur.at.y - spur.on.y), tag).toBeGreaterThanOrEqual(rise / 2 - 1e-9);
+          expect(Math.abs(spur.at.y - spur.on.y), tag).toBeLessThanOrEqual(rise + 1e-9);
+          expect(spur.up, tag).toBe(spur.at.y < spur.on.y);
+          expect(spur.at.y, tag).toBeGreaterThanOrEqual(room - 1e-9);
+          expect(spur.at.y, tag).toBeLessThanOrEqual(height - room + 1e-9);
+          // It never reaches the mark beside it: a step, a camp or an end of the route.
+          for (const stop of stops) {
+            if (Math.abs(stop - w.along) < 1e-9) continue;
+            expect(stop <= spur.from || stop >= spur.to, `${tag} against ${stop}`).toBe(true);
+          }
+        }
+      }
+    }
+    expect(optional).toBe(12);
+    // One optional step of the statistics roadmap sits too close to its camp for a spur: it stays on the route.
+    expect(spurs).toBe(11);
+  });
+
+  it('draws the spur under the route and the optional step at its far point, due ring and all', () => {
+    const roadmap = sample('photography-basics');
+    const trek = deriveTrek(roadmap);
+    const g = profileGeometry(trek);
+    const spur = g.spurs[0]!;
+    const svg = parseFragment(profileSvg(trek, { due: [spur.id], done: [spur.id] }));
+    const paths = [...svg.querySelectorAll('path')];
+    const drawn = svg.querySelector(`.zo-p-spur[data-waypoint="${spur.id}"]`)!;
+    expect(drawn.getAttribute('d')).toBe(spur.d);
+    expect(drawn.getAttribute('stroke-dasharray')).toBe('0.01 5');
+    expect(drawn.getAttribute('stroke-linecap')).toBe('round');
+    expect(paths.indexOf(drawn as SVGPathElement)).toBeLessThan(paths.indexOf(svg.querySelector('.zo-p-route') as SVGPathElement));
+    expect(svg.querySelectorAll('.zo-p-spur')).toHaveLength(g.spurs.length);
+    const steps = [...svg.querySelectorAll('.zo-p-step')];
+    const index = trek.waypoints.findIndex((w) => w.id === spur.id);
+    const dot = steps[index]!;
+    expect(dot.classList.contains('is-optional')).toBe(true);
+    expect(dot.classList.contains('is-done')).toBe(true);
+    expect(Number(dot.getAttribute('cx'))).toBeCloseTo(spur.at.x, 0);
+    expect(Number(dot.getAttribute('cy'))).toBeCloseTo(spur.at.y, 0);
+    const ring = svg.querySelector('.zo-p-due')!;
+    expect(Number(ring.getAttribute('cy'))).toBeCloseTo(spur.at.y, 0);
+    // A step on the route keeps its place on it.
+    const plain = trek.waypoints.findIndex((w) => !w.optional);
+    expect(Number(steps[plain]!.getAttribute('cy'))).toBeCloseTo(g.y(trek.waypoints[plain]!.altitude), 0);
   });
 
   it('is in the outline with the pin at the roadmap entry before any progress', () => {

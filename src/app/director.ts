@@ -15,17 +15,18 @@ import { formatDay, formatHours } from '../look/format';
 import { THEME, hexToRgb } from '../look/theme';
 import { injectTokens } from '../look/tokens';
 import { loadFonts } from '../look/type';
-import { anchor, findOutline, hydrateOutline, printView, renderOutline, setNoindex, type HydratedOutline } from '../outline';
-import { critDamp, easeInOutCubic, lerp, seg, smooth, spring, type CameraPose } from '../paper/motion';
-import { loadProgressOrEmpty, type Progress } from '../roadmap/progress';
+import type { HydratedOutline } from '../outline';
+import { clamp01, critDamp, easeInOutCubic, lerp, seg, smooth, spring, type CameraPose } from '../paper/motion';
+import { loadProgressOrEmpty, serialiseProgress, type Progress } from '../roadmap/progress';
 import { kelvinToHex, resolveTheme } from '../roadmap/themes';
 import type { Roadmap } from '../roadmap/types';
 import type { FrameTime } from '../scene/contract';
 import { canUseWebGL, createStage, type Stage } from '../scene/stage';
-import type { Sections } from '../sections';
-import { HERO_CAMERA, INTRO, PIN, createHeroCamera, createTable, deriveSheet, isNarrow, sheetScale, type SheetSpec, type TablePart } from '../table';
+import type { Sections, StartChoice } from '../sections';
+import { COVER, HERO_CAMERA, INTRO, PIN, TURN, createHeroCamera, createTable, deriveSheet, isNarrow, sheetScale, type SheetSpec, type TablePart } from '../table';
 import type { WalkItem, WalkPart } from '../walk';
-import { createLibrary, tableEntries, type TableEntry } from './library';
+import { createChooser } from './empty';
+import { createLibrary, tableEntries, type TableEntry, type TableShows } from './library';
 import { ROADMAP_ELEMENT_ID, RECEIPT_ELEMENT_ID, issueLines, pickSource, readDebug, readReceipt, readRoadmapText, readRoadmapValue } from './load';
 import { createModeMachine, isLocked, viewOf, type Mode, type View } from './modes';
 import { createBuildQueue } from './queue';
@@ -34,8 +35,12 @@ import {
   DIVE,
   FINALE,
   RETURN,
+  RISE,
   SCROLL,
   WALK_TOP,
+  WIPE,
+  approachHx,
+  diveSecondsAt,
   divePose,
   finaleOpacity,
   foldAt,
@@ -45,16 +50,29 @@ import {
   landingHandover,
   landingShare,
   mixPose,
+  movePose,
   nearPlane,
+  orbitMix,
   returnAt,
+  riseHx,
   stretchViewports,
   walkProgressAt,
   walkScrollFor,
+  wheelPixels,
+  wipeCovered,
+  wipeRadius,
 } from './timeline';
 import './app.css';
 
-/** The gallery, in the order its sheets lie on the table. */
-const GALLERY_ORDER = ['photography-basics', 'rust-for-a-python-dev', 'deutsch-a1-von-null', 'music-theory-for-a-class', 'statistics-for-data-work', 'langgraph-for-a-python-dev'];
+/**
+ * Set to false by the build of the single-file viewer (`scripts/build-viewer.ts`). The viewer is the page the
+ * skill writes one person's roadmap into, so it carries no gallery: none of the examples, and no way to them.
+ * The hosted site and the dev server leave it unset, which means true.
+ */
+declare const __ZERO_TO_GALLERY__: boolean | undefined;
+const GALLERY = typeof __ZERO_TO_GALLERY__ === 'undefined' || __ZERO_TO_GALLERY__;
+
+/** How many examples lie on the table when it shows the gallery. */
 const SHEETS = 5;
 /** The walker has arrived when the smoothed progress is this close to where the scroll is. */
 const NOTE_ARRIVED = 0.003;
@@ -82,6 +100,20 @@ interface Info {
   readonly walkHere: number | null;
   readonly guard: number;
   readonly pin: { readonly x: number; readonly y: number; readonly visible: boolean } | null;
+  /** The compass on the screen, as a circle around its rings, in CSS pixels; null while the table is not drawn. */
+  readonly compass: { readonly x: number; readonly y: number; readonly r: number } | null;
+  /** Radius of the opening circle in percent while it opens, else null. */
+  readonly wipe: number | null;
+  /** How far the camera has risen out of the map, 0 at the gate and 1 on the table, while it rises; else null. */
+  readonly rise: number | null;
+  /** True while the lit mountain is held flat. */
+  readonly flat: boolean;
+  /** Opacity of the dark curtain. */
+  readonly curtain: number;
+  /** Device pixels per CSS pixel the canvas is drawn at. */
+  readonly ratio: number;
+  /** True while "Jump to where you are" is offered. */
+  readonly jump: boolean;
 }
 
 declare global {
@@ -114,6 +146,29 @@ function saveFile(name: string, text: string, type: string): void {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/**
+ * Marks the running page noindex, for a roadmap that came from a share link or an address: crawlers never read
+ * the fragment, so such a page must not be indexed as the page it replaced. The outline package has the same
+ * helper; it is written out here so the outline's code stays out of the first download.
+ */
+function setNoindex(): void {
+  let tag = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.name = 'robots';
+    document.head.append(tag);
+  }
+  tag.content = 'noindex';
+}
+
+/** True when a key press belongs to a field or a widget that moves its own focus, not to the page. */
+function ownKey(event: KeyboardEvent): boolean {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return true;
+  return target.closest('[role="tablist"], [role="radiogroup"], [role="slider"], dialog') !== null;
 }
 
 function toHudItem(item: WalkItem | null): HudItem {
@@ -150,8 +205,11 @@ export async function boot(): Promise<void> {
   const toastHost = el('div', { class: 'zt-toasts', role: 'status', 'aria-live': 'polite' });
   layer.append(toastHost);
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The last message that stays until it is closed: what went wrong while loading. */
+  let problem: { readonly text: string; readonly lines: readonly string[] } | null = null;
   const toast = (text: string, lines: readonly string[] = [], seconds = 9): void => {
     clearTimeout(toastTimer);
+    if (seconds <= 0) problem = { text, lines };
     const close = el('button', { type: 'button', 'aria-label': say('dismiss') }, '×');
     const body = el('div', {}, el('p', {}, text));
     if (lines.length > 0) body.append(el('ul', { lang: 'en' }, ...lines.map((line) => el('li', {}, line))));
@@ -166,12 +224,28 @@ export async function boot(): Promise<void> {
   };
 
   // -------------------------------------------------------------------------------------------------------
-  // Which roadmap, and which roadmaps lie beside it.
+  // Which roadmap, and what lies beside it.
+  //
+  // A roadmap that was given (a page built for it, a share link, an address, a file) lies on the table alone:
+  // no examples beside it, nothing to turn to and no word of them in the sections. Only without one does the
+  // table show the gallery, and only the hosted site carries it. Its examples are fetched when they are shown.
 
-  const sampleFiles = import.meta.glob<Roadmap>('../roadmap/samples/*.json', { eager: true, import: 'default' });
+  type GalleryLib = typeof import('./gallery');
+  let galleryModule: Promise<GalleryLib> | null = null;
+  const loadGalleryLib = (): Promise<GalleryLib> | null => (GALLERY ? (galleryModule ??= import('./gallery')) : null);
+  let samples: Roadmap[] = [];
   const byId = new Map<string, Roadmap>();
-  for (const sample of Object.values(sampleFiles)) byId.set(sample.id, sample);
-  const samples: Roadmap[] = [...GALLERY_ORDER.flatMap((id) => (byId.has(id) ? [byId.get(id) as Roadmap] : [])), ...[...byId.values()].filter((sample) => !GALLERY_ORDER.includes(sample.id))];
+  const fetchGallery = async (): Promise<void> => {
+    const lib = loadGalleryLib();
+    if (!lib || samples.length > 0) return;
+    try {
+      samples = await (await lib).loadGallery();
+    } catch (error) {
+      console.error('zero-to: the gallery could not be loaded', error);
+      samples = [];
+    }
+    for (const sample of samples) byId.set(sample.id, sample);
+  };
 
   const storage: StorageLike | undefined = debug.done > 0 ? memoryStorage() : undefined;
   const library = createLibrary(storage);
@@ -184,30 +258,58 @@ export async function boot(): Promise<void> {
   };
 
   const source = pickSource({ inline: document.getElementById(ROADMAP_ELEMENT_ID)?.textContent ?? null, hash: location.hash, search: location.search }, location.href);
+  // The examples are on their way while the rest starts, when the page is going to show them.
+  const galleryAhead = source.kind === 'gallery' || source.kind === 'sample' ? fetchGallery() : null;
   let opened: Roadmap | null = null;
+  /** True while the table holds a roadmap that was given, false while it shows the gallery. */
+  let given = false;
   let pendingPreview: { roadmap: Roadmap; source: 'link' | 'file'; name?: string } | null = null;
   const receipt = source.kind === 'inline' ? readReceipt(document.getElementById(RECEIPT_ELEMENT_ID)?.textContent) : null;
+  /** The roadmap the receipt was written for: the one in the page. */
+  let receiptFor = '';
+
+  // The outline's code is fetched when it is needed: for the list view, a print, or a page without WebGL.
+  type OutlineLib = typeof import('../outline');
+  let outlineModule: Promise<OutlineLib> | null = null;
+  let outlineLib: OutlineLib | null = null;
+  const loadOutline = (): Promise<OutlineLib> =>
+    (outlineModule ??= import('../outline').then((module) => {
+      outlineLib = module;
+      return module;
+    }));
 
   if (source.kind === 'inline') {
     const result = readRoadmapText(source.text);
     if (result.ok) {
       opened = result.roadmap;
-      // A page built for one roadmap is remembered, a gallery page is an example and is not.
-      if (!byId.has(opened.id)) library.add(opened);
+      receiptFor = opened.id;
+      // An example's own page on the hosted site shows the gallery with that example in the light. Any other
+      // page was built for this one roadmap: it is remembered, and it lies on the table alone.
+      const lib = loadGalleryLib();
+      if (lib && (await lib).GALLERY_IDS.includes(opened.id)) await fetchGallery();
+      given = !byId.has(opened.id);
+      if (given) library.add(opened);
     } else {
-      toast(say('inlineInvalid'), issueLines(result.issues), 0);
+      toast(say(GALLERY ? 'inlineInvalid' : 'inlineInvalidAlone'), issueLines(result.issues), 0);
     }
   } else if (source.kind === 'sample') {
+    await galleryAhead;
     opened = byId.get(source.id) ?? null;
-    if (!opened) toast(say('sampleMissing', { id: source.id.slice(0, 60) }), [], 0);
+    if (!opened) toast(say(GALLERY ? 'sampleMissing' : 'sampleMissingAlone', { id: source.id.slice(0, 60) }), [], 0);
   } else if (source.kind === 'link') {
     setNoindex();
     const result = await readLink(`#r=${source.fragment}`);
     if (result.ok) {
       const known = library.list().find((entry) => entry.id === result.roadmap.id);
-      // A link that was opened here before goes straight onto the table. A new one is shown first.
-      if (known && JSON.stringify(known.roadmap) === JSON.stringify(result.roadmap)) opened = known.roadmap;
-      else pendingPreview = { roadmap: result.roadmap, source: 'link' };
+      // The link's roadmap is what the page is for, so it lies on the table at once. One opened here before is
+      // simply there. A new one is previewed first, and this browser keeps it only once the visitor opens it.
+      given = true;
+      if (known && JSON.stringify(known.roadmap) === JSON.stringify(result.roadmap)) {
+        opened = known.roadmap;
+      } else {
+        opened = result.roadmap;
+        pendingPreview = { roadmap: result.roadmap, source: 'link' };
+      }
     } else {
       toast(`${say('linkInvalid')} ${result.error}`, issueLines(result.issues), 0);
     }
@@ -216,14 +318,42 @@ export async function boot(): Promise<void> {
     try {
       const response = await fetch(source.url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
       const result = response.ok ? readRoadmapValue(await response.json()) : null;
-      if (result?.ok) pendingPreview = { roadmap: result.roadmap, source: 'file', name: source.url };
-      else toast(say('addressFailed'), result ? issueLines(result.issues) : [], 0);
+      if (result?.ok) {
+        given = true;
+        opened = result.roadmap;
+        pendingPreview = { roadmap: result.roadmap, source: 'file', name: source.url };
+      } else {
+        toast(say('addressFailed'), result ? issueLines(result.issues) : [], 0);
+      }
     } catch {
       toast(say('addressFailed'), [], 0);
     }
   }
+  if (!given) await fetchGallery();
 
-  let entries: TableEntry[] = tableEntries(opened, library.list(), samples, SHEETS);
+  if (!given && samples.length === 0) {
+    // Nothing to show: the viewer opened as it is, or with a roadmap that could not be read. It asks for one.
+    html.dataset.zt = 'choose';
+    const chooser = createChooser(document.body, library.list(), problem);
+    chooser.element.querySelector<HTMLElement>('h1')?.focus({ preventScroll: true });
+    const choice = await chooser.chosen;
+    chooser.destroy();
+    toastHost.replaceChildren();
+    delete html.dataset.zt;
+    opened = choice.roadmap;
+    given = true;
+    if (choice.source === 'link') setNoindex();
+    if (!library.add(opened)) toast(say('notKept'));
+  }
+
+  const shows = (): TableShows => (given && opened ? { kind: 'given', roadmap: opened } : { kind: 'gallery', first: opened });
+  let entries: TableEntry[] = tableEntries(shows(), samples, SHEETS);
+  /** The page says how many sheets lie on the table, and whose they are: with one there is nothing to turn to. */
+  const markTable = (): void => {
+    html.dataset.ztSheets = String(entries.length);
+    html.dataset.ztTable = given ? 'given' : 'gallery';
+  };
+  markTable();
   let session: Session = createSession((entries[0] as TableEntry).roadmap, storage);
   if (debug.done > 0) {
     const steps = session.roadmap.stages.flatMap((stage) => stage.waypoints).filter((waypoint) => !waypoint.optional);
@@ -243,25 +373,96 @@ export async function boot(): Promise<void> {
   // The outline: the roadmap as a page. It is the list view, and all there is without WebGL.
 
   const outlineHost = document.getElementById('zero-to-outline') ?? document.body.insertBefore(el('div', { id: 'zero-to-outline' }), document.body.firstChild);
+  // A page the hosted site wrote for the gallery (the root, the gallery page) carries the examples as its text.
+  // Given a roadmap of its own (a share link, an address, a file) the page is that roadmap's: the examples go.
+  const dropIndexText = (): void => {
+    for (const index of outlineHost.querySelectorAll('[data-zo-home], [data-zo-gallery]')) index.remove();
+  };
+  if (given) dropIndexText();
   let outline: HydratedOutline | null = null;
   let outlineFor = '';
   let outlineLang = uiLang();
-  const ensureOutline = (): void => {
+  /**
+   * True while the list view is the gallery's index rather than one roadmap: a gallery page opened without the
+   * map (no WebGL, or `?view=list`) before anybody chose an example. Each example is a link from there.
+   */
+  let indexShown = false;
+
+  /** The site's root, from an example's own page or the gallery page as well as from the root itself. */
+  const siteRoot = (): string => {
+    const path = location.pathname;
+    const at = path.search(/(?:roadmaps\/[^/]+|gallery)\/(?:index\.html)?$/);
+    return at >= 0 ? path.slice(0, at) : path.replace(/[^/]*$/, '');
+  };
+  /** An example opened on this page by its id, keeping the page's other switches. */
+  const exampleHref = (id: string, hash = ''): string => {
+    const params = new URLSearchParams(location.search);
+    params.set('road', id);
+    return `?${params.toString()}${hash}`;
+  };
+
+  const showIndex = async (): Promise<void> => {
+    const lib = await loadOutline();
+    outline?.destroy();
+    outline = null;
+    outlineFor = '';
+    // A built site has the index in the page already, written before any script ran. It stays as it is.
+    const written = outlineHost.querySelector<HTMLElement>('[data-zo-home], [data-zo-gallery]');
+    if (written && written.getAttribute('lang') === uiLang()) return;
+    // Without it (the dev server, a build that was not prerendered, another language) it is written here, and
+    // its links open each example on this page.
+    const { toDom } = await import('../outline/tree');
+    lib.ensureOutlineStyles(document);
+    const tree = toDom(lib.galleryTree(samples, uiLang())) as HTMLElement;
+    for (const link of tree.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+      const match = /^(?:\.\.\/)?roadmaps\/([^/]+)\/(#.*)?$/.exec(link.getAttribute('href') ?? '');
+      if (match?.[1]) link.setAttribute('href', exampleHref(match[1], match[2] ?? ''));
+    }
+    outlineHost.replaceChildren(tree);
+    outlineLang = uiLang();
+  };
+
+  const ensureOutline = async (): Promise<void> => {
+    html.toggleAttribute('data-zt-index', indexShown);
+    syncListBar();
+    if (indexShown) {
+      await showIndex();
+      return;
+    }
+    const lib = await loadOutline();
     const roadmap = session.roadmap;
     if (outline && outlineFor === roadmap.id && outlineLang === uiLang()) return;
     outline?.destroy();
     outline = null;
-    const found = findOutline(outlineHost);
+    const found = lib.findOutline(outlineHost);
     const usable = found && found.dataset.zoOutline === roadmap.id && found.dataset.zoHydrated === undefined && outlineLang === uiLang();
-    if (!usable) outlineHost.replaceChildren(renderOutline(roadmap, { ui: uiLang() }));
+    if (!usable) outlineHost.replaceChildren(lib.renderOutline(roadmap, { ui: uiLang() }));
     outlineFor = roadmap.id;
     outlineLang = uiLang();
     try {
-      outline = hydrateOutline(outlineHost, session, { ui: uiLang() });
+      outline = lib.hydrateOutline(outlineHost, session, { ui: uiLang() });
     } catch (error) {
       console.error(error);
     }
   };
+  const showOutline = (): void => {
+    void ensureOutline().catch((error: unknown) => console.error('zero-to: the list view could not be built', error));
+  };
+
+  // Above the list: a way to open another roadmap, and on the hosted site the way from an example back to all
+  // of them. A given roadmap gets no word of the gallery.
+  const listOpen = el('button', { type: 'button', class: 'zt-chip', 'data-plain': '' });
+  const listExamples = el('a', { class: 'zt-chip', 'data-plain': '' });
+  const listBar = el('nav', { class: 'zt-listbar' }, listExamples, listOpen);
+  outlineHost.before(listBar);
+  function syncListBar(): void {
+    listBar.setAttribute('aria-label', say('listBar'));
+    listOpen.textContent = say('listOpen');
+    listExamples.textContent = say('listExamples');
+    listExamples.hidden = !GALLERY || given || indexShown;
+    listExamples.setAttribute('href', `${siteRoot()}${debug.list ? '?view=list' : ''}`);
+  }
+  syncListBar();
 
   // -------------------------------------------------------------------------------------------------------
   // The overlay.
@@ -335,7 +536,8 @@ export async function boot(): Promise<void> {
     langDe.setAttribute('aria-label', say('langDe'));
     langEn.setAttribute('aria-pressed', String(uiLang() === 'en'));
     langDe.setAttribute('aria-pressed', String(uiLang() === 'de'));
-    receiptLine.textContent = receipt ? say('receipt', { opened: receipt.opened, kept: receipt.kept, day: formatDay(receipt.checkedOn, { lang: uiLang() }) }) : '';
+    receiptLine.textContent = receipt && receiptFor === roadmap.id ? say('receipt', { opened: receipt.opened, kept: receipt.kept, day: formatDay(receipt.checkedOn, { lang: uiLang() }) }) : '';
+    syncListBar();
     if (opened) setTitle();
   };
   writeWords();
@@ -353,6 +555,7 @@ export async function boot(): Promise<void> {
       stage = null;
     }
   }
+  let listReady: Promise<void> = Promise.resolve();
   if (!stage) {
     // No map: the roadmap as a list, with every learning control working.
     html.classList.remove('map-view');
@@ -360,8 +563,11 @@ export async function boot(): Promise<void> {
     hud.setMode('list');
     machine.go('list');
     html.dataset.ztView = 'list';
-    ensureOutline();
-    if (!debug.list) toast(say('noWebgl'), [], 12);
+    // A gallery page without the map is the gallery's index, as its HTML already is. One roadmap's outline is
+    // shown only once one was chosen: an example's own page, `?road=`, or a roadmap that was given.
+    indexShown = !given && source.kind === 'gallery';
+    listReady = ensureOutline().catch((error: unknown) => console.error('zero-to: the list view could not be built', error));
+    if (!debug.list) toast(say(indexShown ? 'noWebglIndex' : 'noWebgl'), [], 12);
   } else {
     html.classList.add('map-view');
     html.dataset.ztView = 'table';
@@ -402,6 +608,15 @@ export async function boot(): Promise<void> {
   let goAfter: number | null = null;
   let reviewFirst: string | null = null;
   let guardSampled = false;
+  /** The shorter approach of a roadmap whose map was not started yet, with its opening circle. */
+  let crossing: { t: number } | null = null;
+  let wipe: number | null = null;
+
+  // Rising out of the map at the top of the walk, and scrolling back in.
+  const rise = spring(0);
+  let riseTarget = 0;
+  let topFor = 0;
+  let touchY: number | null = null;
 
   // The walk.
   let walk: WalkPart | null = null;
@@ -424,7 +639,7 @@ export async function boot(): Promise<void> {
   let closing = false;
 
   // The way back, and the fade of reduced motion.
-  let returning: { t: number; fold: number | null; from: CameraPose | null; swapped: boolean } | null = null;
+  let returning: { t: number; fold: number | null; from: CameraPose | null; swapped: boolean; start: CameraPose | null } | null = null;
   let fade: { t: number; half: boolean; action: () => void; then: Mode; wait?: () => boolean } | null = null;
   let sheetsStale = false;
   let listScroll = 0;
@@ -449,6 +664,14 @@ export async function boot(): Promise<void> {
     camera.updateMatrixWorld();
   };
 
+  /** The camera as the hero rig has just placed it, looking at the rig's own target. */
+  const heroNow = (): CameraPose | null => {
+    const pose = rig.pose;
+    if (!camera || !pose) return null;
+    const { x, y, z } = camera.position;
+    return { position: { x, y, z }, target: pose.target, distance: Math.hypot(x - pose.target.x, y - pose.target.y, z - pose.target.z), fov: camera.fov };
+  };
+
   const poseNow = (): CameraPose | null => {
     if (!camera) return null;
     const direction = camera.getWorldDirection(scratch);
@@ -461,24 +684,61 @@ export async function boot(): Promise<void> {
     };
   };
 
-  const walkInsets = (): { bottom?: number; narrow: boolean } => {
+  /** How much of the shelf dock's width the walk's screen box gives way to on a desktop. */
+  const DOCK_GIVE = 0.45;
+  const walkInsets = (): { bottom?: number; right?: number; narrow: boolean } => {
     const { width, height } = sizeOf();
     const narrow = isNarrow(width, height);
     const insets = hud.setInsets();
-    const bottom = hud.mode === 'walk' ? (2 * insets.bottom) / Math.max(1, height) : 0;
-    // The strip along the bottom is glass over the cloth in front of the panel, and the narrow box already
-    // leaves room under it: the panel keeps most of its size.
-    return bottom > 0 ? { bottom: Math.min(0.5, bottom * (narrow ? 0.6 : 0.55)), narrow } : { narrow };
+    if (hud.mode !== 'walk' || insets.bottom <= 0) return { narrow };
+    const bottom = (2 * insets.bottom) / Math.max(1, height);
+    // On a phone the strip lies over the cloth in front of the panel, and the narrow box already leaves room
+    // under it: the panel keeps most of its size.
+    if (narrow) return { bottom: Math.min(0.5, bottom * 0.6), narrow };
+    // On a desktop the panel's front edge ends above the strip and its readout row, with a little air, so the
+    // readout never lies on lit paper (the profile's box holds the readout row). The shelf dock stands in the
+    // corner beside the strip: the box gives way to it on the right, so the panel's front corner stays clear of
+    // it. Only part of the way, or the panel would slide under the note on the left.
+    const dock = insets.parts.shelf;
+    const right = dock && dock.top < height - insets.bottom ? (DOCK_GIVE * 2 * Math.max(0, width - dock.left)) / Math.max(1, width) : 0;
+    return { bottom: Math.min(0.6, bottom + (2 * 10) / Math.max(1, height)), ...(right > 0 ? { right } : {}), narrow };
   };
+
+  /** The lowest edge of the hero copy (headline, lede and hint) in CSS pixels, or null when none of it is laid out. */
+  const copyBottom = (): number | null => {
+    let bottom: number | null = null;
+    for (const part of hudRoot.querySelectorAll<HTMLElement>('.zh-hero > :is(.zh-headline, .zh-lede, .zh-hint)')) {
+      const box = part.getBoundingClientRect();
+      if (box.width > 0 && box.height > 0) bottom = Math.max(bottom ?? 0, box.bottom);
+    }
+    return bottom;
+  };
+  /** The top of the camera's screen box under a copy that ends at `bottom` px, in screen units, with a gap of 8 px. */
+  const clearBelowOf = (bottom: number, height: number): number => 1 - (2 * (bottom + 8)) / height;
+  /** The least share of a phone's height the scene keeps under the copy. Below it the lede keeps to two lines. */
+  const SCENE_LEAST = 0.5;
 
   const reframe = (): void => {
     if (!stage) return;
     const { width, height } = sizeOf();
     if (table?.ready) {
       const narrow = isNarrow(width, height);
-      const copy = narrow ? hudRoot.querySelector<HTMLElement>('.zh-headline') : null;
-      const box = copy?.getBoundingClientRect();
-      const clearBelow = box && box.height > 0 ? 1 - (2 * (box.bottom + 8)) / height : undefined;
+      let clearBelow: number | undefined;
+      if (narrow) {
+        // On a phone the scene starts under all of the copy, not only the headline, so the compass never lies on
+        // the lede or the hint. When that leaves the scene less than about half of the screen, the lede is held
+        // to two lines, measured again, and the scene starts under that.
+        delete html.dataset.ztLede;
+        let bottom = copyBottom();
+        const scene = (at: number): number => (clearBelowOf(at, height) - HERO_CAMERA.textGap - HERO_CAMERA.narrow.box.y0) / 2;
+        if (bottom !== null && scene(bottom) < SCENE_LEAST) {
+          html.dataset.ztLede = 'short';
+          bottom = copyBottom();
+        }
+        if (bottom !== null) clearBelow = clearBelowOf(bottom, height);
+      } else {
+        delete html.dataset.ztLede;
+      }
       rig.frame(table.framePoints(), width, height, clearBelow === undefined ? {} : { clearBelow });
     }
     if (walk) walk.posesFor(width / Math.max(1, height), walkInsets());
@@ -540,7 +800,7 @@ export async function boot(): Promise<void> {
     previous.destroy();
     listen();
     writeWords();
-    if (machine.mode === 'list') ensureOutline();
+    if (machine.mode === 'list') showOutline();
   };
 
   // -------------------------------------------------------------------------------------------------------
@@ -599,7 +859,15 @@ export async function boot(): Promise<void> {
     void loadWalk().then((module) => {
       walkLib = module;
       if (token !== walkToken || !stage) return;
-      const part = module.createWalk(stage.environment, { roadmap, progress: session.progress, lang: uiLang(), number: index + 1, example: entries[index]?.example === true });
+      // The walk asks the session's clock, so the class flag on the map and the strip agree on what today is.
+      const part = module.createWalk(stage.environment, {
+        roadmap,
+        progress: session.progress,
+        lang: uiLang(),
+        number: index + 1,
+        example: entries[index]?.example === true,
+        today: () => session.today(),
+      });
       part.object.visible = false;
       stage.scene.add(part.object);
       walk = part;
@@ -697,17 +965,87 @@ export async function boot(): Promise<void> {
     if (!landingQueued) landingQueued = requestAnimationFrame(showLanding);
   };
 
+  /** What a roadmap can be taken away as, from the brief's upkeep stop: the roadmap that is open now. */
+  const briefActions = {
+    print: (): void => void loadOutline().then(({ printView }) => printView('trail-card', session, { ui: uiLang() })),
+    share: (): void => hud.openPanel('share'),
+    download: (): void => saveFile(`${session.roadmap.id}.roadmap.json`, `${JSON.stringify(session.roadmap, null, 2)}\n`, 'application/json'),
+    markdown: (): void =>
+      void loadOutline().then(({ roadmapToMarkdown }) =>
+        saveFile(`${session.roadmap.id}.md`, roadmapToMarkdown(session.roadmap, { ui: uiLang(), teacher: false }), 'text/markdown;charset=utf-8'),
+      ),
+    progress: (): void => saveFile(`${session.roadmap.id}-progress.json`, `${serialiseProgress(session.progress)}\n`, 'application/json'),
+  };
+
+  /**
+   * The permit at the brief's last stop is torn off: the start is kept with the learner's progress, and the walk
+   * begins from the table, at the top of the page. The tear is seen first, then the page goes up and dives.
+   */
+  const startFromPermit = (choice: StartChoice): void => {
+    session.start(choice);
+    if (machine.mode !== 'table') return;
+    const reduced = isReduced();
+    window.setTimeout(
+      () => {
+        if (machine.mode !== 'table') return;
+        if (reduced) scrollNow(0);
+        else window.scrollTo({ top: 0, behavior: 'smooth' });
+        const began = performance.now();
+        const arrive = (): void => {
+          if (machine.mode !== 'table') return;
+          if (window.scrollY > 1 && performance.now() - began < 2600) {
+            requestAnimationFrame(arrive);
+            return;
+          }
+          scrollNow(0);
+          // `enter` waits for the table to be in view, which the scroll handler finds out a frame later.
+          showLanding();
+          dive();
+        };
+        // The intro's clock stands still while the sections cover the table. Torn off before the intro had ended,
+        // the permit waits for it to end, unless the visitor scrolls away from the table or goes elsewhere first.
+        const dive = (): void => {
+          if (machine.mode !== 'table' || away) return;
+          if (introBusy()) {
+            requestAnimationFrame(dive);
+            return;
+          }
+          enter({});
+        };
+        requestAnimationFrame(arrive);
+      },
+      reduced ? 0 : 650,
+    );
+  };
+
+  let sectionsToken = 0;
   const mountSections = async (): Promise<void> => {
     if (!stage) return;
+    const token = (sectionsToken += 1);
     const module = await import('../sections');
     await module.loadSectionWords(uiLang());
+    if (token !== sectionsToken) return;
+    sections?.destroy();
     const live = location.protocol === 'http:' || location.protocol === 'https:';
+    // A given roadmap: the stops are its trip brief, and nothing on the page speaks of the gallery.
+    const own = given ? session.roadmap : null;
+    const kept = own !== null && receipt !== null && receiptFor === own.id;
     sections = module.mountSections(sectionsRoot, {
       navHost: hud.navSlot,
       reduced: isReduced,
       topic: opened?.topic ?? '',
-      examples: samples.map((sample) => ({ title: sample.title, lang: sample.lang, checkedOn: sample.checkedOn, ...(sample.freshness ? { freshness: sample.freshness } : {}) })),
-      ...(live ? { links: { ...module.DEFAULT_LINKS, gallery: './gallery/' } } : {}),
+      roadmap: own,
+      ...(own
+        ? {
+            ...(kept ? { receipt } : {}),
+            plan: session.plan,
+            onStart: startFromPermit,
+            actions: briefActions,
+          }
+        : {
+            examples: samples.map((sample) => ({ title: sample.title, lang: sample.lang, checkedOn: sample.checkedOn, ...(sample.freshness ? { freshness: sample.freshness } : {}) })),
+            ...(live ? { links: { ...module.DEFAULT_LINKS, gallery: `${siteRoot()}gallery/` } } : {}),
+          }),
     });
     showLanding();
   };
@@ -806,6 +1144,30 @@ export async function boot(): Promise<void> {
     guard.style.setProperty('--zt-guard-c', shade(9, -6));
   };
 
+  /**
+   * The red over the frame. Across the cut it fades in and out with `hx`. On the shorter approach it opens as a
+   * circle from the pin's place on the screen, and then holds while the map is finished.
+   */
+  const paintGuard = (): void => {
+    if (wipe === null) {
+      guard.style.opacity = String(guardOpacity(hx));
+      if (guard.style.clipPath) guard.style.clipPath = '';
+      return;
+    }
+    guard.style.opacity = '1';
+    if (wipe >= WIPE.to || !table || !camera) {
+      if (guard.style.clipPath) guard.style.clipPath = '';
+      return;
+    }
+    const { width, height } = sizeOf();
+    const pin = table.pinScreen(camera);
+    const x = pin.visible ? ((pin.x + 1) / 2) * width : width / 2;
+    const y = pin.visible ? ((1 - pin.y) / 2) * height : height / 2;
+    guard.style.setProperty('--zt-guard-x', `${x.toFixed(1)}px`);
+    guard.style.setProperty('--zt-guard-y', `${y.toFixed(1)}px`);
+    guard.style.clipPath = `circle(${wipe.toFixed(3)}% at ${x.toFixed(1)}px ${y.toFixed(1)}px)`;
+  };
+
   const crossCut = (): void => {
     if (!walk || crossed) return;
     crossed = true;
@@ -850,7 +1212,6 @@ export async function boot(): Promise<void> {
 
   const applyHx = (frame: FrameTime): void => {
     if (!stage || !table || !camera) return;
-    guard.style.opacity = String(guardOpacity(hx));
     const u = landingShare(hx);
     if (u === null || !walk || !crossed) {
       showTable();
@@ -864,8 +1225,9 @@ export async function boot(): Promise<void> {
           headDistance: PIN.diveDistance * sheetScale(table.count),
         });
         applyPose(fall, nearPlane(fall.distance));
-        if (hx > DIVE.guard.from - 0.03) sampleGuard();
+        if (hx > DIVE.guard.from - 0.03 || wipe !== null) sampleGuard();
       }
+      paintGuard();
       return;
     }
     showWalk();
@@ -879,7 +1241,9 @@ export async function boot(): Promise<void> {
     const pose = mixPose(walk.landingPose(u), walk.cameraAt(landAt), landingHandover(u));
     applyPose(pose, nearPlane(pose.distance));
     setFog(pose.distance);
-    if (u >= DIVE.overlayAt && html.dataset.ztPhase === 'land') {
+    paintGuard();
+    // On the way down the walk's overlay comes in before the landing ends. Rising, the scroll decides.
+    if (machine.mode !== 'rise' && u >= DIVE.overlayAt && html.dataset.ztPhase === 'land') {
       setPhase(null);
       feedHud(frame, true);
     }
@@ -905,8 +1269,8 @@ export async function boot(): Promise<void> {
     } else {
       seenFor += Math.max(frame.dt, 1 / 240);
     }
-    // A swap of the note takes over a second. So the note changes when he has arrived at a step (or has been on
-    // it for a while), and stays as it is for the steps he only passes on a long scroll.
+    // A swap of the note takes 0.55 s, and a run of them would flicker. So the note changes when he has arrived at
+    // a step (or has been on it for a while), and stays as it is for the steps he only passes on a long scroll.
     const arrived = ahead !== null || Math.abs(target - progress.x) < NOTE_ARRIVED;
     if (force || (key !== lastItem && (key === '' || (arrived && seenFor >= (ahead !== null ? 0 : 0.15)) || seenFor >= 1.6))) {
       lastItem = key;
@@ -976,7 +1340,102 @@ export async function boot(): Promise<void> {
       setPhase(closing ? 'leave' : null);
     }
     feedHud(frame);
+    // How long the page has rested at the gate: only then does a scroll up lift the camera out of the map.
+    topFor = window.scrollY <= 1 && Math.abs(target - WALK_TOP) < 1e-4 && Math.abs(progress.x - WALK_TOP) < 0.002 && !scrollAnim ? topFor + frame.dt : 0;
     if (p >= FINALE.shut && target >= FINALE.shut && !scrollAnim) startReturn(false);
+  };
+
+  // -------------------------------------------------------------------------------------------------------
+  // Rising out of the map, and scrolling back in.
+
+  const canRise = (): boolean => machine.mode === 'walk' && !isReduced() && !finaleOn && topFor >= RISE.dwell && walk !== null && walkReady() && table !== null && rig.pose !== null;
+
+  /** Starts the rise from the gate. Returns false when the page is not resting at the gate. */
+  const startRise = (): boolean => {
+    if (!canRise() || !walk || !machine.go('rise')) return false;
+    hud.closePanel();
+    reviewItem = null;
+    scrollAnim = null;
+    rise.x = 0;
+    rise.v = 0;
+    riseTarget = 0;
+    hx = 1;
+    crossed = true;
+    landAt = WALK_TOP;
+    progress.x = WALK_TOP;
+    progress.v = 0;
+    target = WALK_TOP;
+    guardSampled = false;
+    jump.removeAttribute('data-on');
+    walk.setFold(1);
+    walk.setProgress(landAt);
+    setPhase('land');
+    return true;
+  };
+
+  /** Moves the rise by a scroll of `pixels`: up is positive. The band is RISE.band windows long. */
+  const riseBy = (pixels: number): void => {
+    riseTarget = clamp01(riseTarget + pixels / Math.max(1, RISE.band * window.innerHeight));
+  };
+
+  /** Back down at the gate: the walk takes over the scroll again. */
+  const landFromRise = (): void => {
+    if (!walk) return;
+    rise.x = 0;
+    rise.v = 0;
+    riseTarget = 0;
+    hx = 1;
+    machine.go('walk');
+    guard.style.opacity = '0';
+    walk.setLanding(null);
+    walk.setFold(null);
+    walk.aim(null);
+    walk.setLight(1);
+    walk.setProgress(WALK_TOP);
+    progress.x = WALK_TOP;
+    progress.v = 0;
+    target = WALK_TOP;
+    topFor = 0;
+    lastItem = '';
+    lastPixel = '';
+    setPhase(null);
+    feedHud(ZERO, true);
+  };
+
+  const tickRise = (frame: FrameTime): void => {
+    if (frame.reduced) {
+      rise.x = riseTarget;
+      rise.v = 0;
+    } else {
+      critDamp(rise, riseTarget, SCROLL.omega, Math.min(frame.dt, 0.034));
+    }
+    rise.x = clamp01(rise.x);
+    hx = riseHx(rise.x);
+    if (window.scrollY > 0) scrollNow(0);
+    applyHx(frame);
+    // The whole overlay steps back while the camera is between the map and the table, on either side of the cut.
+    if (html.dataset.ztPhase !== 'land') setPhase('land');
+    if (riseTarget <= 0 && rise.x < 0.002) {
+      landFromRise();
+    } else if (riseTarget >= 1 && rise.x > 0.996) {
+      // All the way out: the table, as the landing page has it.
+      rise.x = 1;
+      swapToTable();
+      machine.go('table');
+    }
+  };
+
+  /** A scroll of `pixels` (up is positive) from the visitor. True when the rise took it. */
+  const riseScroll = (pixels: number): boolean => {
+    if (machine.mode === 'rise') {
+      riseBy(pixels);
+      return true;
+    }
+    if (pixels > 0 && machine.mode === 'walk' && startRise()) {
+      riseBy(pixels);
+      return true;
+    }
+    return false;
   };
 
   // -------------------------------------------------------------------------------------------------------
@@ -1037,6 +1496,8 @@ export async function boot(): Promise<void> {
 
   const enter = (options: EnterOptions = {}): void => {
     if (machine.mode !== 'table' || away || introBusy()) return;
+    // A roadmap whose map was never started, because it was picked a moment ago or nobody had shown interest.
+    const fresh = table !== null && entries[table.selected]?.roadmap.id !== walkFor;
     if (!prepareEnter(options)) return;
     hud.closePanel();
     if (isReduced()) {
@@ -1067,12 +1528,34 @@ export async function boot(): Promise<void> {
     held = 0;
     crossed = false;
     guardSampled = false;
+    crossing = fresh ? { t: 0 } : null;
+    wipe = null;
   };
 
   const introBusy = (): boolean => introFrom !== null && sceneT - introFrom < INTRO.grow;
 
   const tickDive = (frame: FrameTime): void => {
-    if (debug.hx === null) {
+    if (debug.hx === null && crossing && !crossed) {
+      // The shorter approach: the map is built while the camera falls, the red opens from the pin and holds
+      // until the map is ready, at most `DIVE.hold` more. Then the dive goes on from the cut as usual.
+      crossing.t += frame.dt;
+      hx = approachHx(crossing.t);
+      wipe = wipeRadius(crossing.t);
+      if (wipeCovered(crossing.t)) {
+        if (!walkReady()) {
+          held += frame.dt;
+          if (held >= DIVE.hold) queue.flush();
+        }
+        if (walkReady() && walk) {
+          landAt = landingProgress();
+          crossCut();
+          crossing = null;
+          wipe = null;
+          hx = DIVE.cut;
+          diveT = diveSecondsAt(DIVE.cut);
+        }
+      }
+    } else if (debug.hx === null) {
       const next = hxAt(diveT + frame.dt);
       if (next >= DIVE.cut && !crossed) {
         // The red waits for a map that is still being built, but not for long: then the rest is built in one go.
@@ -1112,7 +1595,11 @@ export async function boot(): Promise<void> {
   // -------------------------------------------------------------------------------------------------------
   // Going back.
 
-  const swapToTable = (intro: boolean): void => {
+  /**
+   * The table takes the map's place: the page is the landing page again, at its top, with the same roadmap in
+   * the light. The intro is not played again. `keepPhase` leaves the overlay hidden while the camera still moves.
+   */
+  const swapToTable = (keepPhase = false): void => {
     if (!stage || !table) return;
     finaleOn = false;
     closing = false;
@@ -1135,6 +1622,9 @@ export async function boot(): Promise<void> {
     }
     showTable();
     hx = 0;
+    wipe = null;
+    crossing = null;
+    guard.style.opacity = '0';
     if (sheetsStale) {
       sheetsStale = false;
       table.setSheets(sheetSpecs(), table.selected);
@@ -1143,16 +1633,19 @@ export async function boot(): Promise<void> {
     table.setExit(0);
     hud.setActive(null);
     hud.setMode('table');
-    setPhase(null);
+    if (!keepPhase) setPhase(null);
     reframe();
-    if (intro) {
-      table.startIntro();
-      introFrom = sceneT;
-      html.dataset.ztIntro = 'again';
-      hud.playIntro();
-    }
     sections?.measure();
     showLanding();
+  };
+
+  /**
+   * The camera that looks at the shut map in the walk's space, moved to look at the lit sheet on the table with
+   * the same picture. The map's middle is the walk's origin; the lit sheet lies at the slot, a little smaller.
+   */
+  const ontoTable = (pose: CameraPose): CameraPose => {
+    const across = walkLib ? COVER.body.width / walkLib.PANEL.width : 1;
+    return movePose(pose, sheetScale(table?.count ?? 5) * across, { x: 0, y: 0, z: TURN.radius });
   };
 
   function startReturn(byHand: boolean): void {
@@ -1160,18 +1653,18 @@ export async function boot(): Promise<void> {
     hud.closePanel();
     if (isReduced()) {
       machine.go('fade');
-      fade = { t: 0, half: false, then: 'table', action: () => swapToTable(false) };
+      fade = { t: 0, half: false, then: 'table', action: () => swapToTable() };
       return;
     }
     machine.go('return');
     setPhase('leave');
     scrollAnim = null;
-    returning = { t: 0, fold: byHand && walk && walk.fold > 0.02 ? 0 : null, from: poseNow(), swapped: false };
+    returning = { t: 0, fold: byHand && walk && walk.fold > 0.02 ? 0 : null, from: poseNow(), swapped: false, start: null };
   }
 
   const tickReturn = (frame: FrameTime): void => {
     const state = returning;
-    if (!state || !walk) return;
+    if (!state || !walk || !table) return;
     if (state.fold !== null) {
       // Folded by hand: the map shuts where the walker stood, and the camera goes to the shut map.
       state.fold += frame.dt;
@@ -1185,6 +1678,7 @@ export async function boot(): Promise<void> {
       finale.style.setProperty('--zt-finale', '0');
       if (k >= 1) {
         state.fold = null;
+        state.from = shut;
         state.t = RETURN.wait * 0.6;
       }
       return;
@@ -1193,27 +1687,32 @@ export async function boot(): Promise<void> {
     const at = returnAt(state.t);
     curtain.style.opacity = at.curtain.toFixed(3);
     if (!at.swapped) {
+      // The map lies shut. The room dims a little and the map's own lamp with it.
       walk.setLight(at.light);
       walk.update(frame);
       const shut = walk.cameraAt(1);
-      // The camera eases away from the shut map while its lamp goes out.
-      const back = 1 + 0.05 * easeInOutCubic(Math.min(1, state.t / (RETURN.wait + RETURN.curtain + RETURN.out)));
-      const pose: CameraPose = {
-        ...shut,
-        position: { x: shut.target.x + (shut.position.x - shut.target.x) * back, y: shut.target.y + (shut.position.y - shut.target.y) * back, z: shut.target.z + (shut.position.z - shut.target.z) * back },
-      };
-      applyPose(pose);
-      setFog(pose.distance * back);
+      applyPose(shut);
+      setFog(shut.distance);
+      state.from = shut;
       return;
     }
     if (!state.swapped) {
+      // Under the dimmed curtain the shut map becomes the lit sheet on the table, flat in its print, seen by the
+      // same camera. From here on it is one camera move back to the hero shot.
       state.swapped = true;
+      state.start = ontoTable(state.from ?? walk.cameraAt(1));
       swapToTable(true);
+      table.holdFlat(true, true);
     }
-    tickTable(frame, true);
+    if (at.grow && table.flat) table.holdFlat(false);
+    tickTable(frame, false);
+    const hero = heroNow();
+    if (state.start && hero) applyPose(orbitMix(state.start, hero, at.move));
     if (at.done) {
       returning = null;
       curtain.style.opacity = '0';
+      if (table.flat) table.holdFlat(false);
+      setPhase(null);
       machine.go('table');
     }
   };
@@ -1261,14 +1760,18 @@ export async function boot(): Promise<void> {
       html.classList.remove('map-view');
       html.dataset.ztView = 'list';
       stage?.stop();
-      ensureOutline();
       hud.setMode('list');
       scrollNow(0);
-      const heading = outlineHost.querySelector<HTMLElement>('h1');
-      if (heading) {
-        heading.tabIndex = -1;
-        heading.focus({ preventScroll: true });
-      }
+      void ensureOutline()
+        .then(() => {
+          if (machine.mode !== 'list') return;
+          const heading = outlineHost.querySelector<HTMLElement>('h1');
+          if (heading) {
+            heading.tabIndex = -1;
+            heading.focus({ preventScroll: true });
+          }
+        })
+        .catch((error: unknown) => console.error('zero-to: the list view could not be built', error));
       return;
     }
     if (!stage || machine.mode !== 'list') return;
@@ -1294,27 +1797,41 @@ export async function boot(): Promise<void> {
 
   const applyOpened = (roadmap: Roadmap, from: 'link' | 'file'): void => {
     if (!library.add(roadmap)) toast(say('notKept'));
-    opened = roadmap;
     if (from === 'link') setNoindex();
-    entries = tableEntries(opened, library.list(), samples, SHEETS);
-    const previous = session;
-    session = createSession(roadmap, storage);
-    hud.setSession(session);
-    previous.destroy();
-    listen();
-    hud.setRoadmaps(hudList(), 0);
-    dropWalk();
-    if (table) {
-      table.setAutoTurn(false);
-      table.setSheets(sheetSpecs(), 0);
-      tintFor(roadmap, lampWant);
-      reframe();
+    // The roadmap of a link or an address lies on the table already while its preview is read: opening it keeps it.
+    const there = given && opened !== null && opened.id === roadmap.id && session.roadmap.id === roadmap.id && JSON.stringify(opened) === JSON.stringify(roadmap);
+    opened = roadmap;
+    given = true;
+    indexShown = false;
+    dropIndexText();
+    if (!there) {
+      // From now on the table holds this roadmap alone, and the page is about it: no examples, no turning.
+      entries = tableEntries(shows(), samples, SHEETS);
+      markTable();
+      const previous = session;
+      session = createSession(roadmap, storage);
+      hud.setSession(session);
+      previous.destroy();
+      listen();
+      hud.setRoadmaps(hudList(), 0);
+      dropWalk();
+      if (table) {
+        table.setAutoTurn(false);
+        table.setSheets(sheetSpecs(), 0);
+        tintFor(roadmap, lampWant);
+        reframe();
+      }
+      writeWords();
+      if (machine.mode === 'list' || !stage) showOutline();
+      else wantWalk();
+      // The stops become the roadmap's trip brief, and the footer loses the gallery.
+      void mountSections();
     }
-    sections?.setTopic(roadmap.topic);
-    writeWords();
-    if (machine.mode === 'list' || !stage) ensureOutline();
-    else wantWalk();
+    setTitle();
     toast(say('opened', { title: roadmap.title }), [], 5);
+    // The preview's dialog closes after this. When it had nothing to give the focus back to, the focus goes to
+    // where the page goes on from: the enter button, or the list's heading.
+    setTimeout(() => settleFocus(machine.mode === 'list' ? 'list' : 'table', true), 0);
   };
 
   // -------------------------------------------------------------------------------------------------------
@@ -1329,8 +1846,10 @@ export async function boot(): Promise<void> {
   };
 
   const outlineGo = (kind: 'step' | 'signpost', id: string): void => {
-    outline?.open(kind, id);
-    document.getElementById(kind === 'step' ? anchor.step(id) : anchor.stage(id))?.scrollIntoView({ behavior: isReduced() ? 'instant' : 'smooth', block: 'start' });
+    void loadOutline().then(({ anchor }) => {
+      outline?.open(kind, id);
+      document.getElementById(kind === 'step' ? anchor.step(id) : anchor.stage(id))?.scrollIntoView({ behavior: isReduced() ? 'instant' : 'smooth', block: 'start' });
+    });
   };
 
   bus.on((event: HudEvent) => {
@@ -1366,10 +1885,13 @@ export async function boot(): Promise<void> {
         else setList(false);
         break;
       case 'fold':
-        startReturn(true);
+        // Half way out of the map already: the rest of the way out.
+        if (machine.mode === 'rise') riseTarget = 1;
+        else startReturn(true);
         break;
       case 'home':
         if (machine.mode === 'list') setList(false);
+        else if (machine.mode === 'rise') riseTarget = 1;
         else if (machine.mode === 'walk' || machine.mode === 'finish') startReturn(true);
         else if (machine.mode === 'table') window.scrollTo({ top: 0, behavior: isReduced() ? 'instant' : 'smooth' });
         break;
@@ -1394,7 +1916,8 @@ export async function boot(): Promise<void> {
     if (!session.progress.startedAt) session.start({ on: session.today() });
     goTo(hereProgress() ?? WALK_TOP, 2.4);
   });
-  finalePrint.addEventListener('click', () => printView('trail-card', session, { ui: uiLang() }));
+  listOpen.addEventListener('click', () => hud.openPanel('open', listOpen));
+  finalePrint.addEventListener('click', () => void loadOutline().then(({ printView }) => printView('trail-card', session, { ui: uiLang() })));
   finaleFold.addEventListener('click', () => startReturn(true));
   jump.addEventListener('click', () => goTo(hereProgress() ?? WALK_TOP, 1.2));
   langEn.addEventListener('click', () => setUiLang('en'));
@@ -1412,7 +1935,7 @@ export async function boot(): Promise<void> {
       dropWalk();
       if (stage && started) wantWalk();
     }
-    if (machine.mode === 'list') ensureOutline();
+    if (machine.mode === 'list') showOutline();
   });
 
   // -------------------------------------------------------------------------------------------------------
@@ -1462,6 +1985,8 @@ export async function boot(): Promise<void> {
         if (hit?.kind === 'signpost' || hit?.kind === 'camp') goTo(walk.progressFor({ stageId: hit.stageId, kind: hit.kind }));
         else if (hit?.kind === 'cairn' && hit.waypointId) goTo(walk.progressFor({ waypointId: hit.waypointId }));
         else if (hit?.kind === 'pin') goTo(walk.progressFor({ along: deriveHere() }));
+        // The class flag stands where the class is today: a tap walks there.
+        else if (hit?.kind === 'flag' && walk.classAlong !== null) goTo(walk.progressFor({ along: walk.classAlong }));
       }
     });
   }
@@ -1473,11 +1998,58 @@ export async function boot(): Promise<void> {
     }
     scrollAnim = null;
   };
-  window.addEventListener('wheel', stopOwnScroll, { passive: false });
-  window.addEventListener('touchmove', stopOwnScroll, { passive: false });
+  // At the gate the scroll goes on upward, out of the map, and back down in. The page itself stays at its top
+  // meanwhile, so the wheel, a finger and the keys move the rise instead of the document.
+  window.addEventListener(
+    'wheel',
+    (event) => {
+      if (event.deltaY !== 0 && riseScroll(-wheelPixels(event.deltaY, event.deltaMode, window.innerHeight))) {
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
+      stopOwnScroll(event);
+    },
+    { passive: false },
+  );
+  window.addEventListener(
+    'touchstart',
+    (event) => {
+      touchY = event.touches.length === 1 ? (event.touches[0]?.clientY ?? null) : null;
+    },
+    { passive: true },
+  );
+  window.addEventListener(
+    'touchmove',
+    (event) => {
+      const y = event.touches.length === 1 ? (event.touches[0]?.clientY ?? null) : null;
+      // A finger moving down scrolls the page up.
+      const pixels = y !== null && touchY !== null ? y - touchY : 0;
+      touchY = y;
+      if (pixels !== 0 && riseScroll(pixels)) {
+        if (event.cancelable) event.preventDefault();
+        return;
+      }
+      if (machine.mode === 'rise' && event.cancelable) event.preventDefault();
+      stopOwnScroll(event);
+    },
+    { passive: false },
+  );
+  window.addEventListener('touchend', () => {
+    touchY = null;
+  });
+  const KEY_SCROLL = [' ', 'PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp'];
   window.addEventListener('keydown', (event) => {
+    if ((machine.mode === 'rise' || machine.mode === 'walk') && KEY_SCROLL.includes(event.key) && !event.defaultPrevented && !ownKey(event) && !event.altKey && !event.ctrlKey && !event.metaKey) {
+      const page = window.innerHeight * RISE.page;
+      const up = event.key === 'ArrowUp' || event.key === 'PageUp' || event.key === 'Home' || (event.key === ' ' && event.shiftKey);
+      const pixels = event.key === 'Home' || event.key === 'End' ? Number.POSITIVE_INFINITY : event.key.startsWith('Arrow') ? RISE.line : page;
+      if (riseScroll(up ? pixels : -pixels)) {
+        event.preventDefault();
+        return;
+      }
+    }
     if (!locked()) return;
-    if ([' ', 'PageDown', 'PageUp', 'Home', 'End', 'ArrowDown', 'ArrowUp'].includes(event.key)) event.preventDefault();
+    if (KEY_SCROLL.includes(event.key)) event.preventDefault();
   });
   let lockY = 0;
   window.addEventListener(
@@ -1494,6 +2066,68 @@ export async function boot(): Promise<void> {
   machine.onChange((mode) => {
     lockY = window.scrollY;
     html.dataset.ztMode = mode;
+  });
+
+  // -------------------------------------------------------------------------------------------------------
+  // Where the keyboard is after the view changes. A part that steps back takes the focus with it, so the focus
+  // goes to where the page goes on from: the note on the map, the enter button on the table, the list tool after
+  // the list view. Only when it was lost, or when a key started the change; a click keeps its own place.
+
+  /** True when the last thing the visitor did was press a key, false after a pointer or the wheel. */
+  let keyed = false;
+  /**
+   * True when a control held the focus as the change began. The browser hands the focus to the page as soon as
+   * that control is made inert, so by the end only this remembers that the focus was lost rather than never set.
+   */
+  let heldFocus = false;
+  window.addEventListener('keydown', () => (keyed = true), true);
+  for (const type of ['pointerdown', 'wheel'] as const) window.addEventListener(type, () => (keyed = false), { capture: true, passive: true });
+
+  type FocusPlace = 'walk' | 'table' | 'list' | 'back';
+  const focusTarget = (place: FocusPlace): HTMLElement | null => {
+    let target: HTMLElement | null = null;
+    if (place === 'walk') target = hudRoot.querySelector<HTMLElement>('.zh-note-title');
+    else if (place === 'table') target = hudRoot.querySelector<HTMLElement>('.zh-enter');
+    else if (place === 'list') target = outlineHost.querySelector<HTMLElement>('h1');
+    else target = hudRoot.querySelector<HTMLElement>('.zh-tool[data-tool="list"]');
+    // A heading takes the focus without joining the order of the Tab key.
+    if (target && (place === 'walk' || place === 'list') && !target.hasAttribute('tabindex')) target.tabIndex = -1;
+    return target;
+  };
+  /** `closed`: a dialog that held the focus has just closed and gave it to the page. */
+  function settleFocus(place: FocusPlace, closed = false): void {
+    const active = document.activeElement;
+    const onPage = !(active instanceof HTMLElement) || active === document.body || active === html;
+    const lost =
+      onPage ||
+      !(active as HTMLElement).isConnected ||
+      (active as HTMLElement).closest('[inert], [data-off], [hidden]') !== null ||
+      (active as HTMLElement).getClientRects().length === 0 ||
+      getComputedStyle(active as HTMLElement).visibility === 'hidden';
+    const held = heldFocus;
+    heldFocus = false;
+    if (!lost || (onPage && !keyed && !closed && !held)) return;
+    const target = focusTarget(place);
+    if (target) giveFocus(target, 8);
+  }
+  /** Focuses a part that may still be on its way in: a hidden one cannot take the focus, so it is tried again. */
+  const giveFocus = (target: HTMLElement, tries: number): void => {
+    const ready = target.isConnected && target.getClientRects().length > 0 && getComputedStyle(target).visibility !== 'hidden' && !target.closest('[inert]');
+    // The ring shows when a key started it; after a click the focus moves without one, where browsers allow.
+    if (ready) target.focus({ preventScroll: true, focusVisible: keyed });
+    else if (tries > 0) setTimeout(() => giveFocus(target, tries - 1), 100);
+  };
+  machine.onChange((mode, previous) => {
+    if (mode === 'dive' || mode === 'fade' || mode === 'return' || mode === 'rise' || mode === 'list') {
+      const active = document.activeElement;
+      heldFocus = active instanceof HTMLElement && active !== document.body && active !== html;
+    }
+    let place: FocusPlace | null = null;
+    if (mode === 'walk' && (previous === 'landing' || previous === 'fade')) place = 'walk';
+    else if (mode === 'table' && (previous === 'return' || previous === 'fade' || previous === 'rise')) place = 'table';
+    else if (previous === 'list' && mode !== 'list') place = 'back';
+    // After the frame's own work: the landing hands over the note, the list view puts the map back.
+    if (place) setTimeout(() => settleFocus(place), 0);
   });
   window.addEventListener('resize', () => {
     reframe();
@@ -1613,6 +2247,9 @@ export async function boot(): Promise<void> {
       case 'finish':
         tickWalk(frame);
         break;
+      case 'rise':
+        tickRise(frame);
+        break;
       case 'return':
         tickReturn(frame);
         break;
@@ -1631,6 +2268,20 @@ export async function boot(): Promise<void> {
     const here = session.here();
     const pin = table && camera && table.object.visible ? table.pinScreen(camera) : null;
     const { width, height } = sizeOf();
+    let compass: Info['compass'] = null;
+    if (table && camera && table.object.visible) {
+      // The table hands out the compass's top, bottom and four sides last among the points it is framed by.
+      const screen = table
+        .framePoints()
+        .slice(-6)
+        .map((point) => {
+          scratch.set(point.x, point.y, point.z).project(camera);
+          return { x: ((scratch.x + 1) / 2) * width, y: ((1 - scratch.y) / 2) * height };
+        });
+      const x = screen.reduce((sum, point) => sum + point.x, 0) / screen.length;
+      const y = screen.reduce((sum, point) => sum + point.y, 0) / screen.length;
+      compass = { x, y, r: Math.max(...screen.map((point) => Math.hypot(point.x - x, point.y - y))) };
+    }
     return {
       mode: machine.mode,
       history: [...machine.history],
@@ -1650,6 +2301,13 @@ export async function boot(): Promise<void> {
       walkHere: walk ? walk.here.panel : null,
       guard: Number(guard.style.opacity || 0),
       pin: pin ? { x: ((pin.x + 1) / 2) * width, y: ((1 - pin.y) / 2) * height, visible: pin.visible } : null,
+      compass,
+      wipe,
+      rise: machine.mode === 'rise' ? rise.x : null,
+      flat: table?.flat ?? false,
+      curtain: Number(curtain.style.opacity || 0),
+      ratio: stage ? stage.renderer.getPixelRatio() : 1,
+      jump: jump.hasAttribute('data-on'),
     };
   };
 
@@ -1684,6 +2342,7 @@ export async function boot(): Promise<void> {
   if (pendingPreview) hud.preview(pendingPreview.roadmap, pendingPreview.source, pendingPreview.name);
 
   if (!stage) {
+    await listReady;
     html.dataset.zt = 'ready';
     return;
   }

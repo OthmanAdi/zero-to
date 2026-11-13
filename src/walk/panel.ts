@@ -7,6 +7,7 @@ import { buildSheet, type Sheet } from '../paper/sheet';
 import {
   createCairn,
   createCamp,
+  createClassFlag,
   createProp,
   createScenery,
   createSignpost,
@@ -17,6 +18,7 @@ import {
   stageBoardText,
   type CairnPart,
   type CampPart,
+  type ClassFlagPart,
   type PropPart,
   type SceneryPart,
   type SignpostPart,
@@ -25,7 +27,8 @@ import {
 import type { FrameTime, SceneEnvironment } from '../scene/contract';
 import { createCardModel, type CardModel } from './cards';
 import { PANEL } from './fold';
-import { panelRoutePoints, pathPoint, type PanelPlan, type WalkPlan } from './plan';
+import { createLabelLayer, type LabelLayer } from './labels';
+import { SPUR, cairnSpot, panelRoutePoints, pathPoint, type PanelPlan, type PanelPoint, type WalkPlan } from './plan';
 import { PRINT, paintPanel, panelContours, panelPaper, type ContourLine } from './print';
 import { MODEL, STRIP } from './strip';
 
@@ -51,9 +54,11 @@ export const SCENE = {
   cairn: 0.3,
   /** A cairn stands up when the walker is this near, in route length. */
   cairnLead: 0.55,
+  /** The class flag stands this far behind the route, so the walker passes in front of it. */
+  flagBack: 0.11,
 } as const;
 
-export type WalkHitKind = 'walker' | 'board' | 'signpost' | 'camp' | 'cairn' | 'prop' | 'pin';
+export type WalkHitKind = 'walker' | 'board' | 'signpost' | 'camp' | 'cairn' | 'prop' | 'pin' | 'flag';
 
 export interface WalkHit {
   readonly kind: WalkHitKind;
@@ -102,6 +107,8 @@ export interface PanelView {
   setDue(ids: ReadonlySet<string>): void;
   setRungs(done: number): void;
   setTicked(ticked: readonly boolean[]): void;
+  /** Where the class flag stands on this panel's route, or null when the class is on another panel or has no flag. */
+  setClass(point: PanelPoint | null): void;
   /** Height of the ground under a point of the panel right now. */
   groundAt(x: number, z: number): number;
   /** Puts everything on its target at once. */
@@ -146,7 +153,21 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
   let contours: ContourLine[] = [];
   let sheet: Sheet | null = null;
   let cards: CardModel | null = null;
-  let route: { mesh: Mesh<BufferGeometry, RouteMaterial>; cardOf: Int16Array; positions: BufferAttribute } | null = null;
+  interface Ribbon {
+    readonly mesh: Mesh<BufferGeometry, RouteMaterial>;
+    readonly cardOf: Int16Array;
+    readonly positions: BufferAttribute;
+  }
+  /** A side trail's ribbon, with the route length beside each of its points and its own length up to there. */
+  interface SpurRibbon extends Ribbon {
+    readonly beside: readonly number[];
+    readonly own: readonly number[];
+  }
+  let route: Ribbon | null = null;
+  const spurs: SpurRibbon[] = [];
+  let labels: LabelLayer | null = null;
+  let flag: (Standing & { part: ClassFlagPart }) | null = null;
+  let classAt: PanelPoint | null = null;
   let scenery: SceneryPart | null = null;
   let sceneryPlaces: Standing[] = [];
   let board: (Standing & { part: StageBoardPart }) | null = null;
@@ -207,21 +228,32 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
     frame.add(cards.object);
   });
 
-  // 3. The route.
-  steps.push(() => {
-    if (!sheet) return;
-    const coarse = panelRoutePoints(panel);
-    const dense: { x: number; z: number }[] = [];
+  // 3. The route, and the side trails of the optional steps.
+  /** Points no further apart than 0.02, so a ribbon bends smoothly and steps cleanly from card to card. */
+  const densify = <P extends { readonly x: number; readonly z: number; readonly s: number }>(coarse: readonly P[]): { x: number; z: number; s: number }[] => {
+    const dense: { x: number; z: number; s: number }[] = [];
     for (let k = 0; k < coarse.length - 1; k += 1) {
-      const a = coarse[k] as { x: number; z: number; s: number };
-      const b = coarse[k + 1] as { x: number; z: number; s: number };
-      const pieces = Math.max(1, Math.ceil((b.s - a.s) / 0.02));
-      for (let piece = 0; piece < pieces; piece += 1) dense.push({ x: a.x + ((b.x - a.x) * piece) / pieces, z: a.z + ((b.z - a.z) * piece) / pieces });
+      const a = coarse[k] as P;
+      const b = coarse[k + 1] as P;
+      const pieces = Math.max(1, Math.ceil(Math.max(b.s - a.s, Math.hypot(b.x - a.x, b.z - a.z)) / 0.02));
+      for (let piece = 0; piece < pieces; piece += 1) {
+        const t = piece / pieces;
+        dense.push({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, s: a.s + (b.s - a.s) * t });
+      }
     }
-    dense.push(coarse[coarse.length - 1] as { x: number; z: number });
+    const last = coarse[coarse.length - 1] as P;
+    dense.push({ x: last.x, z: last.z, s: last.s });
+    return dense;
+  };
+  const buildRibbon = (
+    name: string,
+    dense: readonly { readonly x: number; readonly z: number }[],
+    look: { readonly width: number; readonly startLength: number; readonly seed: number; readonly period?: number; readonly ink?: number },
+  ): (Ribbon & { readonly lengths: readonly number[] }) | null => {
+    if (!sheet) return null;
     const ribbon = createRouteGeometry(
       dense.map((point) => ({ x: point.x - PANEL.width / 2, y: 0, z: point.z })),
-      { width: ROUTE.width, lift: ROUTE.lift, startLength: panel.start },
+      { width: look.width, lift: ROUTE.lift, startLength: look.startLength },
     );
     // Where the route leaves a high edge of the model it does not run down the side as a red stripe: the
     // ribbon ends at the edge and goes on at its foot.
@@ -235,18 +267,44 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       kept.push(base, base + 1, base + 2, base + 1, base + 3, base + 2);
     }
     ribbon.geometry.setIndex(kept);
-    const material = createRouteMaterial({ seed: panel.index * 3.7 + 0.4, follow: sheet.material });
+    const material = createRouteMaterial({
+      seed: look.seed,
+      follow: sheet.material,
+      ...(look.period !== undefined ? { period: look.period } : {}),
+      ...(look.ink !== undefined ? { ink: look.ink } : {}),
+    });
     const mesh = new Mesh(ribbon.geometry, material);
-    mesh.name = `panel-${panel.index}-route`;
+    mesh.name = name;
     mesh.receiveShadow = true;
     mesh.visible = false;
     mesh.frustumCulled = false;
     sheet.object.add(mesh);
-    route = {
-      mesh,
-      cardOf,
-      positions: ribbon.geometry.getAttribute('position') as BufferAttribute,
-    };
+    return { mesh, cardOf, positions: ribbon.geometry.getAttribute('position') as BufferAttribute, lengths: ribbon.lengths };
+  };
+  steps.push(() => {
+    route = buildRibbon(`panel-${panel.index}-route`, densify(panelRoutePoints(panel)), { width: ROUTE.width, startLength: panel.start, seed: panel.index * 3.7 + 0.4 });
+    for (const mark of panel.marks) {
+      if (!mark.spur) continue;
+      const dense = densify(mark.spur.points);
+      // A side trail is dotted for good: it is never the walked route, whoever has been there.
+      const ribbon = buildRibbon(`panel-${panel.index}-spur-${mark.waypoint.id}`, dense, {
+        width: SPUR.width,
+        startLength: 0,
+        seed: panel.index * 3.7 + 1.9 + mark.index,
+        period: SPUR.period,
+        ink: SPUR.ink,
+      });
+      if (!ribbon) continue;
+      ribbon.mesh.material.setWalked(-1);
+      spurs.push({ mesh: ribbon.mesh, cardOf: ribbon.cardOf, positions: ribbon.positions, beside: dense.map((point) => panel.start + point.s), own: ribbon.lengths });
+    }
+  });
+
+  // 3b. The waypoint marks and their titles: labels of their own that lie on the cards, not print the cards cut.
+  steps.push(() => {
+    if (!sheet) return;
+    labels = createLabelLayer(panel, { follow: sheet.material, resolution: phone ? 300 : 420, ink, lang: plan.roadmap.lang });
+    sheet.object.add(labels.mesh);
   });
 
   // 4. The stage board, the signpost and the camp.
@@ -297,8 +355,8 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
     if (!mark.waypoint.checks || mark.waypoint.checks.length === 0) continue;
     steps.push(() => {
       const part = createCairn({ phone, seed: (seed + mark.index * 31) % 199, due: due.has(mark.waypoint.id) });
-      const z = Math.max(MODEL.z0 + 0.1, mark.z - 0.2);
-      cairns.push({ ...stand(part.object, mark.x + 0.13, z), part, waypointId: mark.waypoint.id, length: panel.start + pathPoint(panel, mark.at).s });
+      const spot = cairnSpot(mark);
+      cairns.push({ ...stand(part.object, spot.x, spot.z), part, waypointId: mark.waypoint.id, length: panel.start + pathPoint(panel, mark.at).s });
     });
   }
 
@@ -336,14 +394,19 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
   steps.push(() => {
     built = true;
     cardsMoved = true;
+    placeFlag();
     apply();
   });
 
   const settleHeights = (): void => {
     for (const place of sceneryPlaces) place.object.position.y = Math.max(heightOf(place), place.card < 0 ? place.lift : 0);
-    for (const entry of [board, signpost, camp, ...cairns]) if (entry) entry.object.position.y = heightOf(entry);
-    if (route && cards) {
-      const { positions, cardOf } = route;
+    for (const entry of [board, signpost, camp, flag, ...cairns]) if (entry) entry.object.position.y = heightOf(entry);
+    if (!cards) return;
+    const model = cards;
+    labels?.setHeights((card) => model.cardTop(card));
+    for (const ribbon of [route, ...spurs]) {
+      if (!ribbon) continue;
+      const { positions, cardOf } = ribbon;
       for (let j = 0; j < cardOf.length; j += 1) {
         const y = cards.cardTop(cardOf[j] as number) + ROUTE.lift;
         positions.setY(j * 2, y);
@@ -351,6 +414,39 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       }
       positions.needsUpdate = true;
     }
+  };
+
+  /** How much of a side trail is drawn when the route is drawn up to `length`: its own length up to there. */
+  const spurDrawn = (spur: SpurRibbon, length: number): number => {
+    const { beside, own } = spur;
+    const last = beside.length - 1;
+    if (length <= (beside[0] as number)) return 0;
+    if (length >= (beside[last] as number)) return (own[last] as number) + 1;
+    let low = 0;
+    let high = last;
+    while (high - low > 1) {
+      const middle = (low + high) >> 1;
+      if ((beside[middle] as number) <= length) low = middle;
+      else high = middle;
+    }
+    const span = (beside[high] as number) - (beside[low] as number);
+    const t = span > 1e-9 ? (length - (beside[low] as number)) / span : 0;
+    return (own[low] as number) + ((own[high] as number) - (own[low] as number)) * t;
+  };
+
+  /** Stands the class flag at its place, a little behind the route. It is built the first time it is needed. */
+  const placeFlag = (): void => {
+    if (!built) return;
+    if (!classAt) {
+      if (flag) flag.object.visible = false;
+      return;
+    }
+    const x = classAt.x;
+    const z = Math.max(MODEL.z0 + 0.08, classAt.z - SCENE.flagBack);
+    const part = flag?.part ?? createClassFlag({ phone, seed: seed % 131 });
+    flag = { ...stand(part.object, x, z), part };
+    flag.object.visible = true;
+    flag.object.position.y = heightOf(flag);
   };
 
   /**
@@ -368,7 +464,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
     }
     if (!scene.visible) return;
     let standing = false;
-    for (const entry of [board, signpost, camp, ...cairns]) if (entry && entry.part.up > 0.03) standing = true;
+    for (const entry of [board, signpost, camp, flag, ...cairns]) if (entry && entry.part.up > 0.03) standing = true;
     if (scenery) for (const prop of scenery.props) if (prop.up > 0.03) standing = true;
     scene.visible = standing;
   }
@@ -376,6 +472,9 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
   function apply(immediate = false): void {
     if (!built) return;
     const up = landed ? sceneUp : 0;
+    // The labels lie on the panel only while it lies open, as the route does: folded, they would show through
+    // the panel stacked on it.
+    labels?.setShown(landed);
     cards?.setFold(up);
     showScene();
     scenery?.setFold(up);
@@ -386,6 +485,8 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
     signpost?.part.setUp(up > SCENE.signpost, immediate);
     camp?.part.setUp(up > SCENE.camp, immediate);
     for (const cairn of cairns) cairn.part.setUp(up > SCENE.cairn && (due.has(cairn.waypointId) || walkerLength > cairn.length - SCENE.cairnLead), immediate);
+    // The class flag is news of today, not of the walker: it stands as soon as its stage does.
+    flag?.part.setUp(up > SCENE.cairn && classAt !== null, immediate);
   }
 
   return {
@@ -420,6 +521,10 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       route.mesh.visible = shown && landed && draw > panel.start - 1e-6;
       route.mesh.material.setDraw(draw);
       route.mesh.material.setWalked(walked);
+      for (const spur of spurs) {
+        spur.mesh.visible = route.mesh.visible && draw > (spur.beside[0] as number);
+        spur.mesh.material.setDraw(spurDrawn(spur, draw));
+      }
     },
     setInk(next) {
       if (Math.abs(next - ink) < 1e-6) return;
@@ -427,6 +532,8 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       if (!built) return;
       sheet?.reprint((ctx, width, height) => paintPanel(ctx, width, height, print()));
       cards?.repaint(ink);
+      labels?.repaint(ink);
+      cardsMoved = true;
     },
     setPassed(next) {
       passed = next;
@@ -447,6 +554,12 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       ticked = next;
       if (signpost) for (let index = 0; index < signpost.part.count; index += 1) signpost.part.setTicked(index, next[index] === true);
     },
+    setClass(point) {
+      if (point === classAt || (point && classAt && point.x === classAt.x && point.z === classAt.z)) return;
+      classAt = point ? { x: point.x, z: point.z } : null;
+      placeFlag();
+      apply();
+    },
     groundAt(x, z) {
       return cards ? cards.groundAt(x, z) : 0;
     },
@@ -455,6 +568,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       apply(true);
       cards?.settle();
       scenery?.settle();
+      labels?.settle();
       settleHeights();
     },
     update(time) {
@@ -462,6 +576,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       const moving = cards ? cards.update(time.dt, time.reduced) : false;
       if (moving || cardsMoved) settleHeights();
       cardsMoved = moving;
+      labels?.update(time.dt, time.reduced);
       if (!landed) return;
       if (sceneUp <= 0.001 && scene.visible) showScene();
       if (!scene.visible) return;
@@ -469,6 +584,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       board?.part.update(time);
       signpost?.part.update(time);
       camp?.part.update(time);
+      flag?.part.update(time);
       for (const cairn of cairns) cairn.part.update(time);
     },
     hit(raycaster) {
@@ -482,6 +598,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       if (signpost) consider('signpost', signpost.part.hit(raycaster));
       if (camp) consider('camp', camp.part.hit(raycaster));
       for (const cairn of cairns) consider('cairn', cairn.part.hit(raycaster), cairn.waypointId);
+      if (flag && classAt) consider('flag', flag.part.hit(raycaster));
       if (scenery) for (const prop of scenery.props) consider('prop', prop.hit(raycaster));
       return best;
     },
@@ -490,6 +607,7 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
       else if (hit.kind === 'signpost') signpost?.part.tap();
       else if (hit.kind === 'camp') camp?.part.tap();
       else if (hit.kind === 'cairn') cairns.find((cairn) => cairn.waypointId === hit.waypointId)?.part.tap();
+      else if (hit.kind === 'flag') flag?.part.tap();
       else if (hit.kind === 'prop') scenery?.tap(raycaster);
     },
     points(target) {
@@ -513,10 +631,13 @@ export function createPanelView(panel: PanelPlan, options: PanelViewOptions): Pa
     dispose() {
       sheet?.dispose();
       cards?.dispose();
-      if (route) {
-        route.mesh.geometry.dispose();
-        route.mesh.material.dispose();
+      labels?.dispose();
+      for (const ribbon of [route, ...spurs]) {
+        if (!ribbon) continue;
+        ribbon.mesh.geometry.dispose();
+        ribbon.mesh.material.dispose();
       }
+      flag?.part.dispose();
       scenery?.dispose();
       board?.part.dispose();
       signpost?.part.dispose();

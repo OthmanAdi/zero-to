@@ -3,9 +3,10 @@ import type { Roadmap } from '../roadmap/types';
 import { validateRoadmap } from '../roadmap/validate';
 
 /**
- * The roadmaps this browser has opened: from a share link, a file, or a page built by the skill. They lie on
- * the table next to the one that is open now, before the gallery examples. Kept in `localStorage` under
- * `zero-to:library`. Progress is not kept here: it has its own key per roadmap, written by the session.
+ * The roadmaps this browser has opened: from a share link, a file, or a page built by the skill. A link that
+ * was opened here before goes onto the table without a preview, and a page that holds no roadmap offers them
+ * to open again. Kept in `localStorage` under `zero-to:library`. Progress is not kept here: it has its own key
+ * per roadmap, written by the session.
  */
 export const LIBRARY_KEY = 'zero-to:library';
 export const LIBRARY_VERSION = 1;
@@ -144,11 +145,19 @@ export interface TableEntry {
   readonly example: boolean;
 }
 
+/** Whose roadmaps lie on the table. */
+export type TableShows =
+  /** A roadmap that was given: a page built for it, a share link, an address, a file. It lies there alone. */
+  | { readonly kind: 'given'; readonly roadmap: Roadmap }
+  /** The gallery of examples, with the one that was asked for (`?road=`, an example's own page) in slot 0. */
+  | { readonly kind: 'gallery'; readonly first?: Roadmap | null };
+
 /**
- * What lies on the table: the opened roadmap in slot 0, then what this browser opened before, then gallery
- * examples until `count` sheets are filled. Without an opened roadmap the table shows the gallery alone.
+ * What lies on the table. A given roadmap lies there alone: no examples beside it, nothing to turn to, and no
+ * other roadmap this browser opened before. Without one the table shows the gallery, up to `count` sheets.
  */
-export function tableEntries(opened: Roadmap | null, library: readonly LibraryEntry[], samples: readonly Roadmap[], count = 5): TableEntry[] {
+export function tableEntries(shows: TableShows, samples: readonly Roadmap[], count = 5): TableEntry[] {
+  if (shows.kind === 'given') return [{ roadmap: shows.roadmap, example: false }];
   const out: TableEntry[] = [];
   const seen = new Set<string>();
   const put = (roadmap: Roadmap, example: boolean): void => {
@@ -156,10 +165,8 @@ export function tableEntries(opened: Roadmap | null, library: readonly LibraryEn
     seen.add(roadmap.id);
     out.push({ roadmap, example });
   };
-  if (opened) {
-    put(opened, false);
-    for (const entry of library) put(entry.roadmap, false);
-  }
+  // The example a page was opened for is named as its own, as it always was: the headline is its title.
+  if (shows.first) put(shows.first, false);
   for (const sample of samples) put(sample, true);
   return out;
 }

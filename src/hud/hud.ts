@@ -10,6 +10,7 @@ import { createBrand } from '../look/brand';
 import { ensurePaperEdge } from '../look/dom';
 import '../look/look.css';
 import {
+  classPlace,
   learnSay,
   notebookPanel,
   paceChoices,
@@ -22,7 +23,7 @@ import type { ScreenBox } from '../paper/motion';
 import { resourcesFor, type ShelfEntry } from '../roadmap/derive';
 import { emptyProgress, summarise, youAreHere, type Progress } from '../roadmap/progress';
 import type { Roadmap } from '../roadmap/types';
-import { createMemorySession, createShelfDock, type ShelfDock } from '../shelf';
+import type { ShelfDock } from '../shelf';
 import type { ReadoutParts } from '../table/readout';
 import type { HudBus, HudBy, HudMode } from './bus';
 import { createCounter, createCreaseArrow, createEnterButton, enterState, type EnterState } from './controls';
@@ -30,7 +31,7 @@ import { createPanel, fillOpen, fillShare, fillShortcuts, type OpenDialog, type 
 import { el, prefersReducedMotion, setText, toolButton, typingTarget } from './dom';
 import { createHero } from './hero';
 import './hud.css';
-import { createNote, pickNoteSide, type HudItem, type MiniMapMark, type NoteFrame, type NoteSide, type WeightedPoint } from './note';
+import { NOTE, createNote, pickNoteSide, sideBox, type HudItem, type MiniMapMark, type NoteFrame, type NoteSide, type WeightedPoint } from './note';
 import { createProfile, type Profile } from './profile';
 import { shelfSessionOf } from './shelf-session';
 import { createSideCard, pinStage, type HudRoadmap } from './side-card';
@@ -107,7 +108,10 @@ export interface Hud {
   readonly navSlot: HTMLElement;
   readonly profile: Profile;
   readonly note: NoteFrame;
+  /** The resource shelf, or null while its code is still on the way (it is fetched after the first frame's code). */
   readonly shelf: ShelfDock | null;
+  /** Resolves with the shelf once its code has arrived and it stands, or with null when there is none. */
+  whenShelf(): Promise<ShelfDock | null>;
   /** How often the side card's readout was written to the document. */
   readonly readoutWrites: number;
 
@@ -195,6 +199,30 @@ export function walkVolumes(roadmap: Roadmap, item: HudItem, stageId: string | n
 
 const SHELF_MAX = 7;
 
+/**
+ * From this width the full shelf (380 px at 46 from the right edge) stands clear of the list view's 820 px reading
+ * column. The style sheet gives the profile strip the room of the folded shelf below it (hud.css, list view).
+ */
+export const LIST_DOCK_WIDE = 1680;
+
+/**
+ * The resource shelf and the Bookshelf modules under it are the largest part of the overlay, and the first frame
+ * of the table does not need them. Their code is fetched on its own, once, and the shelf stands when it arrives.
+ */
+type ShelfLib = typeof import('../shelf');
+let shelfLib: ShelfLib | null = null;
+let shelfLoad: Promise<ShelfLib | null> | null = null;
+const loadShelf = (): Promise<ShelfLib | null> =>
+  (shelfLoad ??= import('../shelf').then(
+    (lib) => (shelfLib = lib),
+    (cause: unknown) => {
+      // A failed fetch leaves the page without a shelf, not without an overlay. The next call tries again.
+      shelfLoad = null;
+      console.warn('zero-to: the resource shelf could not be loaded', cause);
+      return null;
+    },
+  ));
+
 export function createHud(root: HTMLElement, session: Session, bus: HudBus, options: HudOptions = {}): Hud {
   const reduced: () => boolean =
     typeof options.reducedMotion === 'function' ? options.reducedMotion : options.reducedMotion === true ? () => true : prefersReducedMotion;
@@ -247,8 +275,17 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
   tools.notebook.append(count);
   tools.teacher.setAttribute('aria-pressed', 'false');
   const toolbar = el('div', { class: 'zh-tools', role: 'toolbar' }, tools.list, tools.notebook, tools.share, tools.open, tools.teacher, tools.fold, tools.help);
-  const chipLabel = el('span');
-  const chip = el('button', { type: 'button', class: 'zh-start zt-on-paper' }, el('span', { class: 'zh-dot', 'aria-hidden': 'true' }), chipLabel, el('span', { class: 'zh-start-arrow', 'aria-hidden': 'true' }, '→'));
+  // A narrow window shows the one-word label, so the section tab beside it keeps its room. The name stays whole.
+  const chipLabel = el('span', { class: 'zh-start-long' });
+  const chipShort = el('span', { class: 'zh-start-short', 'aria-hidden': 'true' });
+  const chip = el(
+    'button',
+    { type: 'button', class: 'zh-start zt-on-paper' },
+    el('span', { class: 'zh-dot', 'aria-hidden': 'true' }),
+    chipLabel,
+    chipShort,
+    el('span', { class: 'zh-start-arrow', 'aria-hidden': 'true' }, '→'),
+  );
   chip.addEventListener('click', () => bus.emit({ type: 'start' }));
   const header = el('header', { class: 'zh-header' }, brand, navSlot, toolbar, chip);
 
@@ -377,24 +414,27 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     return active.stageId;
   };
 
+  let shelfWaiting: Promise<ShelfDock | null> | null = null;
+
+  /** Fetches the shelf's code if it has not arrived yet, then puts the shelf up and says the insets changed. */
+  const whenShelf = (): Promise<ShelfDock | null> => {
+    if (options.shelf === false || destroyed) return Promise.resolve(null);
+    if (shelfLib) return Promise.resolve(dock);
+    return (shelfWaiting ??= loadShelf().then((lib) => {
+      shelfWaiting = null;
+      if (!lib || destroyed) return null;
+      syncShelf();
+      bus.emit({ type: 'insets' });
+      return dock;
+    }));
+  };
+
   const syncShelf = (): void => {
     if (options.shelf === false || destroyed) return;
     const onTable = mode === 'table';
     const entry = onTable ? lit() : null;
     const roadmap = entry?.roadmap ?? current.roadmap;
     const own = roadmap.id === current.roadmap.id;
-    const key = `${roadmap.id}|${own ? 'session' : 'guest'}|${uiLang()}`;
-    if (key !== dockKey) {
-      dock?.destroy();
-      shelfHost.replaceChildren();
-      dockKey = key;
-      entriesKey = '';
-      dock = createShelfDock(shelfHost, own ? shelfSessionOf(current) : createMemorySession(roadmap), {
-        ui: uiLang(),
-        ...(options.reducedMotion === true ? { reducedMotion: true } : {}),
-        background: background(),
-      });
-    }
     let entries: ShelfEntry[];
     let present: string | null = null;
     let light = 1;
@@ -409,25 +449,89 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
       }
     }
     entries = entries.slice(0, SHELF_MAX);
+    // The place is held from the start, so the entrance of the table times the shelf as if it had always been there.
+    shelfHost.hidden = entries.length === 0;
+    const lib = shelfLib;
+    if (!lib) {
+      void whenShelf();
+      return;
+    }
+    // In the list view the full shelf would stand over the reading column, so below LIST_DOCK_WIDE it is the round
+    // button that opens the bottom sheet, as on a phone.
+    const folded = mode === 'list';
+    const key = `${roadmap.id}|${own ? 'session' : 'guest'}|${uiLang()}|${folded ? 'list' : 'map'}`;
+    if (key !== dockKey) {
+      if (dock) {
+        dock.destroy();
+        // A dock that goes takes `inert` off everything it was given as background, also the parts this mode
+        // keeps out of the keyboard's path. They get it back here.
+        syncParts();
+      }
+      shelfHost.replaceChildren();
+      dockKey = key;
+      entriesKey = '';
+      dock = lib.createShelfDock(shelfHost, own ? shelfSessionOf(current) : lib.createMemorySession(roadmap), {
+        ui: uiLang(),
+        ...(options.reducedMotion === true ? { reducedMotion: true } : {}),
+        ...(folded ? { phoneQuery: `(max-width: ${LIST_DOCK_WIDE - 1}px)` } : {}),
+        background: background(),
+      });
+    }
     const nextKey = `${mode}|${entries.map((e) => e.resource.id).join(',')}|${present ?? ''}`;
     if (nextKey !== entriesKey) {
       entriesKey = nextKey;
       dock?.setEntries(entries, present);
     }
     dock?.setLit(light);
-    shelfHost.hidden = entries.length === 0;
+  };
+
+  // ---- The note keeps off the walker
+  let lastFrame = Number.NaN;
+  let coveredFor = 0;
+  let dodgedAt = Number.NEGATIVE_INFINITY;
+
+  /**
+   * The side of the note is chosen when a step is reached, but the camera goes on moving after that, and at a
+   * camp it has already crossed to the next panel. So the note can come to lie over the walker. When he has
+   * been under it for half a second it goes to the other side. A note that is being read stays where it is.
+   */
+  const keepOffWalker = (time: number): void => {
+    const dt = Number.isFinite(lastFrame) ? Math.min(0.1, Math.max(0, time - lastFrame)) : 0;
+    lastFrame = time;
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const at = walkerScreen;
+    if (!at || !note.item || viewport.width <= NOTE.narrow || time - dodgedAt < NOTE.dodge.rest) {
+      coveredFor = 0;
+      return;
+    }
+    const pad = 16;
+    const column = sideBox(note.side, viewport, 0);
+    let under = at.x >= column.left - pad && at.x <= column.left + column.width + pad;
+    if (under) {
+      const height = note.element.getBoundingClientRect().height || 420;
+      under = at.y + NOTE.dodge.figure >= column.top - pad && at.y <= column.top + height + pad;
+    }
+    if (under && (note.element.matches(':hover') || note.element.contains(document.activeElement))) under = false;
+    coveredFor = under ? coveredFor + dt : 0;
+    if (coveredFor < NOTE.dodge.after) return;
+    coveredFor = 0;
+    dodgedAt = time;
+    note.place(note.side === 'left' ? 'right' : 'left');
+  };
+
+  /** The stage the note's item belongs to, so the strip's readout names the same stage at a camp. */
+  const stageOfItem = (item: HudItem): number | null => {
+    if (!item || item.kind === 'review') return null;
+    const stages = current.roadmap.stages;
+    const index = item.kind === 'waypoint' ? stages.findIndex((stage) => stage.waypoints.some((wp) => wp.id === item.waypointId)) : stages.findIndex((stage) => stage.id === item.stageId);
+    return index >= 0 ? index : null;
   };
 
   // ---- What follows the session
-  const classAlong = (): number | null => {
-    const sessions = current.roadmap.class?.sessions;
-    if (!sessions) return null;
-    const today = current.today();
-    let latest: (typeof sessions)[number] | null = null;
-    for (const s of sessions) if (s.date && s.date <= today && (!latest || (latest.date ?? '') <= s.date)) latest = s;
-    const last = latest?.inClass[latest.inClass.length - 1];
-    const wp = last ? current.trek.waypoints.find((w) => w.id === last) : undefined;
-    return wp ? wp.along : null;
+  /** The class flag: after the steps of the latest session dated today or earlier. The map stands its own there. */
+  const syncClass = (): void => {
+    const place = teacher || current.roadmap.class ? classPlace(current.roadmap, current.trek, current.today()) : null;
+    profile.setClass(place ? place.along : null, place ? say('classSession', { n: place.session.n, title: place.session.title }) : '');
   };
 
   const syncEnter = (): void => {
@@ -454,7 +558,7 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     profile.setPace(pace.status === 'before-start' ? null : pace.expectedAlong, pace.arrival);
     profile.setOffer(pace.offer);
     profile.setDue(current.due().map((item) => ({ waypointId: item.waypointId, title: item.title })));
-    profile.setClass(teacher || current.roadmap.class ? classAlong() : null);
+    syncClass();
     const ratings: Record<string, number> = {};
     for (const [id, wp] of Object.entries(current.progress.waypoints)) if (wp.done) ratings[id] = wp.rating ?? 0;
     profile.setRatings(ratings);
@@ -504,6 +608,8 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     nameTool(tools.fold, say('fold'));
     nameTool(tools.help, say('shortcuts'));
     setText(chipLabel, say('startChip'));
+    setText(chipShort, say('startChipShort'));
+    chip.setAttribute('aria-label', say('startChip'));
     note.element.setAttribute('aria-label', say('note'));
     syncTools();
   };
@@ -521,17 +627,21 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     node.toggleAttribute('inert', !on);
   };
 
+  /** Which parts the mode shows; the others fade and leave the keyboard's path. */
+  function syncParts(): void {
+    const table = mode === 'table';
+    show(hero.element, table);
+    show(controls, table);
+    show(side.element, table);
+    show(note.element, mode === 'walk');
+    show(profileHost, !table);
+  }
+
   function setMode(nextMode: HudMode): void {
     mode = nextMode;
     if (nextMode !== 'list') mapMode = nextMode;
     root.dataset.mode = nextMode;
-    const table = nextMode === 'table';
-    const walk = nextMode === 'walk';
-    show(hero.element, table);
-    show(controls, table);
-    show(side.element, table);
-    show(note.element, walk);
-    show(profileHost, !table);
+    syncParts();
     syncTools();
     syncShelf();
     bus.emit({ type: 'insets' });
@@ -556,7 +666,7 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     if (key === '?') return act(() => openPanel('shortcuts', tools.help));
     if (key === 'l' || key === 'L') return act(toggleList);
     if (key === 'n' || key === 'N') return act(() => openPanel('notebook', tools.notebook));
-    if (key === 'b' || key === 'B') return act(() => dock?.focus());
+    if (key === 'b' || key === 'B') return act(() => (dock ? dock.focus() : void whenShelf().then((ready) => ready?.focus())));
     if (key === 'Escape') {
       if (mode !== 'walk') return;
       if (note.expanded) return act(() => note.setExpanded(false));
@@ -634,6 +744,7 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     get shelf() {
       return dock;
     },
+    whenShelf,
     get readoutWrites() {
       return side.writes;
     },
@@ -676,6 +787,7 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
     setActive(item) {
       active = item;
       note.setActive(item);
+      profile.setStage(stageOfItem(item));
       syncShelf();
     },
     placeNote(nextSide) {
@@ -754,7 +866,9 @@ export function createHud(root: HTMLElement, session: Session, bus: HudBus, opti
       );
     },
     frame(time) {
-      if (mode === 'walk') note.frame(time);
+      if (mode !== 'walk') return;
+      note.frame(time);
+      keepOffWalker(time);
     },
     openPanel,
     closePanel,

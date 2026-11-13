@@ -7,6 +7,7 @@ import {
   WALK,
   evenWindows,
   fForMinutes,
+  finaleLightAt,
   itemAt,
   mapOpenAt,
   minutesShareAt,
@@ -224,5 +225,19 @@ describe('pathAt', () => {
     }
     expect(minutesShareAt(-1)).toBe(0);
     expect(minutesShareAt(2)).toBe(1);
+  });
+});
+
+describe('finaleLightAt', () => {
+  it('opens the lights over the wide shot, holds them while every scene stands and closes them as it all folds down', () => {
+    for (const p of [0, 0.3, WALK.wide.from]) expect(finaleLightAt(p)).toBe(0);
+    for (const p of [WALK.wide.to, 0.9, WALK.down.from]) expect(finaleLightAt(p)).toBe(1);
+    for (const p of [WALK.down.to, WALK.shut.from, 1]) expect(finaleLightAt(p)).toBe(0);
+    let last = 0;
+    for (let k = 0; k <= 100; k += 1) {
+      const now = finaleLightAt(WALK.wide.from + ((WALK.wide.to - WALK.wide.from) * k) / 100);
+      expect(now).toBeGreaterThanOrEqual(last);
+      last = now;
+    }
   });
 });

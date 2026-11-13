@@ -3,8 +3,8 @@
  *
  * - `PROPS` is the scenery by ground surface, and `sceneryFor` lays it out for one panel from a seed.
  * - `SIGNPOSTS` are the checkpoint signposts a roadmap can choose, described in `SIGNPOST_CATALOGUE`.
- * - `createSignpost`, `createStageBoard`, `createCamp`, `createCairn`, `createWalker` and `createStation`
- *   build the pieces that carry a learning action.
+ * - `createSignpost`, `createStageBoard`, `createCamp`, `createCairn`, `createClassFlag`, `createWalker` and
+ *   `createStation` build the pieces that carry a learning action.
  *
  * Every piece is a `ScenePart`: add `object` to the scene, call `update` once per frame, `dispose` at the end.
  * Every piece starts lying on the map (the walker starts standing) and stands up with `setUp(true)`.
@@ -75,6 +75,7 @@ export {
   type CampOptions,
   type CampPart,
 } from './camp';
+export { CLASS_FLAG, createClassFlag, type ClassFlagOptions, type ClassFlagPart } from './class-flag';
 export { WALKER, createWalker, walkCycle, type WalkPose, type WalkerOptions, type WalkerPart } from './walker';
 export {
   CARRIES,

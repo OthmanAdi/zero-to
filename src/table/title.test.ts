@@ -87,4 +87,22 @@ describe('layoutTitle', () => {
     expect(layout.truncated).toBe(false);
     expect(layout.scale).toBeLessThan(1);
   });
+  it('takes a wrapping only when the extra test of the box passes, and shrinks until it does', () => {
+    const box = coverBox();
+    const plain = layoutTitle('Zero to Rust, coming from Python', 'en', box);
+    const asked: number[] = [];
+    // A box that takes the title only from 40 px down, the way a mountain in front of it would.
+    const smaller = layoutTitle('Zero to Rust, coming from Python', 'en', {
+      ...box,
+      fits: (_lines, fontPx) => {
+        asked.push(fontPx);
+        return fontPx <= 40;
+      },
+    });
+    expect(asked.length).toBeGreaterThan(1);
+    expect(plain.fontPx).toBeGreaterThan(40);
+    expect(smaller.fontPx).toBeLessThanOrEqual(40);
+    expect(smaller.scale).toBeGreaterThanOrEqual(0.56 - 1e-9);
+    expect(smaller.truncated).toBe(false);
+  });
 });

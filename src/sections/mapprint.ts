@@ -1,4 +1,5 @@
 import { resolveTheme } from '../roadmap/themes';
+import type { SurfaceKind } from '../roadmap/types';
 import { assignSurfaces, generateHeightfield, levelHeights, planTrail, traceContours, type Ring, type TerrainTemplate, type TrailTemplate } from '../terrain';
 
 /**
@@ -12,6 +13,8 @@ export interface MapChoice {
   readonly trail: TrailTemplate;
   readonly theme: string;
   readonly seed: string;
+  /** Ground bands from the foot to the summit, for a roadmap that lists its own. Default: the theme's. */
+  readonly surfaces?: readonly SurfaceKind[];
 }
 
 export const PRINT = { width: 600, height: 400, levels: 11, stops: 5 } as const;
@@ -23,7 +26,7 @@ const ringPath = (ring: Ring, x: (value: number) => string, y: (value: number) =
 export function mapPrint(choice: MapChoice): string {
   const field = generateHeightfield({ seed: choice.seed, template: choice.shape, resolution: 65 });
   const levels = traceContours(field, levelHeights(PRINT.levels), { simplify: 0.006 });
-  const surfaces = assignSurfaces(levels, resolveTheme(choice.theme).surfaces, choice.seed, { template: field.template });
+  const surfaces = assignSurfaces(levels, choice.surfaces ?? resolveTheme(choice.theme).surfaces, choice.seed, { template: field.template });
   const trail = planTrail(field, { seed: choice.seed, template: choice.trail, stops: PRINT.stops });
 
   // The footprint is a square from -1 to 1. It sits in the middle of the sheet, a little wider than tall.

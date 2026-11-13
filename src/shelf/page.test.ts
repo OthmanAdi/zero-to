@@ -105,4 +105,14 @@ describe('strings', () => {
   it('has the same keys and placeholders in English and German', () => {
     expect(missingKeys(SHELF_STRINGS)).toEqual([]);
   });
+
+  it('has its own German for the row hint and the place of a volume, which the Bookshelf row only has in English', () => {
+    expect(SHELF_STRINGS.en.hint).toBe('Arrow keys move along the shelf, Enter opens.');
+    expect(SHELF_STRINGS.de.hint).toBe('Pfeiltasten bewegen dich am Regal entlang, Enter öffnet.');
+    expect(SHELF_STRINGS.en.volumeAt).toBe('Volume {index} of {count}');
+    expect(SHELF_STRINGS.de.volumeAt).toBe('Band {index} von {count}');
+    for (const key of ['hint', 'volumeAt', 'volumeDone', 'volumeRead', 'restedAt'] as const) {
+      expect(SHELF_STRINGS.de[key]).not.toBe(SHELF_STRINGS.en[key]);
+    }
+  });
 });

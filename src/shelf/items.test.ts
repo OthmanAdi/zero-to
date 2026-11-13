@@ -16,9 +16,13 @@ import {
   safeHref,
   statusLine,
   statusSentence,
+  restedLine,
   toShelfItems,
   TYPE_LOOK,
+  volumeLabel,
 } from './items';
+import { describe as describeVolume } from '../bookshelf/shelf/book';
+import type { ShelfItem } from '../bookshelf/shelf';
 
 const ALL_TYPES: ResourceType[] = ['docs', 'reference', 'book', 'course', 'video', 'article', 'interactive', 'exercises', 'tool', 'community'];
 
@@ -203,5 +207,36 @@ describe('links', () => {
     const stage = roadmap.stages.find((s) => (s.project?.resources?.length ?? 0) > 0)!;
     const entry = resourcesFor(roadmap, stage.id).find((e) => e.for === 'project')!;
     expect(placeOf(entry, roadmap)).toEqual({ stageId: stage.id });
+  });
+});
+
+describe('what the row says to a screen reader', () => {
+  const base: ShelfItem = { id: 'v', title: 'Making the Most of Natural Light', source: 'example.org', cloth: 'slate', pattern: 'tiles' };
+  const kinds: ShelfItem[] = [
+    base,
+    { ...base, source: undefined },
+    { ...base, done: true },
+    { ...base, progress: 0.4 },
+    { ...base, done: true, progress: 0.4 },
+  ];
+
+  it('names a volume in English exactly as the Bookshelf row does', () => {
+    for (const item of kinds) expect(volumeLabel(item, 1, 2, 'en')).toBe(describeVolume(item, 1, 2));
+  });
+
+  it('names a volume in German, place and marks included', () => {
+    expect(volumeLabel(base, 1, 2, 'de')).toBe('Making the Most of Natural Light. example.org. Band 2 von 2');
+    expect(volumeLabel({ ...base, done: true }, 0, 3, 'de')).toBe('Making the Most of Natural Light. example.org. Band 1 von 3. Als genutzt markiert');
+    expect(volumeLabel({ ...base, progress: 0.4 }, 0, 3, 'de')).toBe('Making the Most of Natural Light. example.org. Band 1 von 3. 40 Prozent gelesen');
+    for (const item of kinds) expect(volumeLabel(item, 1, 2, 'de')).not.toMatch(/Volume|of 2|read/);
+  });
+
+  it('says where the row came to rest in the interface language, and only for the line the row writes', () => {
+    expect(restedLine('Fixture docs, 2 of 5', 'en')).toBe('Fixture docs, 2 of 5');
+    expect(restedLine('Fixture docs, 2 of 5', 'de')).toBe('Fixture docs, 2 von 5');
+    // A title of its own with commas and numbers keeps them; only the end is the shelf's.
+    expect(restedLine('Chapter 1, 2 of 3, 4 of 5', 'de')).toBe('Chapter 1, 2 of 3, 4 von 5');
+    expect(restedLine('Fixture docs, 2 von 5', 'de')).toBeNull();
+    expect(restedLine('', 'de')).toBeNull();
   });
 });

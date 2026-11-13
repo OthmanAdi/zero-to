@@ -89,6 +89,10 @@
         margin: 24px 0 0;
         color: var(--zt-text-soft);
       }
+      .dev-hero p.dev-problem {
+        max-width: 560px;
+        color: var(--zt-signal, #e0452b);
+      }
       .dev-hero small {
         position: absolute;
         right: 46px;
@@ -109,6 +113,11 @@
         .dev-hero {
           padding: 104px 16px 0;
         }
+        .dev-hero small {
+          left: 16px;
+          right: 16px;
+          bottom: 24px;
+        }
       }
     </style>
   </head>
@@ -120,8 +129,8 @@
     </header>
     <div class="dev-hero" id="top">
       <h1 class="zt-headline">Any topic, from zero to the <em>summit</em>.</h1>
-      <p class="zt-body">A stand-in for the hero. The sections start one screen further down.</p>
-      <small>dev/sections.html</small>
+      <p class="zt-body" id="hero-note">A stand-in for the hero. The sections start one screen further down.</p>
+      <small id="hero-label">dev/sections.html</small>
     </div>
     <main id="sections"></main>
     <script type="module" src="./sections.ts"></script>

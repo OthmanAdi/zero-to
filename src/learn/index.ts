@@ -55,6 +55,7 @@ export { reviewCard, reviewSitting, nextReviewDay, REVIEW_MINUTES_PER_CHECK, SIT
 export { paceChoices, type PaceChoicesOptions } from './pace-choices';
 export { notebookPanel, notebookFileName, type NotebookPanelOptions } from './notebook-panel';
 export { storageNotice } from './notice';
+export { classPlace, latestSession, type ClassPlace } from './class-flag';
 export { ratingName, RATINGS } from './rating';
 export { resourceLine, statusSentence, languageName } from './resources';
 export { LEARN_STRINGS, say as learnSay, type LearnKey } from './strings';

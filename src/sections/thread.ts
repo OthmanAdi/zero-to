@@ -1,5 +1,5 @@
 import { CAIRN, STONE, TUSSOCK, WALKER } from './art';
-import { svg, svgEl } from './dom';
+import { HIDDEN, svg, svgEl } from './dom';
 import { decorate, indexAt, pointAt, polyline, type PathPoint, type Point, type Polyline } from './model';
 
 /**
@@ -36,7 +36,7 @@ export interface PieceOptions {
 
 export function createPiece(points: readonly Point[], width: number, height: number, options: PieceOptions = {}): ThreadPieceView {
   const line = polyline(points);
-  const element = svgEl('svg', { class: 'zs-thread', viewBox: `0 0 ${Math.max(1, width)} ${Math.max(1, height)}`, 'aria-hidden': 'true', focusable: 'false' });
+  const element = svgEl('svg', { class: 'zs-thread', viewBox: `0 0 ${Math.max(1, width)} ${Math.max(1, height)}`, ...HIDDEN, focusable: 'false' });
   element.setAttribute('preserveAspectRatio', 'none');
 
   if (options.rings && line.length > 0) {

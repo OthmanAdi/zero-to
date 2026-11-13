@@ -504,6 +504,66 @@ div.zs-band.is-on {
   transform: rotate(225deg);
 }
 
+/*
+ * Folded: one tab hangs alone and opens the rest as a stack. The sections fold the tabs on a narrow window, and
+ * on a wider one whenever the row is wider than the room the header leaves it (`fitNav` in mount.ts).
+ */
+.zs-folded {
+  width: fit-content;
+}
+
+.zs-folded .zs-nav-toggle {
+  display: flex;
+}
+
+.zs-folded .zs-tabs {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding-top: 4px;
+  transform: translateX(-50%);
+}
+
+.zs-folded.is-open .zs-tabs {
+  display: flex;
+}
+
+.zs-folded .zs-tabs .zs-tab,
+.zs-folded .zs-tabs .zs-tab[aria-current] {
+  height: 44px;
+  padding-top: 0;
+  border-radius: 3px;
+}
+
+/*
+ * Tight: even the folded tab is wider than its room, as between the brand and the tools of a phone. It keeps its
+ * number and caret, the name is left to screen readers, and it stands over the middle of the room.
+ */
+.zs-tight {
+  width: 44px;
+  margin-left: min(0px, calc(50% - 22px));
+}
+
+.zs-tight .zs-nav-toggle {
+  justify-content: center;
+  gap: 4px;
+  width: 44px;
+  padding: 0;
+}
+
+.zs-tight .zs-toggle-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* ---- 01 What it is: the paper theatre with four peaks --------------------------------------------------- */
 
 .zs-theatre {
@@ -1945,37 +2005,6 @@ a.zs-age-title:hover {
 
   div.zs-band {
     height: 92px;
-  }
-
-  .zs-nav-fixed {
-    left: 50%;
-  }
-
-  .zs-nav-toggle {
-    display: flex;
-  }
-
-  .zs-tabs {
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
-    padding-top: 4px;
-    transform: translateX(-50%);
-  }
-
-  .zs-nav.is-open .zs-tabs {
-    display: flex;
-  }
-
-  .zs-tabs .zs-tab,
-  .zs-tabs .zs-tab[aria-current] {
-    height: 44px;
-    padding-top: 0;
-    border-radius: 3px;
   }
 
   .zs-theatre {

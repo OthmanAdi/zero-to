@@ -5,11 +5,11 @@ import { formatHours, formatNumber } from '../look/format';
 import { THEME, mix, withAlpha } from '../look/theme';
 import { canvasFont, drawText, measureTextWidth } from '../look/type';
 import type { TierName } from '../scene/palette';
-import { markTrail, trailPointAt, type ContourLevel, type Ring } from '../terrain';
+import { levelIndexAt, markTrail, trailPointAt, type ContourLevel, type Ring } from '../terrain';
 import { GROW } from './grow';
 import type { SheetPrint } from './sheet-data';
 import { say, tierKey } from './strings';
-import { estimateTextWidth, layoutTitle, type TitleLayout } from './title';
+import { estimateTextWidth, layoutTitle, type TitleBox, type TitleLayout } from './title';
 
 /**
  * The cover of a pocket map, printed on a canvas per roadmap. Layout is worked out as plain numbers first
@@ -25,9 +25,46 @@ export const COVER = {
   body: { width: 4.06, depth: 5.46, radius: 0.12 },
   /** Depths of the zones from the top edge, in scene units. */
   margin: 0.09,
-  topBand: 0.95,
+  /**
+   * From the margin to the field. The title keeps to the upper `titleBand` of it; below that lies the strip a
+   * standing mountain takes on the screen when the hero camera looks across it, so the summit stays clear of
+   * the title. With a band of 0.95 and a data row of 0.65, a mountain of 16 to 20 cards stood 35 to 45 px into
+   * the title at the hero camera's 31 degrees, so 0.2 of the data row went to that strip.
+   */
+  topBand: 1.15,
+  titleBand: 0.95,
   field: GROW.size,
-  dataRow: 0.65,
+  dataRow: 0.45,
+} as const;
+
+/**
+ * Where the hero camera stands, seen from the middle of the lit sheet's cover: x to the right, y up, z toward
+ * the lower edge, in scene units of a sheet at full size. It is the fitted pose of a 1440 by 900 window, which
+ * looks down onto the far edge of the field at about 37 degrees, the flattest view of a cover the hero takes;
+ * phones look down more steeply. The cover works out from here how far up it a standing mountain reaches.
+ */
+export const COVER_EYE = { x: -0.81, y: 11.77, z: 14.07 } as const;
+
+/**
+ * What stands on a full-grown mountain, in scene units, as the terrain model builds it: a hovered card lifts
+ * itself and all above it, flag poles at the camps and the summit with their flags, the gate. Paper trees and
+ * stones stand anywhere on forest and scree cards; their positions are the model's own, so the outline of such
+ * a card is lifted by what a tree near the edge adds on the screen (measured on the gallery: up to 13 px, about
+ * 0.06 of height), not by the tallest tree. `margin` takes every height a little larger, for windows that look
+ * at the cover from a little lower than `COVER_EYE` (an 800 by 900 window: 36 degrees instead of 37).
+ */
+export const COVER_REACH = {
+  hover: 0.025,
+  tree: 0.07,
+  stone: 0.03,
+  camp: { pole: 0.19, flag: 0.1 },
+  summit: { pole: 0.3, flag: 0.15 },
+  gate: { post: 0.15, half: 0.1 },
+  margin: 1.05,
+  /** Columns across the cover the reach is kept in. */
+  columns: 46,
+  /** Room between a title glyph and the mountain, in canvas pixels. */
+  gap: 6,
 } as const;
 
 /** Canvas pixels per scene unit, across and down. */
@@ -93,11 +130,26 @@ export interface CoverLayout {
 
 const PAD = 38;
 const TITLE_PX = 54;
+const TITLE_LEADING = 1.06;
+
+/** How a title is set in its box: at most three lines, shrinking from 100 to 56 percent. */
+function titleSetting(spec: CoverSpec, box: CoverRect): TitleBox {
+  return {
+    width: box.width,
+    height: box.height,
+    fontPx: TITLE_PX,
+    lineHeight: TITLE_LEADING,
+    maxLines: 3,
+    minScale: 0.56,
+    measure: spec.measure ?? estimateTextWidth,
+  };
+}
 
 /** Where everything on a cover goes, in canvas pixels at scale 1. */
 export function coverLayout(spec: CoverSpec, lang: UiLang): CoverLayout {
   const top = COVER.margin * UY;
   const bandBottom = (COVER.margin + COVER.topBand) * UY;
+  const titleBottom = (COVER.margin + COVER.titleBand) * UY;
   const fieldSize = { width: COVER.field * UX, height: COVER.field * UY };
   const field: CoverRect = { x: (COVER.width - fieldSize.width) / 2, y: bandBottom, width: fieldSize.width, height: fieldSize.height };
   const paperShare = 1 - 0.06;
@@ -110,16 +162,8 @@ export function coverLayout(spec: CoverSpec, lang: UiLang): CoverLayout {
   const rowTop = field.y + field.height;
 
   const brandBaseline = top + 37;
-  const titleBox: CoverRect = { x: PAD, y: top + 50, width: COVER.width - 2 * PAD, height: bandBottom - (top + 50) - 8 };
-  const title = layoutTitle(spec.title, spec.lang, {
-    width: titleBox.width,
-    height: titleBox.height,
-    fontPx: TITLE_PX,
-    lineHeight: 1.06,
-    maxLines: 3,
-    minScale: 0.56,
-    measure: spec.measure ?? estimateTextWidth,
-  });
+  const titleBox: CoverRect = { x: PAD, y: top + 50, width: COVER.width - 2 * PAD, height: titleBottom - (top + 50) - 8 };
+  const title = layoutTitle(spec.title, spec.lang, titleSetting(spec, titleBox));
 
   const number: CoverText = {
     text: say('number', { n: String(Math.max(1, Math.round(spec.number))).padStart(2, '0') }, lang).toUpperCase(),
@@ -132,7 +176,7 @@ export function coverLayout(spec: CoverSpec, lang: UiLang): CoverLayout {
     ? { text: say('example', undefined, lang).toUpperCase(), x: COVER.width - PAD - 92, y: brandBaseline - 3, px: 11, align: 'right' }
     : null;
 
-  const dataY = rowTop + 46;
+  const dataY = rowTop + 35;
   const tierName = say(tierKey(spec.tier), undefined, lang);
   const columns = [
     say('stages', { count: Math.max(0, Math.round(spec.stages)) }, lang),
@@ -151,7 +195,7 @@ export function coverLayout(spec: CoverSpec, lang: UiLang): CoverLayout {
 
   const share = Number.isFinite(spec.share) ? Math.min(1, Math.max(0, spec.share)) : 0;
   const percentText = `${formatNumber(Math.round(share * 100), { lang, fraction: 0 })} %`;
-  const barY = rowTop + 74;
+  const barY = rowTop + 52;
   const bar = { x: PAD, y: barY, width: COVER.width - 2 * PAD - 64, height: 4, share };
 
   return {
@@ -167,11 +211,124 @@ export function coverLayout(spec: CoverSpec, lang: UiLang): CoverLayout {
     title: { ...title, x: PAD, y: titleBox.y + titleBox.height - title.height },
     field,
     paper,
-    rule: rowTop + 16,
+    rule: rowTop + 11,
     data,
     bar,
     percent: { text: percentText, x: COVER.width - PAD, y: barY + 8, px: 13, align: 'right' },
   };
+}
+
+/**
+ * How far up the cover the full-grown mountain of a print reaches as the hero camera sees it, in canvas pixels
+ * at scale 1: for each of `COVER_REACH.columns` columns across the cover, the smallest y it covers, or the
+ * cover's height where it covers nothing above the field. Every card's outline is lifted to the top of its card
+ * (with the hover lift and what stands on it) and projected from `COVER_EYE` back onto the cover.
+ */
+export function coverReach(print: SheetPrint, eye: { readonly x: number; readonly y: number; readonly z: number } = COVER_EYE): Float64Array {
+  const columns = COVER_REACH.columns;
+  const columnWidth = COVER.width / columns;
+  const reach = new Float64Array(columns).fill(COVER.height);
+  const half = print.half;
+  const thickness = GROW.thickness;
+  const fieldZ = FIELD_OFFSET;
+  // Steps along an outline short enough that no column is jumped over.
+  const stride = (columnWidth / UX / half) * 0.45;
+
+  const mark = (x: number, z: number, height: number): void => {
+    const lift = height * COVER_REACH.margin;
+    if (lift >= eye.y) return;
+    const k = eye.y / (eye.y - lift);
+    const sx = eye.x + (x * half - eye.x) * k;
+    const sz = eye.z + (fieldZ + z * half - eye.z) * k;
+    const u = (sx / COVER.body.width + 0.5) * COVER.width;
+    const v = (sz / COVER.body.depth + 0.5) * COVER.height;
+    if (!(u >= 0 && u < COVER.width)) return;
+    const column = Math.min(columns - 1, Math.floor(u / columnWidth));
+    if (v < (reach[column] as number)) reach[column] = v;
+  };
+  const line = (ax: number, az: number, bx: number, bz: number, height: number): void => {
+    const steps = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / stride));
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps;
+      mark(ax + (bx - ax) * t, az + (bz - az) * t, height);
+    }
+  };
+
+  print.levels.forEach((level, card) => {
+    const kind = print.surfaces[card];
+    const standing = kind === 'forest' ? COVER_REACH.tree : kind === 'scree' ? COVER_REACH.stone : 0;
+    const height = (card + 1) * thickness + COVER_REACH.hover + standing;
+    for (const polygon of level.polygons) {
+      const ring = polygon.outer;
+      for (let i = 0; i < ring.length; i += 1) {
+        const a = ring[i];
+        const b = ring[(i + 1) % ring.length];
+        if (a && b) line(a.x, a.z, b.x, b.z, height);
+      }
+    }
+  });
+
+  // Flags fly to the right of their poles; the gate is two posts and a bar across the trail.
+  const stops = print.trail.stops;
+  stops.forEach((stop, index) => {
+    const card = Math.max(0, levelIndexAt(print.levels, stop.x, stop.z));
+    const ground = (card + 1) * thickness + COVER_REACH.hover;
+    if (index === 0) {
+      const reachAcross = COVER_REACH.gate.half / half;
+      line(stop.x - reachAcross, stop.z, stop.x + reachAcross, stop.z, ground + COVER_REACH.gate.post);
+      return;
+    }
+    const { pole, flag } = index === stops.length - 1 ? COVER_REACH.summit : COVER_REACH.camp;
+    line(stop.x, stop.z, stop.x + flag / half, stop.z, ground + pole);
+  });
+  return reach;
+}
+
+/** The highest point of a reach (the smallest y) over a stretch of the cover, in canvas pixels. */
+function reachOver(reach: ArrayLike<number>, x0: number, x1: number): number {
+  const columnWidth = COVER.width / reach.length;
+  const from = Math.max(0, Math.floor((x0 - 4) / columnWidth));
+  const to = Math.min(reach.length - 1, Math.floor((x1 + 4) / columnWidth));
+  let lowest: number = COVER.height;
+  for (let column = from; column <= to; column += 1) lowest = Math.min(lowest, reach[column] as number);
+  return lowest;
+}
+
+/**
+ * The layout with its title set clear of the mountain that will stand in front of it (`coverReach`). The title
+ * stays at the foot of its box while every line clears the mountain where that line runs; otherwise it moves
+ * up, then shrinks as far as 56 percent, then keeps to the strip above the highest point and ends in an
+ * ellipsis. A cover whose mountain stays clear keeps the title `coverLayout` gave it.
+ */
+export function clearTitle(layout: CoverLayout, spec: CoverSpec, reach: ArrayLike<number>): CoverLayout {
+  const box = layout.titleBox;
+  const setting = titleSetting(spec, box);
+  const measure = setting.measure ?? estimateTextWidth;
+  const rtl = layout.title.direction === 'rtl';
+  const gap = COVER_REACH.gap;
+
+  /** The top of the block for these lines at this size, or null when no place in the box clears the mountain. */
+  const place = (lines: readonly string[], fontPx: number): number | null => {
+    const lineHeight = fontPx * TITLE_LEADING;
+    let top = box.y + box.height - lines.length * lineHeight;
+    lines.forEach((line, index) => {
+      const width = measure(line, fontPx);
+      const x0 = rtl ? box.x + box.width - width : box.x;
+      top = Math.min(top, reachOver(reach, x0, x0 + width) - gap - (index + 1) * lineHeight);
+    });
+    return top >= box.y - 0.5 ? top : null;
+  };
+
+  let title = layoutTitle(spec.title, spec.lang, { ...setting, fits: (lines, fontPx) => place(lines, fontPx) !== null });
+  let top = place(title.lines, title.fontPx);
+  if (top === null) {
+    const room = reachOver(reach, box.x, box.x + box.width) - gap - box.y;
+    const least = TITLE_PX * (setting.minScale ?? 0.56) * TITLE_LEADING;
+    title = layoutTitle(spec.title, spec.lang, { ...setting, height: Math.min(box.height, Math.max(least, room)) });
+    top = box.y;
+  }
+  if (title.fontPx === layout.title.fontPx && title.lines.join('\n') === layout.title.lines.join('\n') && Math.abs(top - layout.title.y) < 0.01) return layout;
+  return { ...layout, title: { ...title, x: layout.title.x, y: top } };
 }
 
 /** A 2D context of either canvas kind. */
@@ -367,12 +524,15 @@ export function paintCover(ctx: Ctx, layout: CoverLayout, spec: CoverSpec, extra
   label(layout.number, 0.92);
   if (layout.example) label(layout.example, 0.66);
 
+  // With the print at hand the title keeps clear of the mountain that grows out of it. Every cover painted from
+  // the same print and spec sets its title the same way.
+  const title = print ? clearTitle(layout, spec, coverReach(print)).title : layout.title;
   ctx.fillStyle = layout.ink;
-  ctx.font = canvasFont('display', layout.title.fontPx, 600);
-  layout.title.lines.forEach((line, index) => {
-    const baseline = layout.title.y + index * layout.title.lineHeightPx + layout.title.fontPx * 0.84;
-    const rtl = layout.title.direction === 'rtl';
-    drawText(ctx, line, rtl ? layout.titleBox.x + layout.titleBox.width : layout.title.x, baseline, {
+  ctx.font = canvasFont('display', title.fontPx, 600);
+  title.lines.forEach((line, index) => {
+    const baseline = title.y + index * title.lineHeightPx + title.fontPx * 0.84;
+    const rtl = title.direction === 'rtl';
+    drawText(ctx, line, rtl ? layout.titleBox.x + layout.titleBox.width : title.x, baseline, {
       lang: spec.lang,
       align: rtl ? 'right' : 'left',
     });

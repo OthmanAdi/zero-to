@@ -85,6 +85,20 @@ describe('the mode machine', () => {
     expect(noMap.can('walk')).toBe(false);
   });
 
+  it('rises out of the walk only from the walk, and comes back down into it or out onto the table', () => {
+    const machine = createModeMachine();
+    for (const mode of ['table', 'dive', 'cut', 'landing', 'walk'] as const) machine.go(mode);
+    expect(machine.go('rise')).toBe(true);
+    expect(machine.can('list')).toBe(false);
+    expect(machine.can('finish')).toBe(false);
+    expect(machine.go('walk')).toBe(true);
+    expect(machine.go('rise')).toBe(true);
+    expect(machine.go('table')).toBe(true);
+    for (const from of ['boot', 'table', 'dive', 'cut', 'landing', 'finish', 'return', 'list', 'fade'] as const) {
+      for (const origin of MODES) expect(nextModes(from, origin)).not.toContain('rise');
+    }
+  });
+
   it('keeps where the walk was entered from while it steps between walk and finish', () => {
     const machine = createModeMachine();
     for (const mode of ['table', 'dive', 'cut', 'landing', 'walk', 'finish', 'walk', 'finish'] as const) machine.go(mode);
@@ -110,6 +124,7 @@ describe('the mode machine', () => {
     expect(viewOf('finish')).toBe('walk');
     expect(viewOf('list')).toBe('list');
     expect(viewOf('fade', 'walk')).toBe('walk');
+    expect(viewOf('rise')).toBe('walk');
     expect(MODES.filter(isLocked)).toEqual(['boot', 'dive', 'cut', 'landing', 'fade', 'return']);
   });
 });

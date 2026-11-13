@@ -18,6 +18,11 @@ export interface TitleBox {
   readonly minScale?: number;
   /** Width of a piece of text at a font size. Without it an estimate by script is used. */
   readonly measure?: (text: string, fontPx: number) => number;
+  /**
+   * A further test for a box that is not a plain rectangle: a wrapping that fits the box is taken only when this
+   * says the lines fit at that size too. The ellipsis at the smallest size does not ask it.
+   */
+  readonly fits?: (lines: readonly string[], fontPx: number) => boolean;
 }
 
 export interface TitleLayout {
@@ -174,7 +179,7 @@ export function layoutTitle(text: string, lang: string, box: TitleBox): TitleLay
   for (const scale of scales) {
     const fontPx = box.fontPx * scale;
     const lines = wrap(chunks, box.width, fontPx, measure, false, lang);
-    if (lines && lines.length <= maxLines && lines.length * fontPx * leading <= box.height + 0.5) return result(lines, scale, false);
+    if (lines && lines.length <= maxLines && lines.length * fontPx * leading <= box.height + 0.5 && (box.fits?.(lines, fontPx) ?? true)) return result(lines, scale, false);
   }
 
   // Smallest size, words broken where they must be, and whatever is left over ends in an ellipsis.

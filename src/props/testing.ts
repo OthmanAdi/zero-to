@@ -2,6 +2,7 @@ import { boardPieces } from './board';
 import type { NamedDrawing } from './brush';
 import { DESIGN } from './brush';
 import { campPieces } from './camp';
+import { classFlagPieces } from './class-flag';
 import { allProps } from './registry';
 import { signpostPieces } from './signpost';
 import { SIGNPOSTS, SIGNPOST_KEYS } from './signposts';
@@ -21,6 +22,7 @@ export function allDrawings(): NamedDrawing[] {
     ...signpostPieces(),
     ...boardPieces(),
     ...campPieces(),
+    ...classFlagPieces(),
     ...walkerPieces(),
     ...stationPieces(),
   ];

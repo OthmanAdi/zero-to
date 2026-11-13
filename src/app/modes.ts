@@ -2,26 +2,33 @@
  * The mode machine of the page: which view is on screen and which view may follow it.
  *
  *   boot -> table -> dive -> cut -> landing -> walk <-> finish -> return -> table
+ *                                              walk <-> rise -> table
+ *
+ * `rise` is the dive played backwards by the scroll: from the top of the walk the camera climbs out through the
+ * pin, and scrolling down again takes it back in to the gate.
  *
  * The walk is never shown by a plain switch. It is reached through the red cut of the dive, or, with reduced
  * motion, through the short fade that stands in for the dive. The list view remembers where it was opened
  * from and goes back only there.
  */
-export type Mode = 'boot' | 'table' | 'dive' | 'cut' | 'landing' | 'fade' | 'walk' | 'finish' | 'return' | 'list';
+export type Mode = 'boot' | 'table' | 'dive' | 'cut' | 'landing' | 'fade' | 'walk' | 'finish' | 'rise' | 'return' | 'list';
 
-export const MODES: readonly Mode[] = ['boot', 'table', 'dive', 'cut', 'landing', 'fade', 'walk', 'finish', 'return', 'list'];
+export const MODES: readonly Mode[] = ['boot', 'table', 'dive', 'cut', 'landing', 'fade', 'walk', 'finish', 'rise', 'return', 'list'];
 
 /** What the overlay shows in a mode: the table's interface, the walk's, or the list view's. */
 export type View = 'table' | 'walk' | 'list';
 
 export function viewOf(mode: Mode, back: Mode = 'table'): View {
   if (mode === 'list') return 'list';
-  if (mode === 'walk' || mode === 'finish' || mode === 'landing' || mode === 'cut') return 'walk';
+  if (mode === 'walk' || mode === 'finish' || mode === 'landing' || mode === 'cut' || mode === 'rise') return 'walk';
   if (mode === 'fade') return back === 'table' ? 'table' : 'walk';
   return 'table';
 }
 
-/** True while the visitor must not scroll or pick: the page is moving by itself. */
+/**
+ * True while the visitor must not scroll or pick: the page is moving by itself. The rise is not locked: the
+ * visitor's own scroll drives it.
+ */
 export function isLocked(mode: Mode): boolean {
   return mode === 'boot' || mode === 'dive' || mode === 'cut' || mode === 'landing' || mode === 'fade' || mode === 'return';
 }
@@ -57,9 +64,12 @@ export function nextModes(mode: Mode, from: Mode): readonly Mode[] {
       // The fade leads across: from the table into the walk, from the walk back to the table.
       return from === 'table' ? ['walk'] : ['table'];
     case 'walk':
-      return ['finish', 'return', 'fade', 'list'];
+      return ['finish', 'rise', 'return', 'fade', 'list'];
     case 'finish':
       return ['walk', 'return', 'fade', 'list'];
+    case 'rise':
+      // Back down into the walk at the gate, or all the way out onto the table.
+      return ['walk', 'table'];
     case 'return':
       return ['table'];
     case 'list':

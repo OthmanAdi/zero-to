@@ -30,6 +30,7 @@ export {
   WALK,
   evenWindows,
   fForMinutes,
+  finaleLightAt,
   itemAt,
   itemMiddle,
   mapOpenAt,
@@ -67,6 +68,11 @@ export {
 } from './strip';
 export { LANDING, RAIL, cameraAt, landingPose, panelLeft, panelPoints, railPoses, type LandingInput, type WalkInsets } from './rail';
 export {
+  CAIRN,
+  FLAG,
+  SPUR,
+  cairnSpot,
+  flagAt,
   hereAt,
   panelRoutePoints,
   pathPoint,
@@ -74,10 +80,14 @@ export {
   planWalk,
   progressForAlong,
   progressForItem,
+  spurOffset,
+  walkPoint,
+  type FlagPlace,
   type HerePlace,
   type PanelMark,
   type PanelPlan,
   type PanelPoint,
+  type PanelSpur,
   type PathPoint,
   type PlanOptions,
   type WalkPlace,
@@ -85,8 +95,10 @@ export {
 } from './plan';
 export { MINI, PRINT, cardTones, miniPixel, miniWindow, paintCardTops, paintLegend, paintMiniMap, paintPanel, panelContours, panelPaper, type ContourLine } from './print';
 export { CARDS, createCardModel, type CardModel } from './cards';
+export { LABEL, cardUnder, createLabelLayer, fitTitle, planLabels, type LabelLayer, type LabelRect, type PanelLabel } from './labels';
 export { SCENE, createPanelView, type PanelView, type WalkHit, type WalkHitKind } from './panel';
 export {
+  COVER_FIT,
   WALKER_ON_MAP,
   WALK_LIGHT,
   createWalk,

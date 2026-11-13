@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { WALK } from '../walk/timeline';
+import type { CameraPose } from '../paper/motion';
 import {
   DIVE,
   FINALE,
   RETURN,
+  RETURN_SECONDS,
+  RISE,
   WALK_TOP,
+  WIPE,
+  approachHx,
+  cubicBezier,
   divePose,
   diveSecondsAt,
   fallShare,
@@ -17,11 +23,17 @@ import {
   landingHandover,
   landingShare,
   mixPose,
+  movePose,
   nearPlane,
+  orbitMix,
   returnAt,
+  riseHx,
   stretchViewports,
   walkProgressAt,
   walkScrollFor,
+  wheelPixels,
+  wipeCovered,
+  wipeRadius,
   type DiveInput,
 } from './timeline';
 
@@ -166,41 +178,130 @@ describe('the walk in the scroll', () => {
 });
 
 describe('the way back', () => {
-  it('waits, dims to 0.42, puts the lamp out, and swaps in the dark', () => {
-    expect(returnAt(0)).toEqual({ curtain: 0, light: 1, swapped: false, done: false });
+  it('waits half a second, dims to 0.42 in 0.2 s, then moves the camera for 2.8 s', () => {
+    expect(returnAt(0)).toEqual({ curtain: 0, light: 1, move: 0, swapped: false, grow: false, done: false });
     expect(returnAt(RETURN.wait).curtain).toBe(0);
     const dimmed = returnAt(RETURN.wait + RETURN.curtain * 0.5);
     expect(dimmed.curtain).toBeGreaterThan(0);
-    expect(dimmed.curtain).toBeLessThanOrEqual(RETURN.dim);
-    expect(dimmed.light).toBe(1);
-    const swap = RETURN.wait + RETURN.curtain + RETURN.out;
-    const before = returnAt(swap - 0.001);
+    expect(dimmed.curtain).toBeLessThan(RETURN.dim);
+    const swap = RETURN.wait + RETURN.curtain;
+    const before = returnAt(swap - 1e-6);
     expect(before.swapped).toBe(false);
-    expect(before.curtain).toBeGreaterThan(0.99);
-    expect(before.light).toBeLessThan(0.01);
+    expect(before.curtain).toBeCloseTo(RETURN.dim, 4);
     const after = returnAt(swap);
     expect(after.swapped).toBe(true);
-    expect(after.curtain).toBe(1);
-    expect(returnAt(swap + RETURN.reveal)).toEqual({ curtain: 0, light: 0, swapped: true, done: true });
+    expect(after.curtain).toBeCloseTo(RETURN.dim, 6);
+    expect(after.move).toBe(0);
+    expect(returnAt(swap + RETURN.move / 2).move).toBeCloseTo(0.5, 6);
+    expect(returnAt(swap + RETURN.move)).toEqual({ curtain: 0, light: RETURN.low, move: 1, swapped: true, grow: true, done: true });
+    expect(RETURN_SECONDS).toBeCloseTo(3.5, 6);
   });
 
-  it('never brightens before the swap and never darkens after it', () => {
-    const swap = RETURN.wait + RETURN.curtain + RETURN.out;
+  it('eases the move in and out, never stepping back, and lifts the curtain early in it', () => {
+    const swap = RETURN.wait + RETURN.curtain;
     let last = -1;
-    for (let t = 0; t < swap; t += 0.02) {
-      expect(returnAt(t).curtain).toBeGreaterThanOrEqual(last - 1e-9);
-      last = returnAt(t).curtain;
+    for (let t = swap; t <= swap + RETURN.move; t += 0.02) {
+      const now = returnAt(t);
+      expect(now.move).toBeGreaterThanOrEqual(last - 1e-9);
+      last = now.move;
     }
-    last = 2;
-    for (let t = swap; t <= swap + RETURN.reveal; t += 0.02) {
-      expect(returnAt(t).curtain).toBeLessThanOrEqual(last + 1e-9);
-      last = returnAt(t).curtain;
-    }
+    // Slow at both ends, fastest in the middle: power 2 in and out.
+    expect(returnAt(swap + 0.1 * RETURN.move).move).toBeCloseTo(0.02, 6);
+    expect(returnAt(swap + 0.9 * RETURN.move).move).toBeCloseTo(0.98, 6);
+    expect(returnAt(swap + RETURN.lift).curtain).toBe(0);
+    expect(returnAt(swap + RETURN.lift / 2).curtain).toBeGreaterThan(0);
+  });
+
+  it('keeps the lit mountain flat for most of the move and lets it grow before the camera arrives', () => {
+    const swap = RETURN.wait + RETURN.curtain;
+    expect(returnAt(swap + 0.5 * RETURN.move).grow).toBe(false);
+    expect(returnAt(swap + (RETURN.grow + 0.01) * RETURN.move).grow).toBe(true);
+    expect(returnAt(swap + (RETURN.grow + 0.01) * RETURN.move).done).toBe(false);
   });
 
   it('folds the map shut by hand in a little over a second', () => {
     expect(foldAt(0)).toBe(1);
     expect(foldAt(RETURN.fold)).toBe(0);
     expect(foldAt(RETURN.fold / 2)).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('the camera move', () => {
+  const close: CameraPose = { position: { x: 0, y: 3, z: 3 }, target: { x: 0, y: 0, z: 0 }, distance: Math.hypot(3, 3), fov: 34 };
+  const wide: CameraPose = { position: { x: -2, y: 9, z: 20 }, target: { x: 0, y: 0.5, z: 4 }, distance: Math.hypot(2, 8.5, 16), fov: 32 };
+
+  it('starts and ends on the two poses', () => {
+    expect(orbitMix(close, wide, 0)).toEqual(close);
+    expect(orbitMix(close, wide, 1)).toEqual(wide);
+  });
+
+  it('pulls back at an even rate of zoom and keeps looking at a point on the line between the two', () => {
+    let last = 0;
+    for (let t = 0; t <= 1; t += 0.05) {
+      const pose = orbitMix(close, wide, t);
+      expect(pose.distance).toBeGreaterThanOrEqual(last - 1e-9);
+      last = pose.distance;
+      expect(distance(pose.position, pose.target)).toBeCloseTo(pose.distance, 6);
+    }
+    expect(orbitMix(close, wide, 0.5).distance).toBeCloseTo(Math.sqrt(close.distance * wide.distance), 6);
+  });
+
+  it('carries a picture from one space to another by scale and offset', () => {
+    const moved = movePose(close, 0.5, { x: 0, y: 0, z: 5.8 });
+    expect(moved.target).toEqual({ x: 0, y: 0, z: 5.8 });
+    expect(moved.distance).toBeCloseTo(close.distance / 2, 9);
+    expect(moved.position.z).toBeCloseTo(5.8 + 1.5, 9);
+    expect(moved.fov).toBe(close.fov);
+  });
+});
+
+describe('entering another roadmap', () => {
+  it('matches the browser curve cubic-bezier(.55,0,.85,.4) at its ends and its middle', () => {
+    const curve = cubicBezier(0.55, 0, 0.85, 0.4);
+    expect(curve(0)).toBe(0);
+    expect(curve(1)).toBe(1);
+    // An ease-in: slow to start, all of the speed at the end.
+    expect(curve(0.25)).toBeLessThan(0.05);
+    expect(curve(0.5)).toBeGreaterThan(0.08);
+    expect(curve(0.5)).toBeLessThan(0.2);
+    let last = 0;
+    for (let t = 0; t <= 1.0001; t += 0.01) {
+      expect(curve(t)).toBeGreaterThanOrEqual(last - 1e-9);
+      last = curve(t);
+    }
+    // The linear curve is the line.
+    const line = cubicBezier(0.25, 0.25, 0.75, 0.75);
+    for (const t of [0.1, 0.37, 0.8]) expect(line(t)).toBeCloseTo(t, 6);
+  });
+
+  it('reaches the guard in 1.75 s and opens the circle 0.44 s before, from nothing to 150 percent in 0.42 s', () => {
+    expect(approachHx(0)).toBe(0);
+    expect(approachHx(WIPE.approach)).toBeCloseTo(DIVE.guard.from, 9);
+    expect(approachHx(WIPE.approach * 4)).toBeCloseTo(DIVE.guard.from, 9);
+    const start = WIPE.approach - WIPE.lead;
+    expect(wipeRadius(start - 0.01)).toBeNull();
+    expect(wipeRadius(start)).toBe(0);
+    expect(wipeRadius(start + WIPE.seconds) as number).toBeCloseTo(150, 9);
+    expect(wipeRadius(start + WIPE.seconds + 1)).toBe(150);
+    expect(wipeRadius(start + WIPE.seconds / 2) as number).toBeLessThan(40);
+    expect(wipeCovered(WIPE.approach - 0.01)).toBe(false);
+    expect(wipeCovered(WIPE.approach)).toBe(true);
+    // The circle opens while the camera is still falling, before the guard would come down by itself.
+    expect(approachHx(start)).toBeLessThan(DIVE.guard.from - DIVE.guard.fade);
+  });
+});
+
+describe('rising out of the map', () => {
+  it('runs the dive backwards: the gate at 0, the table at 1', () => {
+    expect(riseHx(0)).toBe(1);
+    expect(riseHx(1)).toBe(0);
+    expect(riseHx(-1)).toBe(1);
+    expect(riseHx(0.4)).toBeCloseTo(0.6, 9);
+  });
+
+  it('reads a wheel in pixels, lines or pages', () => {
+    expect(wheelPixels(-120, 0, 900)).toBe(-120);
+    expect(wheelPixels(-3, 1, 900)).toBe(-3 * RISE.line);
+    expect(wheelPixels(1, 2, 900)).toBeCloseTo(900 * RISE.page, 9);
   });
 });

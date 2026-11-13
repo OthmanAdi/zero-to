@@ -17,7 +17,7 @@ import { mountReader, type ReaderHandle } from '../bookshelf/reader';
 import { createCover, mountShelf, VARIANTS, type ShelfHandle, type Variant } from '../bookshelf/shelf';
 import './dock.css';
 import { uiLang } from '../i18n';
-import { dockHeader, dockHeaderParts, pinFor, placeOf, toShelfItems } from './items';
+import { dockHeader, dockHeaderParts, pinFor, placeOf, restedLine, toShelfItems, volumeLabel } from './items';
 import { readerDoc, readerLabels } from './page';
 import { say } from './strings';
 import type { DockItem, ShelfDock, ShelfDockOptions, ShelfEntry, ShelfSession } from './types';
@@ -198,6 +198,40 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     onLoopChange: (loop) => motionRef?.setLoop(loop),
   });
   shelf.element.setAttribute('aria-describedby', header.id);
+
+  // The Bookshelf row writes its keyboard hint, each volume's name and its live "came to rest" line in English,
+  // and writes them again in frames of its own. The dock says them in the interface language: right after it
+  // changes the row, and through an observer for the rest. (A labels option on the shelf would replace this.)
+  const shelfHint = shelf.element.querySelector<HTMLElement>('.bb-shelf__hint');
+  const shelfStatus = shelf.element.querySelector<HTMLElement>('.bb-shelf__status');
+  const hintText = say('hint', undefined, ui);
+  const wording = typeof MutationObserver === 'function' ? new MutationObserver(() => speakUi()) : null;
+
+  function speakUi(): void {
+    if (destroyed) return;
+    if (shelfHint && shelfHint.textContent !== hintText) shelfHint.textContent = hintText;
+    for (const control of shelf.element.querySelectorAll<HTMLElement>('.bb-book__control')) {
+      const book = control.closest<HTMLElement>('.bb-book');
+      const index = Number(book?.dataset.index);
+      const item = items[index];
+      if (!item || item.id !== book?.dataset.id) continue;
+      const label = volumeLabel(item, index, items.length, ui);
+      if (control.getAttribute('aria-label') !== label) control.setAttribute('aria-label', label);
+    }
+    // Only a line the shelf has just written matches its English form, so a rewritten line is never said twice.
+    const rested = shelfStatus?.textContent ? restedLine(shelfStatus.textContent, ui) : null;
+    if (shelfStatus && rested !== null && rested !== shelfStatus.textContent) shelfStatus.textContent = rested;
+    // What this function wrote needs no second look.
+    wording?.takeRecords();
+  }
+
+  // The row's own arrows and empty line never show in the dock, which draws its own; they say the same words.
+  shelf.element.querySelector('.bb-shelf__empty')?.replaceChildren(say('empty', undefined, ui));
+  shelf.element.querySelector('.bb-shelf__arrow--prev')?.setAttribute('aria-label', say('prev', undefined, ui));
+  shelf.element.querySelector('.bb-shelf__arrow--next')?.setAttribute('aria-label', say('next', undefined, ui));
+  wording?.observe(shelf.element, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-label'] });
+  speakUi();
+
   const themeRoot = options.themeRoot !== false;
   const rootVariantBefore = document.documentElement.dataset.variant;
   if (themeRoot) document.documentElement.dataset.variant = shelf.variant.name;
@@ -537,6 +571,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     items = toShelfItems(entries, session, ui);
     shelf.setItems(items);
     shelf.setPose({ position: motion.state.position, open: motion.state.open, reduced: motion.state.reduced });
+    speakUi();
     writeCaption();
   }
 
@@ -560,6 +595,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     if (index < 0) index = Math.max(0, entries.findIndex((entry) => entry.main));
     motion.setCount(items.length, Math.min(index, Math.max(0, items.length - 1)));
     shelf.setPose({ position: motion.state.position, open: motion.state.open, reduced: motion.state.reduced });
+    speakUi();
     lastPresented = null;
     writeCounts();
     writeCaption();
@@ -606,6 +642,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
       document.removeEventListener('pointerdown', onPointerInput, true);
       document.removeEventListener('keydown', onKeyInput, true);
       phoneMedia?.removeEventListener('change', onPhoneChange);
+      wording?.disconnect();
       stopSession?.();
       stopMotion();
       stopIntents();

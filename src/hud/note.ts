@@ -49,8 +49,12 @@ export const NOTE = {
   tilt: -1.2,
   floatY: 4,
   floatRot: 0.6,
-  /** Swap: the old content leaves in 0.4 s, the new arrives in 1.2 s, rows 0.85 s and 0.08 s apart. */
-  out: 400,
+  /**
+   * Swap: a turn of the sheet. The step that was there stays readable until the next one is ready, the sheet
+   * turns away with it in `out` ms and comes back with the new step in `turn` ms. The paper is never shown bare.
+   */
+  out: 170,
+  turn: 380,
   /** A move to the other side takes 1.4 s. */
   move: 1400,
   /** The mini map is drawn 560 px wide. The walker's dot is W/70 and its halo W/34. */
@@ -63,6 +67,12 @@ export const NOTE = {
   sheetShare: 0.7,
   /** Below this width the note is a bottom sheet. */
   narrow: 760,
+  /**
+   * A note that has come to lie over the walker goes to the other side once he has been under it for `after`
+   * seconds, and then stays for `rest` seconds whatever happens. `figure` is how far below the top of his hat
+   * the walker still counts, in pixels.
+   */
+  dodge: { after: 0.5, rest: 2.4, figure: 64 },
 } as const;
 
 export function itemKey(item: HudItem): string {
@@ -132,6 +142,11 @@ export interface MiniMapMark {
   readonly title: string;
 }
 
+/** What the dots of a mini map show: ids, titles and places to a tenth of a pixel. Equal keys need no rebuild. */
+export function marksKey(marks: readonly MiniMapMark[]): string {
+  return marks.map((mark) => `${mark.id}@${Math.round(mark.x * 10)},${Math.round(mark.y * 10)}:${mark.title}`).join('|');
+}
+
 export interface NoteOptions {
   /** A card asked to go somewhere, or a mini map dot was pressed. */
   readonly onGo?: (detail: GoDetail) => void;
@@ -180,6 +195,7 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
   let expanded = false;
   let card: MountedCard | null = null;
   let swapTimer: ReturnType<typeof setTimeout> | undefined;
+  let inTimer: ReturnType<typeof setTimeout> | undefined;
   let pending: HudItem | undefined;
   let mapBase: HTMLCanvasElement | null = null;
   let mapPixel: { x: number; y: number } | null = null;
@@ -375,9 +391,18 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
     }
   }
 
-  // ---- Swap: the old lines leave upwards, the new ones rise out of their masks one after another.
+  // ---- Swap: the sheet turns away with the step that was on it and comes back with the next one. The old
+  // step stays readable until the new one is built, and the turn is short, so the note never stands empty.
   const swapTo = (it: HudItem): void => {
-    if (itemKey(it) === key && (it === null) === (item === null)) return;
+    if (itemKey(it) === key && (it === null) === (item === null)) {
+      // Back to what is already shown while a turn was about to start: nothing to turn.
+      if (pending !== undefined) {
+        clearTimeout(swapTimer);
+        pending = undefined;
+        root.classList.remove('is-out');
+      }
+      return;
+    }
     if (reduced() || key === '' || root.hidden) {
       clearTimeout(swapTimer);
       pending = undefined;
@@ -407,6 +432,9 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
     // Reading a box starts the entrance again from its first frame.
     void root.offsetWidth;
     root.classList.add('is-in');
+    // The class goes once the sheet lies, so a later change of the layout cannot play the turn again.
+    clearTimeout(inTimer);
+    inTimer = setTimeout(() => root.classList.remove('is-in'), NOTE.turn + 60);
   };
 
   // ---- Mini map: the base drawing, then the walker's dot with its halo and paper ring.
@@ -437,7 +465,12 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
     ctx.stroke();
   };
 
+  /**
+   * The dots are buttons, so they are built again only when what they show changed. The walk hands over a new
+   * list of marks every time the walker moves; a dot that has the keyboard's focus keeps it through a rebuild.
+   */
   const buildDots = (): void => {
+    const focusedId = mapDots.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.waypoint : undefined;
     mapDots.replaceChildren();
     if (!mapBase) return;
     for (const mark of mapMarks) {
@@ -447,6 +480,7 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
       button.style.top = `${(mark.y / mapBase.height) * 100}%`;
       button.addEventListener('click', () => options.onGo?.({ waypointId: mark.id }));
       mapDots.append(button);
+      if (mark.id === focusedId) button.focus({ preventScroll: true });
     }
   };
 
@@ -584,12 +618,9 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
       const baseChanged = base !== mapBase;
       mapBase = base;
       mapPixel = pixel ? { x: pixel.x, y: pixel.y } : null;
-      if (marks !== undefined && (marks !== mapMarks || baseChanged)) {
-        mapMarks = marks;
-        buildDots();
-      } else if (baseChanged) {
-        buildDots();
-      }
+      const marksChanged = marks !== undefined && marks !== mapMarks && marksKey(marks) !== marksKey(mapMarks);
+      if (marks !== undefined) mapMarks = marks;
+      if (marksChanged || baseChanged) buildDots();
       if (baseChanged) lastDot = '';
       drawMap();
     },
@@ -611,6 +642,7 @@ export function createNote(host: HTMLElement, session: Session, options: NoteOpt
     relabel,
     destroy() {
       clearTimeout(swapTimer);
+      clearTimeout(inTimer);
       unsubscribe?.();
       card?.destroy();
       window.removeEventListener('pointermove', onDragMove);

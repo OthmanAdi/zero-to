@@ -28,7 +28,23 @@ export const RAIL = {
     /** Height of the scenery band at the back of a panel, on its left and on its right. */
     scenery: [1.75, 2.0],
   },
-  wide: { elevation: 30, yaw: -17, box: { x0: -0.95, x1: 0.95, y0: -0.8, y1: 0.34 }, narrowBox: { x0: -0.96, x1: 0.96, y0: -0.5, y1: 0.4 } },
+  wide: {
+    elevation: 30,
+    yaw: -17,
+    box: { x0: -0.95, x1: 0.95, y0: -0.8, y1: 0.34 },
+    /**
+     * A narrow window: the row of panels is five times longer than it is deep, and seen across it on a phone it is
+     * a sliver. Seen along the row from the legend's end, the map runs up the screen toward the summit and fills
+     * the stretch between the finale's actions and the profile strip. Any elevation from 30 to 58 fills its height;
+     * 42 keeps the near panels wider than a steeper look would, without the standing scenes hiding the ones behind.
+     */
+    narrow: { elevation: 42, yaw: -60 },
+    /**
+     * The finale's actions end at about 0.12 on a phone. The director takes the profile strip off the bottom
+     * (about 0.26 on a phone), so the map ends just above the strip.
+     */
+    narrowBox: { x0: -0.94, x1: 0.94, y0: -0.81, y1: 0.09 },
+  },
   /** The hop between two panels: the camera rises, and its eye runs ahead of it. */
   hop: 0.44,
   hopLook: 0.35,
@@ -121,16 +137,20 @@ export function railPoses(count: number, aspect: number, insets: WalkInsets = {}
     poses.push(fitPose(panelPoints(index), { x: middle, y: 0.4, z: 0 }, panelElevation, RAIL.panel.yaw, fov, panelBox, ratio));
   }
 
-  // The whole map, with the legend on its left.
-  const left = panelLeft(0) - PANEL.width * 0.55;
+  // The whole map, with the legend on its left: the open cover, as wide as a panel. All four of its corners are
+  // fitted, as are every panel's, so nothing of the map leaves the frame at the moment every scene stands up.
+  const left = panelLeft(0) - PANEL.width;
   const right = panelLeft(n);
   const widePoints: Vec3[] = [
     { x: left, y: 0, z: half.z },
     { x: right, y: 0, z: half.z },
+    { x: left, y: 0, z: -half.z },
+    { x: right, y: 0, z: -half.z },
     { x: left, y: 0.9, z: -half.z },
     { x: right, y: 0.9, z: -half.z },
   ];
-  poses.push(fitPose(widePoints, { x: (left + right) / 2, y: 0, z: 0 }, RAIL.wide.elevation, RAIL.wide.yaw, fov, inset(narrow ? RAIL.wide.narrowBox : RAIL.wide.box, insets), ratio));
+  const wideShot = narrow ? RAIL.wide.narrow : RAIL.wide;
+  poses.push(fitPose(widePoints, { x: (left + right) / 2, y: 0, z: 0 }, wideShot.elevation, wideShot.yaw, fov, inset(narrow ? RAIL.wide.narrowBox : RAIL.wide.box, insets), ratio));
   poses.push({ position: { ...shut.position }, target: { ...shut.target }, distance: shut.distance, fov: shut.fov });
   return poses;
 }

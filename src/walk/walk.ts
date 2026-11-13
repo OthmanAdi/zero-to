@@ -11,10 +11,13 @@ import {
 } from 'three';
 import { hashSeed } from '../core/random';
 import { uiLang, type UiLang } from '../i18n';
+import { classPlace } from '../learn/class-flag';
 import { THEME } from '../look/theme';
 import { clamp01, lerp, seg, settleSpring, smooth, spring, stepSpringKC, type CameraPose, type Vec3 } from '../paper/motion';
 import { buildSheet, type Sheet } from '../paper/sheet';
+import { roundedRect } from '../paper/silhouette';
 import { createWalker, type WalkerPart } from '../props';
+import { toDay } from '../roadmap/dates';
 import type { Progress } from '../roadmap/progress';
 import type { Roadmap } from '../roadmap/types';
 import type { FrameTime, SceneEnvironment, ScenePart } from '../scene/contract';
@@ -25,10 +28,10 @@ import { flatTones } from '../table/sheet';
 import { trailAlong } from '../table/sheet-data';
 import { PANEL, coverAngle, coverHeight, creaseAngle, panelLanded, stackOffset } from './fold';
 import { createPanelView, type PanelView, type WalkHit, type WeightedWorldPoint } from './panel';
-import { hereAt, placeAt, planWalk, progressForAlong, progressForItem, type HerePlace, type PanelPlan, type WalkPlace, type WalkPlan } from './plan';
+import { flagAt, hereAt, placeAt, planWalk, progressForAlong, progressForItem, type FlagPlace, type HerePlace, type PanelPlan, type WalkPlace, type WalkPlan } from './plan';
 import { MINI, PRINT, miniPixel, paintLegend, paintMiniMap } from './print';
 import { LANDING, RAIL, cameraAt, followShift, landingPose, panelLeft, railPoses, shiftPose, type WalkInsets } from './rail';
-import { WALK, mapOpenAt, railAt, sceneAt, type WalkItem } from './timeline';
+import { WALK, finaleLightAt, mapOpenAt, railAt, sceneAt, type WalkItem } from './timeline';
 
 /**
  * The light of the walk: a low, cool fill everywhere and one warm lamp whose pool is one panel wide. The fill is
@@ -55,10 +58,26 @@ export const WALK_LIGHT = {
   follow: { share: 0.8, rate: 3 },
   /** Where the pool lies on a panel, measured from the panel's middle. */
   aim: { x: -0.1, z: 0.35 },
+  /**
+   * The finale, from the wide shot until everything folds down: the whole map is in the picture and every scene
+   * stands up, so one lit panel is not enough. The lamp opens its cone, softens its edge less and stands further
+   * back, with its candela raised by the square of that distance so the summit keeps its light, and the room
+   * light rises. The pool keeps its brightest point on the summit panel, where the walk ends, and the panels
+   * toward the legend fall off from there instead of going dark.
+   */
+  finale: { cone: 60, penumbra: 0.4, distance: 16, key: 0.62, hemisphere: 0.4, fill: 0.16 },
   shadow: { mapSize: 2048, phoneMapSize: 1024, near: 2.3, far: 24, bias: -0.0003, normalBias: 0.015 },
   /** Fog starts and ends at these multiples of the camera's distance from what it looks at. */
   fog: { near: 1.8, far: 5.5 },
 } as const;
+
+/**
+ * The cover is the lit sheet of the table, at the walk's scale. At the return the director swaps the shut map for
+ * that sheet under one camera, mapping a panel's width onto the sheet's width. A cover as wide as a panel is the
+ * same picture on both sides of the cut, and it hides the torn white edges of the panels stacked under it, as
+ * the sheet on the table has none.
+ */
+export const COVER_FIT = PANEL.width / COVER.body.width;
 
 /** The walker's own springs and distances. */
 export const WALKER_ON_MAP = {
@@ -69,6 +88,8 @@ export const WALKER_ON_MAP = {
   jump: 1.2,
   /** The pin stands up when the walker is further than this from it, in route length. */
   pinClear: 0.4,
+  /** The day is asked again this often, in milliseconds, so the class flag moves on at midnight. */
+  dayCheck: 30_000,
 } as const;
 
 export interface WalkInput {
@@ -85,6 +106,8 @@ export interface WalkInput {
   readonly lights?: boolean;
   /** Milliseconds per frame spent on building. Default 10. */
   readonly budget?: number;
+  /** The day the class flag is placed for, as YYYY-MM-DD or as a clock that is asked now and then. Default: today. */
+  readonly today?: string | (() => string);
 }
 
 /** A point on the screen in window pixels, with how much a note should keep off it. */
@@ -108,6 +131,8 @@ export interface WalkMiniMap {
   readonly pixel: { readonly x: number; readonly y: number } | null;
   /** The waypoints of the stage on the drawing. */
   readonly marks: readonly { readonly id: string; readonly x: number; readonly y: number; readonly title: string }[];
+  /** The class flag's pixel on it, or null when the class is on another stage or has no flag. */
+  readonly classFlag: { readonly x: number; readonly y: number } | null;
 }
 
 /** Where the director wants to walk to. */
@@ -146,6 +171,14 @@ export interface WalkPart extends ScenePart<Group> {
   setRungs(stageId: string, done: number): void;
   /** Ticked arms of a stage's signpost. */
   setTicked(stageId: string, ticked: readonly boolean[]): void;
+  /**
+   * Where the class is today, as a share of the roadmap's minutes: the class flag stands there. The walk works
+   * it out itself from the roadmap's sessions and the day. A host with a clock of its own passes the share, or
+   * null for no flag; `undefined` hands it back to the walk.
+   */
+  setClass(along: number | null | undefined): void;
+  /** Where the class flag stands, as a share of the roadmap's minutes, or null. */
+  readonly classAlong: number | null;
   /** The landing after the dive, 0 to 1, or null when there is none. */
   setLanding(u: number | null): void;
   /** The camera during the landing. */
@@ -310,12 +343,20 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
   const buildCover = (): void => {
     const image = coverPrint();
     const board = THEME.cover[plan.data.tier];
+    const width = COVER.body.width * COVER_FIT;
+    const depth = COVER.body.depth * COVER_FIT;
+    // The corners of the sheet on the table, not the slightly rounder ones of a plain sheet.
+    const outline = (ctx: CanvasRenderingContext2D, w: number, h: number): void => {
+      roundedRect(ctx, 0, 0, w, h, (COVER.body.radius / COVER.body.width) * w);
+      ctx.fill();
+    };
     coverSheet = buildSheet({
-      width: COVER.body.width,
-      height: COVER.body.depth,
+      width,
+      height: depth,
+      outline,
       standing: false,
       paper: board,
-      resolution: (COVER.width * (phone ? 1 : 1.6)) / COVER.body.width,
+      resolution: (COVER.width * (phone ? 1 : 1.6)) / width,
       maxCanvas: environment.maxTexture,
       soft: 0.03,
       seed: 3.3,
@@ -330,8 +371,9 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
     });
     coverSheet.object.position.set(PANEL.width / 2, 0.003, 0);
     legendSheet = buildSheet({
-      width: COVER.body.width,
-      height: COVER.body.depth,
+      width,
+      height: depth,
+      outline,
       standing: false,
       paper: THEME.paper,
       resolution: (PRINT.width * (phone ? 1 : 1.5)) / PANEL.width,
@@ -358,6 +400,7 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
   const walkerHeight = spring(0);
   let walkerPanel = -1;
   let walkerLength: number | null = null;
+  let walkerSpot: { x: number; z: number } | null = null;
   let walkerShown = false;
 
   const pin: Pin = createPin(environment);
@@ -385,8 +428,13 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
   lights.add(key, key.target, hemisphere, fill, fill.target, lamp, lamp.target);
   if (input.lights !== false) object.add(lights);
 
+  /** How far the lights are in their finale state, 0 to 1. */
+  let finaleLight = 0;
   const placeLights = (): void => {
-    const { azimuth, elevation, distance } = WALK_LIGHT.lamp;
+    const { azimuth, elevation } = WALK_LIGHT.lamp;
+    const wide = WALK_LIGHT.finale;
+    const k = finaleLight;
+    const distance = lerp(WALK_LIGHT.lamp.distance, wide.distance, k);
     const az = azimuth * RAD;
     const el = elevation * RAD;
     lamp.position.set(aimAt.x + distance * Math.sin(az) * Math.cos(el), aimAt.y + distance * Math.sin(el), aimAt.z - distance * Math.cos(az) * Math.cos(el));
@@ -395,10 +443,18 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
     key.target.position.copy(aimAt);
     fill.position.set(aimAt.x + 1.7, aimAt.y + 2.3, aimAt.z + 9.3);
     fill.target.position.copy(aimAt);
-    lamp.intensity = WALK_LIGHT.lamp.intensity * light;
-    key.intensity = WALK_LIGHT.key * light;
-    hemisphere.intensity = WALK_LIGHT.hemisphere * light;
-    fill.intensity = WALK_LIGHT.fill * light;
+    lamp.angle = lerp(WALK_LIGHT.lamp.cone, wide.cone, k) * RAD;
+    lamp.penumbra = lerp(WALK_LIGHT.lamp.penumbra, wide.penumbra, k);
+    // Further back by the same light at the point it aims at: the candela grows with the square of the distance.
+    lamp.intensity = WALK_LIGHT.lamp.intensity * (distance / WALK_LIGHT.lamp.distance) ** 2 * light;
+    const far = WALK_LIGHT.shadow.far + (distance - WALK_LIGHT.lamp.distance) * 3;
+    if (Math.abs(lamp.shadow.camera.far - far) > 1e-3) {
+      lamp.shadow.camera.far = far;
+      lamp.shadow.camera.updateProjectionMatrix();
+    }
+    key.intensity = lerp(WALK_LIGHT.key, wide.key, k) * light;
+    hemisphere.intensity = lerp(WALK_LIGHT.hemisphere, wide.hemisphere, k) * light;
+    fill.intensity = lerp(WALK_LIGHT.fill, wide.fill, k) * light;
   };
   placeLights();
 
@@ -442,8 +498,31 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
   // -------------------------------------------------------------------------------------------------------
   // Mini maps, drawn when first asked for and again when you-are-here moves.
 
-  const minis = new Map<number, { canvas: HTMLCanvasElement; walked: number }>();
+  const minis = new Map<number, { canvas: HTMLCanvasElement; key: string }>();
   const walkedOn = (panel: PanelPlan): number => Math.min(panel.length, Math.max(0, here.length - panel.start));
+
+  // -------------------------------------------------------------------------------------------------------
+  // The class flag: at the end of what the latest dated session did in class. It follows the date.
+
+  const dayNow = (): string => {
+    try {
+      return typeof input.today === 'function' ? input.today() : (input.today ?? toDay(new Date()));
+    } catch {
+      return '';
+    }
+  };
+  let classDay = dayNow();
+  let classOverride: number | null | undefined;
+  let classAlong: number | null = null;
+  let classHere: FlagPlace | null = null;
+  let dayCheckedAt = 0;
+  const placeClass = (): void => {
+    const along = classOverride !== undefined ? classOverride : (classPlace(input.roadmap, plan.data.trek, classDay)?.along ?? null);
+    classAlong = along === null ? null : clamp01(along);
+    classHere = classAlong === null ? null : flagAt(plan, classAlong);
+    views.forEach((view, index) => view.setClass(classHere && classHere.panel === index ? classHere.point : null));
+  };
+  placeClass();
 
   // -------------------------------------------------------------------------------------------------------
   // Placing everything for the current state.
@@ -481,6 +560,15 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
 
   const update = (frame: FrameTime): void => {
     runQueue(budget);
+    const clock = performance.now();
+    if (classOverride === undefined && clock - dayCheckedAt > WALKER_ON_MAP.dayCheck) {
+      dayCheckedAt = clock;
+      const day = dayNow();
+      if (day !== classDay) {
+        classDay = day;
+        placeClass();
+      }
+    }
     applyFold(foldOverride ?? mapOpenAt(progress));
     const { open, shown, length } = state();
 
@@ -505,8 +593,12 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
     const jumped = walkerLength === null || Math.abs(moved) > WALKER_ON_MAP.jump || !walkerShown;
     if (jumped || frame.reduced) settleSpring(walkerHeight, ground);
     else stepSpringKC(walkerHeight, ground, WALKER_ON_MAP.k, WALKER_ON_MAP.c, Math.min(frame.dt, 0.034));
-    if (!jumped && shown) walker.advance(moved);
+    // On a side trail he covers more ground than the route beside it is long. His legs go by what he walks.
+    const sameSheet = walkerSpot !== null && walkerPanel === place.panel;
+    const strode = sameSheet && walkerSpot ? Math.hypot(place.point.x - walkerSpot.x, place.point.z - walkerSpot.z) : Math.abs(moved);
+    if (!jumped && shown) walker.advance(Math.sign(moved) * Math.max(Math.abs(moved), Math.min(strode, WALKER_ON_MAP.jump)));
     walkerLength = length;
+    walkerSpot = { x: place.point.x, z: place.point.z };
     if (shown !== walkerShown) {
       walker.setUp(shown, frame.reduced);
       walkerShown = shown;
@@ -550,15 +642,17 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
       const wanted = shiftAt(rail, place, WALK_LIGHT.follow.share);
       lampShift = lampSnap || frame.reduced ? wanted : lerp(lampShift, wanted, 1 - Math.exp(-WALK_LIGHT.follow.rate * Math.min(frame.dt, 0.1)));
       lampSnap = false;
-      const middle = panelLeft(0) + (count * PANEL.width) / 2;
+      // In the wide shot the pool stays on the summit panel, and from there it goes back to the shut map.
+      const summit = (count - 1) * PANEL.width;
       let x: number;
       if (rail <= 1) x = 0;
       else if (rail <= count) x = (rail - 1) * PANEL.width;
-      else if (rail <= count + 1) x = lerp((count - 1) * PANEL.width, middle, rail - count);
-      else x = lerp(middle, 0, rail - count - 1);
+      else if (rail <= count + 1) x = summit;
+      else x = lerp(summit, 0, rail - count - 1);
       const onPanel = clamp01(rail) * (1 - clamp01(rail - count - 1));
       aimAt.set(x + WALK_LIGHT.aim.x * onPanel + lampShift, 0.1, WALK_LIGHT.aim.z * onPanel);
     }
+    finaleLight = landing !== null ? 0 : finaleLightAt(progress);
     placeLights();
     dirty = false;
   };
@@ -646,6 +740,14 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
     setTicked(stageId, ticked) {
       views.find((view) => view.plan.stage.id === stageId)?.setTicked(ticked);
     },
+    setClass(along) {
+      classOverride = along === undefined || along === null ? along : clamp01(Number.isFinite(along) ? along : 0);
+      if (classOverride === undefined) classDay = dayNow();
+      placeClass();
+    },
+    get classAlong() {
+      return classAlong;
+    },
     setLanding(u) {
       landing = u === null ? null : clamp01(u);
     },
@@ -712,18 +814,20 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
       if (!view || !view.built) return null;
       const panel = view.plan;
       const walked = walkedOn(panel);
+      const classAt = classHere && classHere.panel === stageIndex ? { x: classHere.on.x, z: classHere.on.z } : null;
+      const key = `${walked}|${classAt ? `${classAt.x},${classAt.z}` : ''}`;
       let entry = minis.get(stageIndex);
       if (!entry) {
         const canvas = document.createElement('canvas');
         canvas.width = MINI.width;
         canvas.height = MINI.height;
-        entry = { canvas, walked: -1 };
+        entry = { canvas, key: '' };
         minis.set(stageIndex, entry);
       }
-      if (entry.walked !== walked) {
+      if (entry.key !== key) {
         const context = entry.canvas.getContext('2d');
-        if (context) paintMiniMap(context, { plan, panel, contours: view.contours, lang, walked });
-        entry.walked = walked;
+        if (context) paintMiniMap(context, { plan, panel, contours: view.contours, lang, walked, classAt });
+        entry.key = key;
       }
       const clampPixel = (x: number, z: number): { x: number; y: number } => {
         const pixel = miniPixel(x, z);
@@ -733,6 +837,7 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
         canvas: entry.canvas,
         pixel: place.panel === stageIndex ? clampPixel(place.point.x, place.point.z) : null,
         marks: panel.marks.map((mark) => ({ id: mark.waypoint.id, ...clampPixel(mark.x, mark.z), title: mark.waypoint.title })),
+        classFlag: classAt ? clampPixel(classAt.x, classAt.z) : null,
       };
     },
     hitTest(ray) {
@@ -783,6 +888,7 @@ export function createWalk(environment: SceneEnvironment, input: WalkInput): Wal
         view.settle();
       });
       walkerLength = null;
+      walkerSpot = null;
       lampSnap = true;
     },
     reprint() {

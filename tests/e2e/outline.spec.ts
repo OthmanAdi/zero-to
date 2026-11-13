@@ -43,7 +43,7 @@ test.describe('with JavaScript off', () => {
   test.use({ javaScriptEnabled: false });
 
   test('a prerendered roadmap page shows its title, stages, steps and links', async ({ page }, info) => {
-    await page.goto(pathToFileURL(join(site, 'r', 'rust-for-a-python-dev', 'index.html')).href);
+    await page.goto(pathToFileURL(join(site, 'roadmaps', 'rust-for-a-python-dev', 'index.html')).href);
     await expect(page.locator('h1')).toHaveText('Zero to Rust, coming from Python');
     await expect(page.locator('section.zo-stage > header h2')).toHaveCount(5);
     await expect(page.locator('li.zo-step h3').first()).toBeVisible();
@@ -59,7 +59,7 @@ test.describe('with JavaScript off', () => {
 
   test('the gallery page lists every example as real links', async ({ page }) => {
     await page.goto(pathToFileURL(join(site, 'gallery', 'index.html')).href);
-    for (const id of SAMPLES) await expect(page.locator(`a[href="../r/${id}/"]`).first()).toBeVisible();
+    for (const id of SAMPLES) await expect(page.locator(`a[href="../roadmaps/${id}/"]`).first()).toBeVisible();
   });
 });
 

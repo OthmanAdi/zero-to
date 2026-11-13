@@ -8,10 +8,11 @@ import { validateRoadmap } from '../roadmap/validate';
  * 2. a share link, `#r=...`;
  * 3. `?src=<address>` of a roadmap file;
  * 4. `?road=<id>` of a gallery example;
- * 5. nothing: the table shows the gallery.
+ * 5. nothing: the table shows the gallery. The single-file viewer has no gallery and asks for a roadmap instead.
  *
  * A file dropped on the page comes later and goes through the same check. Whatever comes from outside the page
- * is validated, and a share link or a file is shown as a preview before it is put on the table.
+ * is validated, and a share link or a file is shown as a preview before this browser keeps it. A roadmap that
+ * was given in any of these ways lies on the table alone, without the examples.
  */
 export const ROADMAP_ELEMENT_ID = 'zero-to-roadmap';
 export const RECEIPT_ELEMENT_ID = 'zero-to-receipt';

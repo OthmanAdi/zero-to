@@ -19,6 +19,13 @@ export const SHELF_STRINGS = {
     phoneButton: { one: 'Sources ({count})', other: 'Sources ({count})' },
     sheetClose: 'Close sources',
 
+    // What the Bookshelf row says to a screen reader. The English matches the shelf's own words.
+    hint: 'Arrow keys move along the shelf, Enter opens.',
+    volumeAt: 'Volume {index} of {count}',
+    volumeDone: 'Marked as read',
+    volumeRead: '{percent} percent read',
+    restedAt: '{title}, {index} of {count}',
+
     costFree: 'Free',
     costFreemium: 'Free, with paid parts',
     costPaid: 'Paid',
@@ -100,6 +107,12 @@ export const SHELF_STRINGS = {
     next: 'Nächste Quelle',
     phoneButton: { one: 'Quellen ({count})', other: 'Quellen ({count})' },
     sheetClose: 'Quellen schließen',
+
+    hint: 'Pfeiltasten bewegen dich am Regal entlang, Enter öffnet.',
+    volumeAt: 'Band {index} von {count}',
+    volumeDone: 'Als genutzt markiert',
+    volumeRead: '{percent} Prozent gelesen',
+    restedAt: '{title}, {index} von {count}',
 
     costFree: 'Kostenlos',
     costFreemium: 'Kostenlos, mit Bezahlteilen',

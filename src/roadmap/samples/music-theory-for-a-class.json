@@ -1321,6 +1321,7 @@
     "sessions": [
       {
         "n": 1,
+        "date": "2027-01-11",
         "title": "Find the pulse",
         "inClass": [
           "pulse"
@@ -1333,6 +1334,7 @@
       },
       {
         "n": 2,
+        "date": "2027-01-14",
         "title": "Note values",
         "opener": "Tap a steady pulse for four beats while your partner claps a song rhythm over it.",
         "inClass": [
@@ -1346,6 +1348,7 @@
       },
       {
         "n": 3,
+        "date": "2027-01-18",
         "title": "Bars and time signatures",
         "opener": "Name the note that gets one beat in 4/4, and how many eighths fill a quarter.",
         "inClass": [
@@ -1359,6 +1362,7 @@
       },
       {
         "n": 4,
+        "date": "2027-01-21",
         "title": "Rests, dots and ties, and the rhythm camp",
         "opener": "Clap a bar of 3/4, then a bar of 4/4, with a stamp on beat one.",
         "inClass": [
@@ -1372,6 +1376,7 @@
       },
       {
         "n": 5,
+        "date": "2027-01-25",
         "title": "The keyboard and note names",
         "opener": "Write the rhythm of a song you know using note values.",
         "inClass": [
@@ -1385,6 +1390,7 @@
       },
       {
         "n": 6,
+        "date": "2027-01-28",
         "title": "The staff and the clefs",
         "opener": "Say the white key names from C to C without looking.",
         "inClass": [
@@ -1401,6 +1407,7 @@
       },
       {
         "n": 7,
+        "date": "2027-02-01",
         "title": "Half steps and sharps, and the pitch camp",
         "opener": "Name five notes on the treble staff from the board.",
         "inClass": [
@@ -1415,6 +1422,7 @@
       },
       {
         "n": 8,
+        "date": "2027-02-04",
         "title": "The major scale",
         "opener": "Point to every half step between C and C on your keyboard strip.",
         "inClass": [
@@ -1428,6 +1436,7 @@
       },
       {
         "n": 9,
+        "date": "2027-02-08",
         "title": "Keys and key signatures",
         "opener": "Build a C major scale aloud with whole and half steps.",
         "inClass": [
@@ -1441,6 +1450,7 @@
       },
       {
         "n": 10,
+        "date": "2027-02-11",
         "title": "The minor scale, and the scale camp",
         "opener": "Say the order of sharps from memory.",
         "inClass": [
@@ -1457,6 +1467,7 @@
       },
       {
         "n": 11,
+        "date": "2027-02-15",
         "title": "Intervals",
         "opener": "Write the key signature of G major.",
         "inClass": [
@@ -1473,6 +1484,7 @@
       },
       {
         "n": 12,
+        "date": "2027-02-18",
         "title": "Triads",
         "opener": "Name three intervals with their half-step counts.",
         "inClass": [
@@ -1486,6 +1498,7 @@
       },
       {
         "n": 13,
+        "date": "2027-02-22",
         "title": "Chord progressions, and the chord camp",
         "opener": "Build the C major triad from the root.",
         "inClass": [
@@ -1499,6 +1512,7 @@
       },
       {
         "n": 14,
+        "date": "2027-02-25",
         "title": "Write a melody",
         "opener": "Say the four chords of 1-5-6-4 in C major.",
         "inClass": [
@@ -1512,6 +1526,7 @@
       },
       {
         "n": 15,
+        "date": "2027-03-01",
         "title": "Chords and form",
         "opener": "Read your melody aloud with the note names.",
         "inClass": [
@@ -1525,6 +1540,7 @@
       },
       {
         "n": 16,
+        "date": "2027-03-04",
         "title": "Perform and explain",
         "opener": "Hum the first four bars of your song.",
         "inClass": [

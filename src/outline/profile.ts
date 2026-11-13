@@ -1,7 +1,8 @@
 /**
  * The profile of the route as an inline SVG: minutes run left to right, altitude (the tier bands) bottom to top.
- * It carries the camps, every step as a dot, the walked part as a solid line and the you-are-here pin, the
- * plan's position for today, due reviews and the class flag.
+ * It carries the camps, every step as a dot (an optional one at the far point of a dotted side trail), the
+ * walked part as a solid line and the you-are-here pin, the plan's position for today, due reviews and the
+ * class flag.
  *
  * The drawing is decoration for the eye: the figure caption next to it says the same in words, and the SVG is
  * hidden from screen readers.
@@ -41,15 +42,42 @@ const LEFT = 92;
 const RIGHT = 986;
 const TOP = 40;
 
+/**
+ * A side trail: the dotted spur an optional step stands on, drawn the way the strip of the 3D view draws it. It
+ * leaves the route at most `half` before the step and rejoins it at most `half` after it. Each side takes no
+ * more than `gapShare` of the gap to the mark beside it (a step, a camp or an end of the route), so a spur next
+ * to a camp rejoins short of the tent. It stands `rise` off the route at the step, or `steep` times its width
+ * when it is narrow, never less than half of `rise`. It keeps `room` from the edge of the drawing and turns
+ * downward where there is none above. A step with less than `least` on either side stays on the route. Units
+ * are those of the viewBox.
+ */
+export const PROFILE_SPUR = { half: 14, gapShare: 0.3, rise: 22, steep: 0.9, room: 8, least: 3 } as const;
+
 interface Point {
   readonly x: number;
   readonly y: number;
 }
 
+/** The side trail of an optional step: a dotted arc that leaves the route and rejoins it. */
+export interface ProfileSpur {
+  readonly id: string;
+  /** Where it leaves and where it rejoins the route, as shares of the route. */
+  readonly from: number;
+  readonly to: number;
+  /** True when it stands above the route. */
+  readonly up: boolean;
+  /** The step's place on the route. */
+  readonly on: Point;
+  /** The far point of the spur, where the step's dot is drawn. */
+  readonly at: Point;
+  /** The arc as an SVG path. */
+  readonly d: string;
+}
+
 const r1 = (n: number): number => Math.round(n * 10) / 10;
 const clamp01 = (n: number): number => Math.min(1, Math.max(0, n));
 
-/** The drawing's geometry: x for a share of the route, y for an altitude, and the line of the ground. */
+/** The drawing's geometry: x for a share of the route, y for an altitude, the line of the ground and the spurs. */
 export function profileGeometry(trek: Trek, height = 240) {
   const bottom = height - 30;
   const x = (along: number): number => LEFT + (RIGHT - LEFT) * clamp01(along);
@@ -78,7 +106,44 @@ export function profileGeometry(trek: Trek, height = 240) {
     }
     return (line[line.length - 1] as Point).y;
   };
-  return { x, y, bottom, line, yAt, share };
+
+  // The marks on the route a spur keeps clear of: both ends, every camp and every step.
+  const stops = [0, 1, ...trek.stages.map((stage) => share(stage.endMinute)), ...trek.waypoints.map((w) => w.along)];
+  const spurs: ProfileSpur[] = [];
+  const { half, gapShare, rise, steep, room, least } = PROFILE_SPUR;
+  const width = RIGHT - LEFT;
+  for (const w of trek.waypoints) {
+    if (!w.optional) continue;
+    let before = 0;
+    let after = 1;
+    for (const stop of stops) {
+      if (stop < w.along - 1e-9 && stop > before) before = stop;
+      if (stop > w.along + 1e-9 && stop < after) after = stop;
+    }
+    const lead = Math.min(half / width, gapShare * (w.along - before));
+    const trail = Math.min(half / width, gapShare * (after - w.along));
+    if (!(Math.min(lead, trail) * width >= least)) continue;
+    const lift = Math.min(rise, Math.max(rise / 2, steep * (lead + trail) * width));
+    const on = { x: x(w.along), y: y(w.altitude) };
+    const up = on.y - lift >= room;
+    const apex = up ? on.y - lift : Math.min(height - room, on.y + lift);
+    if (Math.abs(apex - on.y) < lift / 3) continue;
+    const fromX = x(w.along - lead);
+    const toX = x(w.along + trail);
+    const from = { x: fromX, y: yAt(fromX) };
+    const to = { x: toX, y: yAt(toX) };
+    // Two quarter arcs: straight off the route, level at the step, and back.
+    spurs.push({
+      id: w.id,
+      from: w.along - lead,
+      to: w.along + trail,
+      up,
+      on,
+      at: { x: on.x, y: apex },
+      d: `M${r1(from.x)} ${r1(from.y)}Q${r1(from.x)} ${r1(apex)} ${r1(on.x)} ${r1(apex)}Q${r1(to.x)} ${r1(apex)} ${r1(to.x)} ${r1(to.y)}`,
+    });
+  }
+  return { x, y, bottom, line, yAt, share, spurs };
 }
 
 const path = (points: readonly Point[]): string => points.map((p, i) => `${i === 0 ? 'M' : 'L'}${r1(p.x)} ${r1(p.y)}`).join(' ');
@@ -117,6 +182,23 @@ export function profileTree(trek: Trek, marks: ProfileMarks = {}, options: Profi
   // The ground and the route.
   const ground = `${path(g.line)} L${r1((g.line[g.line.length - 1] as Point).x)} ${g.bottom} L${r1((g.line[0] as Point).x)} ${g.bottom} Z`;
   kids.push(svgEl('path', { class: 'zo-p-ground', d: ground, fill: THEME.paperShade, 'fill-opacity': 0.55 }));
+  // Side trails: dots where the route has dashes, so the two are told apart without colour. Under the route,
+  // so the route closes each of them.
+  for (const spur of g.spurs) {
+    kids.push(
+      svgEl('path', {
+        class: 'zo-p-spur',
+        'data-waypoint': spur.id,
+        d: spur.d,
+        fill: 'none',
+        stroke: THEME.ink,
+        'stroke-opacity': 0.62,
+        'stroke-width': 2.2,
+        'stroke-linecap': 'round',
+        'stroke-dasharray': '0.01 5',
+      }),
+    );
+  }
   kids.push(
     svgEl('path', {
       class: 'zo-p-route',
@@ -161,12 +243,14 @@ export function profileTree(trek: Trek, marks: ProfileMarks = {}, options: Profi
     );
   }
 
-  // Steps.
+  // Steps. An optional step with a spur stands at its far point.
   const done = new Set(marks.done ?? []);
   const due = new Set(marks.due ?? []);
+  const spurOf = new Map(g.spurs.map((spur) => [spur.id, spur]));
   for (const w of trek.waypoints) {
-    const cx = r1(g.x(w.along));
-    const cy = r1(g.y(w.altitude));
+    const at = spurOf.get(w.id)?.at;
+    const cx = r1(at ? at.x : g.x(w.along));
+    const cy = r1(at ? at.y : g.y(w.altitude));
     const isDone = done.has(w.id);
     if (due.has(w.id)) {
       kids.push(svgEl('circle', { class: 'zo-p-due', cx, cy, r: 9, fill: 'none', stroke: THEME.signal, 'stroke-width': 2 }));

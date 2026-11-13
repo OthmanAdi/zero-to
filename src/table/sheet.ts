@@ -21,7 +21,7 @@ import { THEME, mix } from '../look/theme';
 import { PALETTE, type SurfaceKind } from '../scene/palette';
 import { settleSpring, spring, springAtRest, stepSpringKC, type Spring } from '../paper/motion';
 import type { SceneEnvironment } from '../scene/contract';
-import { COVER, coverLayout, paintCover, titleMeasure, type CoverLayout, type CoverSpec } from './cover';
+import { COVER, clearTitle, coverLayout, coverReach, paintCover, titleMeasure, type CoverLayout, type CoverSpec } from './cover';
 import { ROOM_ENV } from './room';
 import { trailAlong, type SheetData, type SheetPrint } from './sheet-data';
 
@@ -313,13 +313,16 @@ export function createTableSheet(options: TableSheetOptions): TableSheet {
     example: data.spec.example === true,
     ...(measure ? { measure } : {}),
   });
-  let layout = coverLayout(coverSpec(), lang);
+  // The title keeps clear of where this sheet's mountain will stand (paintCover sets it the same way).
+  const reach = coverReach(print);
+  const firstSpec = coverSpec();
+  let layout = clearTitle(coverLayout(firstSpec, lang), firstSpec, reach);
   const cover = canvasOf(COVER.width * pixelScale, COVER.height * pixelScale);
   let coverTexture: CanvasTexture | null = null;
   const paint = (): void => {
     if (!cover) return;
     const spec = coverSpec(titleMeasure(cover.context, data.roadmap.lang));
-    layout = coverLayout(spec, lang);
+    layout = clearTitle(coverLayout(spec, lang), spec, reach);
     cover.context.setTransform(1, 0, 0, 1, 0, 0);
     cover.context.clearRect(0, 0, cover.canvas.width, cover.canvas.height);
     paintCover(

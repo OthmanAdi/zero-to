@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   levelHeights,
   levelIndexAt,
+  outlineDistance,
   pointInLevel,
   pointInRing,
   ringArea,
@@ -219,5 +220,84 @@ describe('traceContours', () => {
     const [all] = traceContours(field, [0.5], { minArea: 0 });
     expect(clean?.polygons.length).toBe(1);
     expect(all?.polygons.length).toBe(2);
+  });
+});
+
+describe('outlineDistance', () => {
+  const centre = (index: number, size: number): number => -1 + ((index + 0.5) * 2) / size;
+
+  it('is the signed distance to the outline, clamped to the reach', () => {
+    const square: ContourLevel = {
+      index: 0,
+      height: 0,
+      polygons: [
+        {
+          outer: [
+            { x: -0.5, z: -0.5 },
+            { x: 0.5, z: -0.5 },
+            { x: 0.5, z: 0.5 },
+            { x: -0.5, z: 0.5 },
+          ],
+          holes: [],
+          area: 1,
+          bounds: { minX: -0.5, minZ: -0.5, maxX: 0.5, maxZ: 0.5 },
+        },
+      ],
+    };
+    const size = 160;
+    const reach = 0.2;
+    const field = outlineDistance(square, size, reach);
+    expect(field.length).toBe(size * size);
+    let worst = 0;
+    for (let j = 0; j < size; j += 1) {
+      for (let i = 0; i < size; i += 1) {
+        const x = Math.abs(centre(i, size));
+        const z = Math.abs(centre(j, size));
+        const inside = x < 0.5 && z < 0.5;
+        const exact = inside ? Math.min(0.5 - x, 0.5 - z) : -Math.hypot(Math.max(0, x - 0.5), Math.max(0, z - 0.5));
+        worst = Math.max(worst, Math.abs((field[j * size + i] as number) - Math.max(-reach, Math.min(reach, exact))));
+      }
+    }
+    expect(worst).toBeLessThan(1e-5);
+  });
+
+  it('counts the rim of a hole as outline and agrees with pointInLevel on traced ground', () => {
+    const field = fieldOf((x, z) => {
+      const d = Math.hypot(x, z);
+      return Math.max(0, 1 - Math.abs(d - 0.5) * 3);
+    });
+    const [level] = traceContours(field, [0.5]);
+    const ring = level as ContourLevel;
+    expect(ring.polygons[0]?.holes.length).toBe(1);
+    const size = 96;
+    const reach = 0.12;
+    const distance = outlineDistance(ring, size, reach);
+    const edges = ringsOf(ring).flatMap((points) => points.map((a, k) => [a, points[(k + 1) % points.length] as typeof a] as const));
+    let checked = 0;
+    for (let j = 0; j < size; j += 1) {
+      for (let i = 0; i < size; i += 1) {
+        const x = centre(i, size);
+        const z = centre(j, size);
+        const value = distance[j * size + i] as number;
+        expect(Math.abs(value)).toBeLessThanOrEqual(reach + 1e-6);
+        expect(value > 0).toBe(pointInLevel(ring, x, z));
+        if ((i * 7 + j) % 11 !== 0) continue;
+        let best = reach;
+        for (const [a, b] of edges) {
+          const dx = b.x - a.x;
+          const dz = b.z - a.z;
+          const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz)));
+          best = Math.min(best, Math.hypot(x - a.x - dx * t, z - a.z - dz * t));
+        }
+        expect(Math.abs(value)).toBeCloseTo(best, 5);
+        checked += 1;
+      }
+    }
+    expect(checked).toBeGreaterThan(500);
+    // Both edges of the ring of paper are outline: the outer one and the rim of the crater.
+    const row = Math.floor(size / 2);
+    const across = Array.from({ length: size }, (_, i) => distance[row * size + i] as number);
+    const crossings = across.filter((value, i) => i > 0 && Math.sign(value) !== Math.sign(across[i - 1] as number)).length;
+    expect(crossings).toBe(4);
   });
 });

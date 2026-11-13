@@ -398,6 +398,72 @@ export function traceContours(field: Heightfield, levels: readonly number[], opt
   });
 }
 
+/**
+ * The signed distance to the outline of one level, sampled at the texel centres of a `size` by `size` grid over the
+ * footprint (-1 to 1 on both axes, row by row along z): positive on the paper, negative beside it, in footprint
+ * units and clamped to `reach`. The edges of holes are outline too. The sign comes from the same even-odd rule as
+ * `pointInRing`, so it agrees with `pointInLevel`.
+ */
+export function outlineDistance(level: ContourLevel, size: number, reach: number): Float32Array {
+  const n = Math.max(1, Math.round(size));
+  const cell = 2 / n;
+  const centre = (index: number): number => -1 + (index + 0.5) * cell;
+  const nearest = new Float32Array(n * n).fill(reach * reach);
+  const crossings: number[][] = Array.from({ length: n }, () => []);
+
+  for (const polygon of level.polygons) {
+    for (const ring of [polygon.outer, ...polygon.holes]) {
+      for (let k = 0; k < ring.length; k += 1) {
+        const a = ring[k] as Point2;
+        const b = ring[(k + 1) % ring.length] as Point2;
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const length2 = dx * dx + dz * dz;
+
+        // Distance: only the texels within reach of this edge.
+        const i0 = Math.max(0, Math.floor((Math.min(a.x, b.x) - reach + 1) / cell - 0.5));
+        const i1 = Math.min(n - 1, Math.ceil((Math.max(a.x, b.x) + reach + 1) / cell - 0.5));
+        const j0 = Math.max(0, Math.floor((Math.min(a.z, b.z) - reach + 1) / cell - 0.5));
+        const j1 = Math.min(n - 1, Math.ceil((Math.max(a.z, b.z) + reach + 1) / cell - 0.5));
+        for (let j = j0; j <= j1; j += 1) {
+          const pz = centre(j) - a.z;
+          for (let i = i0; i <= i1; i += 1) {
+            const px = centre(i) - a.x;
+            const t = length2 > 0 ? Math.min(1, Math.max(0, (px * dx + pz * dz) / length2)) : 0;
+            const ex = px - dx * t;
+            const ez = pz - dz * t;
+            const d2 = ex * ex + ez * ez;
+            const index = j * n + i;
+            if (d2 < (nearest[index] as number)) nearest[index] = d2;
+          }
+        }
+
+        // Inside or out: where the edge crosses the middle line of a row, half open as in `pointInRing`.
+        if (dz !== 0) {
+          const low = Math.min(a.z, b.z);
+          const high = Math.max(a.z, b.z);
+          for (let j = Math.max(0, Math.ceil((low + 1) / cell - 0.5)); j < n && centre(j) < high; j += 1) {
+            (crossings[j] as number[]).push(a.x + ((centre(j) - a.z) * dx) / dz);
+          }
+        }
+      }
+    }
+  }
+
+  const field = new Float32Array(n * n);
+  for (let j = 0; j < n; j += 1) {
+    const row = (crossings[j] as number[]).sort((p, q) => p - q);
+    let passed = 0;
+    for (let i = 0; i < n; i += 1) {
+      const x = centre(i);
+      while (passed < row.length && (row[passed] as number) < x) passed += 1;
+      const d = Math.sqrt(nearest[j * n + i] as number);
+      field[j * n + i] = passed % 2 === 1 ? d : -d;
+    }
+  }
+  return field;
+}
+
 /** Evenly spaced cut heights for a stack of `count` cards: 0, 1/count, 2/count and so on. The first is the sheet itself. */
 export function levelHeights(count: number): number[] {
   const cards = Math.max(1, Math.round(count));

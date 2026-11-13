@@ -148,6 +148,20 @@ function dashedRoute(ctx: Ctx, points: readonly { x: number; z: number; s: numbe
   ctx.stroke();
 }
 
+/**
+ * The side trails of a panel as rows of round dots: a pen of width `size` set down every `pitch`. The route is
+ * dashed and a side trail is dotted, so the two are told apart without colour.
+ */
+function dottedSpurs(ctx: Ctx, panel: PanelPlan, X: (x: number) => number, Y: (z: number) => number, size: number, pitch: number): void {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = size;
+  ctx.setLineDash([0, pitch]);
+  for (const mark of panel.marks) if (mark.spur) strokeLine(ctx, mark.spur.points, X, Y);
+  ctx.restore();
+}
+
 /** Dense points of a panel's route, so printed dashes have clean ends. */
 function densePath(panel: PanelPlan, step = 0.012): { x: number; z: number; s: number }[] {
   const points = panelRoutePoints(panel);
@@ -181,43 +195,11 @@ export function panelPaper(surface: SurfaceKind): string {
   return mix(THEME.paper, THEME.surface[surface], 0.14);
 }
 
-function waypointLabels(ctx: Ctx, print: Pick<PanelPrint, 'panel' | 'plan'>, X: (x: number) => number, Y: (z: number) => number, unit: number, alpha: number): void {
-  const { panel, plan } = print;
-  const roadLang = plan.roadmap.lang;
-  panel.marks.forEach((mark, index) => {
-    const x = X(mark.x);
-    const y = Y(mark.z);
-    const r = unit * 0.036;
-    ctx.fillStyle = THEME.paperHi;
-    ctx.strokeStyle = withAlpha(THEME.ink, alpha);
-    ctx.lineWidth = unit * 0.012;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    if (mark.waypoint.optional) ctx.setLineDash([unit * 0.02, unit * 0.016]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    if (!mark.waypoint.optional) {
-      ctx.fillStyle = withAlpha(THEME.ink, alpha);
-      ctx.beginPath();
-      ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // The title: above or below the route in turn, on a strip of paper so contours do not cross it.
-    const below = index % 2 === 1;
-    ctx.font = canvasFont('text', unit * 0.082, 600);
-    const text = fitText(ctx, mark.waypoint.title, unit * 1.05, roadLang);
-    const width = measureTextWidth(ctx, text, { lang: roadLang });
-    const left = Math.min(X(PANEL.width) - width - unit * 0.1, Math.max(unit * 0.1, x - width / 2));
-    const base = below ? y + unit * 0.2 : y - unit * 0.115;
-    ctx.fillStyle = withAlpha(THEME.paperHi, 0.78 * alpha);
-    ctx.fillRect(left - unit * 0.03, base - unit * 0.078, width + unit * 0.06, unit * 0.105);
-    ctx.fillStyle = withAlpha(THEME.ink, alpha);
-    drawText(ctx, text, left, base, { lang: roadLang });
-  });
-}
-
-/** Prints the face of a panel. The canvas is already filled with the panel's paper tone. */
+/**
+ * Prints the face of a panel. The canvas is already filled with the panel's paper tone. The waypoint marks and
+ * their titles are not on it: they lie over it as labels of their own (`labels.ts`), so that the cards cut out of
+ * this print never slice them.
+ */
 export function paintPanel(ctx: Ctx, width: number, height: number, print: PanelPrint): void {
   const { panel, plan, lang, contours } = print;
   const { X, Y, unit } = px(width, height);
@@ -269,6 +251,7 @@ export function paintPanel(ctx: Ctx, width: number, height: number, print: Panel
   ctx.strokeStyle = withAlpha(THEME.ink, 0.5 * ink);
   ctx.lineWidth = unit * 0.017;
   dashedRoute(ctx, route, X, Y, 0.11, 0.55);
+  dottedSpurs(ctx, panel, X, Y, unit * 0.019, unit * 0.048);
 
   // The stops at both ends, and the ring of the entry.
   const start = pathPoint(panel, 0);
@@ -299,8 +282,6 @@ export function paintPanel(ctx: Ctx, width: number, height: number, print: Panel
     ctx.stroke();
     ctx.setLineDash([]);
   }
-
-  waypointLabels(ctx, print, X, Y, unit, 0.88 * ink);
 
   // The title along the back edge, and the stage line over it.
   const left = X(0.26);
@@ -523,7 +504,7 @@ export interface CardPrint {
 /**
  * Prints the tops of a panel's cards as one sheet over the model's window. Each card is laid on the ones
  * below it, the way the stack is built: it throws its contact shadow, covers its own area with its paper tone,
- * takes the pattern of its ground and shows its cut edge. The waypoint marks are printed last.
+ * takes the pattern of its ground and shows its cut edge. The waypoint marks lie over the cards as labels.
  */
 export function paintCardTops(ctx: Ctx, width: number, height: number, print: CardPrint): void {
   const { panel } = print;
@@ -592,8 +573,6 @@ export function paintCardTops(ctx: Ctx, width: number, height: number, print: Ca
     ctx.stroke();
     ctx.restore();
   });
-
-  waypointLabels(ctx, print, X, Y, unit, 0.9 * Math.max(0.5, print.ink));
   ctx.restore();
 }
 
@@ -628,12 +607,15 @@ export function paintLegend(ctx: Ctx, width: number, height: number, print: Lege
   drawText(ctx, facts.toUpperCase(), left, unit * 1.24, { tracking: 0.12, lang });
 
   let y = unit * 1.75;
+  // A roadmap for a class has one row more. The rows then stand closer, so everything below keeps its place.
+  const forClass = (plan.roadmap.class?.sessions?.length ?? 0) > 0;
+  const pitch = unit * (forClass ? 0.24 : 0.27);
   const row = (draw: (x: number, y: number) => void, text: string): void => {
     draw(left + unit * 0.25, y - unit * 0.035);
     ctx.fillStyle = THEME.ink;
     ctx.font = canvasFont('text', unit * 0.1, 400);
     drawText(ctx, text, left + unit * 0.7, y, { lang });
-    y += unit * 0.27;
+    y += pitch;
   };
   const dash = (color: string, solid: boolean) => (x: number, at: number): void => {
     ctx.strokeStyle = color;
@@ -660,7 +642,20 @@ export function paintLegend(ctx: Ctx, width: number, height: number, print: Lege
   row(dash(THEME.signal, true), say('legendWalked', undefined, lang));
   row(dot(THEME.signal, THEME.signalDeep, 0.05), say('legendHere', undefined, lang));
   row(dot(THEME.ink, THEME.ink, 0.03), say('legendWaypoint', undefined, lang));
-  row(dot(THEME.paperHi, THEME.ink, 0.036, true), say('legendSide', undefined, lang));
+  row((x, at) => {
+    ctx.save();
+    ctx.strokeStyle = THEME.signal;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = unit * 0.026;
+    ctx.setLineDash([0, unit * 0.058]);
+    ctx.beginPath();
+    ctx.moveTo(x - unit * 0.24, at - unit * 0.055);
+    ctx.bezierCurveTo(x - unit * 0.12, at - unit * 0.055, x - unit * 0.14, at + unit * 0.06, x, at + unit * 0.06);
+    ctx.bezierCurveTo(x + unit * 0.14, at + unit * 0.06, x + unit * 0.12, at - unit * 0.055, x + unit * 0.24, at - unit * 0.055);
+    ctx.stroke();
+    ctx.restore();
+    dot(THEME.paperHi, THEME.ink, 0.036, true)(x, at + unit * 0.06);
+  }, say('legendSide', undefined, lang));
   row((x, at) => {
     ctx.strokeStyle = THEME.walnut;
     ctx.lineWidth = unit * 0.022;
@@ -698,6 +693,7 @@ export function paintLegend(ctx: Ctx, width: number, height: number, print: Lege
       ctx.fill();
     }
   }, say('legendCairn', undefined, lang));
+  if (forClass) row((x, at) => classFlagMark(ctx, x - unit * 0.05, at + unit * 0.1, unit * 0.2, THEME.ink, THEME.paper), say('legendClass', undefined, lang));
 
   // The grounds of this mountain, from the foot up.
   y += unit * 0.14;
@@ -770,6 +766,44 @@ export interface MiniPrint {
   readonly lang: UiLang;
   /** The route is solid up to this length on the panel (you-are-here), or 0. */
   readonly walked: number;
+  /** Where the class flag stands on this panel, in panel coordinates, or null. */
+  readonly classAt?: { readonly x: number; readonly z: number } | null;
+}
+
+/** The class flag as maps print it: a staff with a swallow-tailed cloth, in ink. `size` is the staff's height. */
+function classFlagMark(ctx: Ctx, x: number, y: number, size: number, ink: string, paper: string): void {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  const cloth = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size * 0.82, y - size * 0.92);
+    ctx.lineTo(x + size * 0.6, y - size * 0.7);
+    ctx.lineTo(x + size * 0.82, y - size * 0.48);
+    ctx.lineTo(x, y - size * 0.42);
+    ctx.closePath();
+  };
+  // A rim of paper keeps the flag clear of the route and the contours it stands on.
+  ctx.strokeStyle = paper;
+  ctx.lineWidth = size * 0.3;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - size);
+  ctx.stroke();
+  cloth();
+  ctx.lineWidth = size * 0.22;
+  ctx.stroke();
+  ctx.strokeStyle = ink;
+  ctx.fillStyle = ink;
+  ctx.lineWidth = size * 0.11;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y - size);
+  ctx.stroke();
+  cloth();
+  ctx.fill();
+  ctx.restore();
 }
 
 /**
@@ -802,6 +836,8 @@ export function paintMiniMap(ctx: Ctx, print: MiniPrint): void {
     ctx.lineWidth = 2.8;
     dashedRoute(ctx, route, X, Y, 0, 1, -Infinity, print.walked);
   }
+  ctx.strokeStyle = withAlpha(THEME.signal, 0.8);
+  dottedSpurs(ctx, panel, X, Y, 2.6, 6.2);
   for (const mark of panel.marks) {
     ctx.fillStyle = THEME.paperHi;
     ctx.strokeStyle = THEME.ink;
@@ -817,6 +853,7 @@ export function paintMiniMap(ctx: Ctx, print: MiniPrint): void {
       ctx.fill();
     }
   }
+  if (print.classAt) classFlagMark(ctx, X(print.classAt.x), Y(print.classAt.z), 19, THEME.ink, THEME.paperHi);
   const camp = pathPoint(panel, PLACE.camp);
   ctx.fillStyle = THEME.paperHi;
   ctx.strokeStyle = THEME.signalDeep;

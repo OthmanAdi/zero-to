@@ -61,6 +61,44 @@ describe('railPoses', () => {
       expect(projectToScreen(pose, point, aspect).y).toBeGreaterThanOrEqual(RAIL.panel.narrowBox.y0 + bottom - 0.02);
     }
   });
+
+  /** Every corner of every panel and of the legend, which lies open left of panel 0 and is as wide as a panel. */
+  const mapCorners = (n: number): Vec3[] => {
+    const corners: Vec3[] = [];
+    for (let index = -1; index < n; index += 1) {
+      for (const x of [panelLeft(index), panelLeft(index) + PANEL.width]) for (const z of [-PANEL.depth / 2, PANEL.depth / 2]) corners.push({ x, y: 0, z });
+    }
+    return corners;
+  };
+
+  it('keeps the whole map, the legend too, inside the wide shot', () => {
+    for (const aspect of [1440 / 900, 2.4, 390 / 844]) {
+      for (const n of [2, 5, 8]) {
+        const wide = railPoses(n, aspect)[n + 1] as CameraPose;
+        for (const corner of mapCorners(n)) expect(inside(wide, corner, aspect, 0), `${aspect} ${n} ${corner.x},${corner.z}`).toBe(true);
+      }
+    }
+  });
+
+  it('fills the stretch between the finale actions and the profile strip on a phone', () => {
+    // The overlays of a 390 by 844 phone: the profile strip takes 184 px from the bottom, of which the director
+    // hands 0.6 to the rail, and the finale's actions end 372 px from the top.
+    const aspect = 390 / 844;
+    const bottom = ((2 * 184) / 844) * 0.6;
+    const actions = 1 - (2 * 372) / 844;
+    const strip = 1 - (2 * 660) / 844;
+    for (const n of [2, 5, 8]) {
+      const wide = railPoses(n, aspect, { bottom })[n + 1] as CameraPose;
+      const screen = mapCorners(n).map((corner) => projectToScreen(wide, corner, aspect));
+      const top = Math.max(...screen.map((point) => point.y));
+      const low = Math.min(...screen.map((point) => point.y));
+      expect(top, `${n} panels`).toBeLessThanOrEqual(actions);
+      expect(low, `${n} panels`).toBeGreaterThanOrEqual(strip);
+      // At least 30 percent of the window's height: the screen is 2 high.
+      expect(top - low, `${n} panels`).toBeGreaterThanOrEqual(0.6);
+      for (const point of screen) expect(Math.abs(point.x)).toBeLessThanOrEqual(1);
+    }
+  });
 });
 
 describe('followShift', () => {

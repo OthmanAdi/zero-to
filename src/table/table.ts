@@ -1,4 +1,4 @@
-import { Color, Group, Plane, Ray, Vector3, type Camera, type Mesh, type ShaderMaterial } from 'three';
+import { Color, Group, Plane, Ray, Vector3, type Camera, type Material, type Mesh, type Object3D, type ShaderMaterial } from 'three';
 import { createCompass, directionToBearing, type CompassPart } from '../compass';
 import { uiLang, type UiLang } from '../i18n';
 import { THEME } from '../look/theme';
@@ -13,7 +13,7 @@ import { readoutFor, type ReadoutParts } from './readout';
 import { createCloth, createTableTop } from './room';
 import { createTableSheet, type TableSheet } from './sheet';
 import { deriveSheet, paperHalf, stageOfCard, stageStartShare, tracePrint, type SheetData, type SheetSpec } from './sheet-data';
-import { TURN, createTurntable, sheetScale, shortestSteps, slotPose, type PickBy, type Turntable } from './turntable';
+import { DIM_FLOOR, TURN, createTurntable, sheetScale, shortestSteps, slotPose, type PickBy, type Turntable } from './turntable';
 
 /** The moments of the intro, in seconds from its start. */
 export const INTRO = {
@@ -23,6 +23,11 @@ export const INTRO = {
   warm: { from: 0.15, to: 2.6 },
   /** The table is held at its turned-away angle until here, then turns in. */
   hold: 0.5,
+  /**
+   * The sheets come out of the dark as the table turns in, between these shares of the turn. Until then only the
+   * wood takes the lamp, and the roadmap that happens to lie under it first is not read.
+   */
+  reveal: { from: 0.6, to: 0.95 },
   /** The compass rises by `rise` and its glow comes up. */
   compass: { from: 0.35, to: 1.8, rise: 0.5 },
   /** The lit sheet may grow its mountain from here. */
@@ -31,8 +36,18 @@ export const INTRO = {
   end: 4.6,
 } as const;
 
-/** When the table turns by itself: only with the gallery on it, and only while nobody acts. */
+/**
+ * When the table turns by itself: only with the gallery on it, and only while nobody acts. A pick puts the next
+ * turn off by `afterPick`, the pointer on the table and keyboard focus on a control by `afterHover`. A key press
+ * or a dive into a roadmap stops it for the rest of the visit.
+ */
 export const AUTO_TURN = { first: 6.2, every: 8.8, afterPick: 14, afterHover: 3 } as const;
+
+/**
+ * Keys that do not count as somebody acting on the page: Tab only moves the focus, which holds the turn on its
+ * own, and a modifier pressed alone does nothing.
+ */
+const PASSIVE_KEYS: ReadonlySet<string> = new Set(['Tab', 'Shift', 'Control', 'Alt', 'AltGraph', 'Meta', 'CapsLock', 'Fn', 'OS', 'Unidentified']);
 
 /** The dive, in hero-exit progress. */
 export const EXIT = {
@@ -65,6 +80,12 @@ export interface TableOptions {
   readonly touch?: boolean;
   /** Most mountains kept with their GPU buffers at once. Default 3, on phones 2. */
   readonly maxModels?: number;
+  /**
+   * The page the table watches for somebody being there: a key press stops the automatic turn for the rest of
+   * the visit, and while a control holds the keyboard focus the turn waits. Default: the page's document, when
+   * there is one. Null watches nothing.
+   */
+  readonly watch?: Document | null;
 }
 
 export type TableHitKind = 'none' | 'sheet' | 'lit' | 'card' | 'pin';
@@ -146,7 +167,32 @@ export interface TablePart extends ScenePart<Group> {
   setSheetBody(index: number, visible: boolean): void;
   startIntro(): void;
   skipIntro(): void;
+  /**
+   * Holds the lit mountain flat in its print, the way the folded map comes back from a walk: no mountain stands
+   * and the pin is down while it is held. `immediate` lays a standing mountain down at once instead of letting
+   * it sink. Let go, the lit mountain grows again as soon as the table is still.
+   */
+  holdFlat(on: boolean, immediate?: boolean): void;
+  /** True while the lit mountain is held flat. */
+  readonly flat: boolean;
+  /** Lets the table turn by itself (the gallery) or not (a person's own roadmap). It never undoes `acted`. */
   setAutoTurn(on: boolean): void;
+  /** Puts the next automatic turn off by at least this many seconds, for a host that sees somebody busy. */
+  holdAutoTurn(seconds: number): void;
+  /**
+   * True once somebody has pressed a key or dived into a roadmap. The table then never turns by itself again in
+   * this visit.
+   */
+  readonly acted: boolean;
+  /** Marks from outside that somebody is here: the automatic turn stops for the rest of the visit. */
+  act(): void;
+  /** True while the table may still turn by itself. */
+  readonly autoTurning: boolean;
+  /**
+   * How much of the room's light the environment map gives right now, 0 to 1: it comes up with the lamp in the
+   * intro, so the room stays dark until the lamp lights it. The compass waits for its own rise.
+   */
+  readonly roomLight: number;
   /** Prints the covers again: after the fonts arrived, or in another interface language. */
   repaint(lang?: UiLang): void;
 }
@@ -161,6 +207,8 @@ interface Model {
   readonly anchor: Vector3;
   readonly pinCard: number;
   flat: number;
+  /** True while the intro keeps the model out of sight with its dark sheet. */
+  hidden: boolean;
 }
 
 export function createTable(environment: SceneEnvironment, options: TableOptions = {}): TablePart {
@@ -168,6 +216,41 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
   const pixelRatio = options.pixelRatio ?? (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
   const maxModels = Math.max(2, options.maxModels ?? (environment.phone ? 2 : 3));
   const touch = options.touch ?? false;
+  const watch = options.watch === undefined ? (typeof document === 'undefined' ? null : document) : options.watch;
+
+  // Everything that takes light from the room's environment map, with the strength it was made with. In the
+  // intro the room is as dark as the lamp: the map comes up with it, the compass with its own rise.
+  type Lit = Material & { envMapIntensity: number };
+  const roomLit = new Map<Lit, number>();
+  const compassLit = new Map<Lit, number>();
+  let roomLight = 1;
+  let compassLight = 1;
+  const eachMaterial = (object: Object3D, visit: (material: Lit) => void): void => {
+    object.traverse((child) => {
+      const material = (child as Mesh).material as Material | Material[] | undefined;
+      for (const one of Array.isArray(material) ? material : material ? [material] : []) {
+        if (typeof (one as { envMapIntensity?: unknown }).envMapIntensity === 'number') visit(one as Lit);
+      }
+    });
+  };
+  const collectLit = (object: Object3D, into: Map<Lit, number>, light: number): void => {
+    eachMaterial(object, (material) => {
+      if (into.has(material)) return;
+      into.set(material, material.envMapIntensity);
+      material.envMapIntensity *= light;
+    });
+  };
+  const forgetLit = (object: Object3D): void => {
+    eachMaterial(object, (material) => {
+      const own = roomLit.get(material);
+      if (own === undefined) return;
+      material.envMapIntensity = own;
+      roomLit.delete(material);
+    });
+  };
+  const setLight = (into: Map<Lit, number>, light: number): void => {
+    for (const [material, own] of into) material.envMapIntensity = own * light;
+  };
 
   const root = new Group();
   root.name = 'table';
@@ -192,6 +275,9 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     lightElevation: 58 * RAD,
   });
   root.add(compass.object);
+  collectLit(cloth.mesh, roomLit, 1);
+  collectLit(top.mesh, roomLit, 1);
+  collectLit(compass.object, compassLit, 1);
   const compassCentre = (compass.topY + compass.bottomY) / 2;
   const compassRadius = (compass.topY - compass.bottomY) / 2;
   const compassGround = compass.object.getObjectByName('compass-ground') as Mesh | undefined;
@@ -221,10 +307,14 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
   let wantIntro = options.intro ?? true;
   let introStart: number | null = null;
   let introHeld = false;
+  /** How far the sheets have come out of the dark in the intro, 0 to 1. */
+  let revealed = 1;
   let autoTurn = options.autoTurn ?? false;
   let nextAuto: number = AUTO_TURN.first;
+  let acted = false;
   let exit = 0;
   let exitPicked = false;
+  let flatHold = false;
   let standing = -1;
   let rake = 0;
   let stoodFor = 0;
@@ -265,7 +355,8 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     sheet.mount.add(mountain.object);
     const pin = createPin(environment);
     mountain.object.add(pin.object);
-    const model: Model = { mountain, pin, anchor: new Vector3(), pinCard: mountain.cardOnTrail(sheet.hereAlong), flat: 0 };
+    collectLit(mountain.object, roomLit, roomLight);
+    const model: Model = { mountain, pin, anchor: new Vector3(), pinCard: mountain.cardOnTrail(sheet.hereAlong), flat: 0, hidden: false };
     mountain.anchorAt(sheet.hereAlong, model.anchor);
     pin.update(0, model.anchor, true);
     models.set(index, model);
@@ -276,6 +367,7 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
   const releaseModel = (index: number): void => {
     const model = models.get(index);
     if (!model) return;
+    forgetLit(model.mountain.object);
     model.pin.dispose();
     model.mountain.dispose();
     models.delete(index);
@@ -283,7 +375,10 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
 
   const clearSheets = (): void => {
     for (const index of [...models.keys()]) releaseModel(index);
-    for (const sheet of sheets) sheet.dispose();
+    for (const sheet of sheets) {
+      forgetLit(sheet.slot);
+      sheet.dispose();
+    }
     for (const arm of arms) arm.removeFromParent();
     sheets = [];
     arms.length = 0;
@@ -321,12 +416,22 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     hovered = -1;
     candidate = -1;
     tintFor(index);
-    if (by === 'person') nextAuto = now + AUTO_TURN.afterPick;
+    if (by === 'person') nextAuto = Math.max(nextAuto, now + AUTO_TURN.afterPick);
     else if (by === 'auto') nextAuto = now + AUTO_TURN.every;
     writeReadout();
     for (const listener of selectListeners) listener(index, by);
     return true;
   };
+
+  /** True while an element other than the page itself holds the keyboard focus. */
+  const focusOnControl = (): boolean => {
+    const active = watch?.activeElement ?? null;
+    return active !== null && active !== watch?.body && active !== watch?.documentElement;
+  };
+  const onKey = (event: KeyboardEvent): void => {
+    if (!PASSIVE_KEYS.has(event.key)) acted = true;
+  };
+  watch?.addEventListener('keydown', onKey, true);
 
   /** True when a ray passes the head of a standing pin, with room to spare for a pointer. */
   const onPin = (ray: Ray, model: Model): boolean => model.pin.up > 0.5 && ray.distanceSqToPoint(model.pin.headWorld(scratch)) < (PIN.radius * 2.6) ** 2;
@@ -383,6 +488,18 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     get readout() {
       return readout;
     },
+    get flat() {
+      return flatHold;
+    },
+    get acted() {
+      return acted;
+    },
+    get autoTurning() {
+      return autoTurn && !acted;
+    },
+    get roomLight() {
+      return roomLight;
+    },
 
     setSheets(specs, selected = 0) {
       clearSheets();
@@ -403,6 +520,7 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
           pixelRatio,
           scale,
         });
+        collectLit(sheet.slot, roomLit, roomLight);
         const arm = new Group();
         arm.name = `arm-${index}`;
         arm.rotation.y = -index * step;
@@ -470,6 +588,8 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     setExit(hx) {
       exit = clamp01(Number.isFinite(hx) ? hx : 0);
       if (exit < EXIT.select) exitPicked = false;
+      // Somebody went into a roadmap: back on the table it stays lit, and the table no longer turns by itself.
+      if (exit > 0) acted = true;
     },
 
     setPointer(x, y) {
@@ -586,9 +706,29 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       introStart = null;
       turntable.settle();
     },
+    holdFlat(on, immediate = false) {
+      flatHold = on;
+      if (!on || !immediate) return;
+      for (const model of models.values()) {
+        model.mountain.setGrow(0, true);
+        model.pin.setStanding(false, true);
+        model.flat = 0;
+      }
+      setStanding(-1);
+      hovered = -1;
+      candidate = -1;
+      rake = 0;
+      writeReadout();
+    },
     setAutoTurn(on) {
       autoTurn = on;
       nextAuto = now + AUTO_TURN.first;
+    },
+    holdAutoTurn(seconds) {
+      if (Number.isFinite(seconds) && seconds > 0) nextAuto = Math.max(nextAuto, now + seconds);
+    },
+    act() {
+      acted = true;
     },
     repaint(next) {
       if (next) lang = next;
@@ -615,6 +755,12 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
           introHeld = true;
           turntable.displace(TURN.introFrom);
           nextAuto = frame.t + AUTO_TURN.first;
+          // The sheets lie in the dark until the table turns in.
+          revealed = 0;
+          for (const sheet of sheets) {
+            sheet.setDimTarget(0);
+            sheet.update(0, slotPose(sheet.index, turntable.phi, sheets.length).yaw, true);
+          }
         }
         intro = frame.t - introStart;
         if (intro >= INTRO.end) {
@@ -628,8 +774,10 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       // The dive selects nothing new, but it stops the table where it is going.
       if (exit >= EXIT.select && !exitPicked) exitPicked = true;
 
-      // The table turns by itself only while nobody is here.
-      if (autoTurn && !reduced && intro === null && exit < 0.005 && frame.t >= nextAuto && sheets.length > 1) {
+      // The table turns by itself only while nobody is here. A control with the keyboard focus means somebody
+      // is: the turn waits, so what that control points at does not change under it.
+      if (autoTurn && !acted && focusOnControl()) nextAuto = Math.max(nextAuto, frame.t + AUTO_TURN.afterHover);
+      if (autoTurn && !acted && !reduced && intro === null && exit < 0.005 && frame.t >= nextAuto && sheets.length > 1) {
         doSelect((turntable.selected + 1) % sheets.length, 'auto');
       }
 
@@ -648,16 +796,20 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       let may = introHeld ? -1 : turntable.up;
       if (intro !== null && intro < INTRO.grow) may = -1;
       if (exit >= EXIT.mountain.from) may = selected;
+      if (flatHold) may = -1;
       if (may !== standing) setStanding(may);
       if (standing >= 0) stoodFor += dt;
 
-      // Sheets.
+      // Sheets. In the intro they lie in the dark while the lamp comes on and come out of it as the table turns
+      // in, so the roadmap that happens to lie under the lamp first is never read.
+      if (intro === null) revealed = 1;
+      else if (!introHeld) revealed = Math.max(revealed, smooth(seg(1 - Math.abs(turntable.phi - turntable.target) / Math.abs(TURN.introFrom), INTRO.reveal.from, INTRO.reveal.to)));
       const others = sheets.length - 1;
       for (const sheet of sheets) {
         const pose = slotPose(sheet.index, drawn, sheets.length);
         const raised = hoverSheet === sheet.index && sheet.index !== selected && exit < 0.005;
         // A sheet under the pointer comes out of the dark a little, so its lift can be seen.
-        sheet.setDimTarget(raised ? Math.max(pose.dim, HOVER.dim) : pose.dim);
+        sheet.setDimTarget((raised ? Math.max(pose.dim, HOVER.dim) : pose.dim) * revealed);
         sheet.setHover(raised);
         if (sheet.index === selected || others <= 0) sheet.setExit(0);
         else {
@@ -707,6 +859,13 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
         model.mountain.anchorAt(sheet.hereAlong, model.anchor);
         model.pin.update(dt, model.anchor, reduced);
         model.flat = !stands && model.mountain.grow === 0 && !model.mountain.moving ? model.flat + dt : 0;
+        // The printed trail of a flat model does not take the dim, so while the intro keeps its sheet in the dark
+        // the model is put away with it.
+        const hide = intro !== null && sheet.dim < DIM_FLOOR / 2;
+        if (hide !== model.hidden) {
+          model.hidden = hide;
+          model.mountain.object.visible = !hide;
+        }
       }
 
       // Keep few mountains alive: the lit one, and its neighbours cut ahead of the next turn.
@@ -741,15 +900,27 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       for (const uniform of glowUniforms) uniform.value.copy(glowColor);
       compass.update(frame);
 
-      // The lamp.
+      // The lamp, and the room's light with it: the environment map gives no more than the lamp does, so the
+      // first frame is the dark room and the lamp is what shows the table. The compass waits for its rise.
       const rakeTarget = litModel && standing === selected ? litModel.mountain.grow : 0;
       rake = reduced ? rakeTarget : rake + (rakeTarget - rake) * damp(5, dt);
       lampFocus.set(0, thickest + 0.3, TURN.radius + FIELD_OFFSET * scale);
+      const on = intro === null ? 1 : easeOutBack(seg(intro, INTRO.lamp.from, INTRO.lamp.to), INTRO.lamp.overshoot) * seg(intro, 0, 0.12);
+      const room = clamp01(on);
+      const compassRoom = room * (intro === null ? 1 : smooth(seg(intro, INTRO.compass.from, INTRO.compass.to)));
+      if (room !== roomLight) {
+        roomLight = room;
+        setLight(roomLit, room);
+      }
+      if (compassRoom !== compassLight) {
+        compassLight = compassRoom;
+        setLight(compassLit, compassRoom);
+      }
       lamp.update({
         t: frame.t,
         dt,
         reduced,
-        on: intro === null ? 1 : easeOutBack(seg(intro, INTRO.lamp.from, INTRO.lamp.to), INTRO.lamp.overshoot) * seg(intro, 0, 0.12),
+        on,
         warm: intro === null ? 1 : smooth(seg(intro, INTRO.warm.from, INTRO.warm.to)),
         rake,
         sun: seg(exit, EXIT.sun.from, EXIT.sun.to),
@@ -765,6 +936,7 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
     dispose() {
       if (disposed) return;
       disposed = true;
+      watch?.removeEventListener('keydown', onKey, true);
       clearSheets();
       root.removeFromParent();
       cloth.dispose();

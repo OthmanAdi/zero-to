@@ -44,6 +44,10 @@ interface WalkHook {
   ready: boolean;
   measure(): Measure;
   read(): Read;
+  part: {
+    place: { panel: number; path: number };
+    plan: { panels: { marks: { waypoint: { id: string }; spur: { from: number; to: number } | null }[] }[] };
+  };
 }
 
 function receipt(info: TestInfo, name: string): string {
@@ -69,6 +73,13 @@ async function open(page: Page, query: string): Promise<void> {
 const measure = (page: Page): Promise<Measure> => page.evaluate(() => (window as unknown as { __walk: WalkHook }).__walk.measure());
 const read = (page: Page): Promise<Read> => page.evaluate(() => (window as unknown as { __walk: WalkHook }).__walk.read());
 const distance = (a: ScreenPoint, b: ScreenPoint): number => Math.hypot(a.x - b.x, a.y - b.y);
+/** The optional step whose side trail the walker is on, or null when he is on the route. */
+const sideTrail = (page: Page): Promise<string | null> =>
+  page.evaluate(() => {
+    const { place, plan } = (window as unknown as { __walk: WalkHook }).__walk.part;
+    const mark = plan.panels[place.panel]?.marks.find((entry) => entry.spur && place.path > entry.spur.from && place.path < entry.spur.to);
+    return mark ? mark.waypoint.id : null;
+  });
 
 test('at p = 0.3 one panel is lit and its neighbours are at least 40 percent darker', async ({ page }, info) => {
   const errors = watchErrors(page);
@@ -95,8 +106,11 @@ test('at p = 0.3 one panel is lit and its neighbours are at least 40 percent dar
 
 test('the walker stands on the drawn end of the route', async ({ page }, info) => {
   const errors = watchErrors(page);
-  for (const p of [0.15, 0.3, 0.47, 0.62]) {
+  // Places on the route. At p 0.3 he is out on the side trail of an optional step, off the route, as he should
+  // be: that walk is checked in walk-hud.spec.ts.
+  for (const p of [0.15, 0.32, 0.47, 0.62]) {
     await open(page, `road=rust-for-a-python-dev&p=${p}&bare=1`);
+    expect(await sideTrail(page), `side trail at p ${p}`).toBeNull();
     const state = await measure(page);
     expect(state.walkerShown, `walker at p ${p}`).toBe(true);
     expect(distance(state.walker, state.routeEnd), `walker and the end of the route at p ${p}`).toBeLessThanOrEqual(6);

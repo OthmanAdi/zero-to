@@ -1,8 +1,10 @@
 import { uiLang, type StringVars, type UiLang } from '../i18n';
 import { createWordmark } from '../look/brand';
+import type { Roadmap } from '../roadmap/types';
+import type { BriefBuilder, BriefOptions } from './brief';
 import { ensurePaperEdge } from '../look/dom';
 import { CAMP } from './art';
-import { h, svg } from './dom';
+import { HIDDEN, h, svg } from './dom';
 import {
   PHONE_FIRST_GAP,
   STOPS,
@@ -24,7 +26,7 @@ import {
   type ThreadPiece,
 } from './model';
 import './sections.css';
-import { MAP_THEMES, buildStops, camel, navKey, type InstallPath, type PageState, type StopContext, type StopView } from './stops';
+import { MAP_THEMES, PLAIN_PRINT, REPOSITORY, buildStops, camel, navKey, type InstallPath, type PageState, type StopContext, type StopView } from './stops';
 import { hasSectionWords, loadSectionWords, say, type SectionKey } from './strings';
 import { createPiece, createWalker, type ThreadPieceView } from './thread';
 import { DEFAULT_TICKET } from './ticket';
@@ -34,6 +36,10 @@ import { DEFAULT_TICKET } from './ticket';
  * station that explains one part of the product. The text is the page. It is in the document as headings,
  * paragraphs, lists and one form, and it reads the same without scripts' motion, without WebGL and with
  * reduced motion. Everything that moves is decoration on top.
+ *
+ * The same stops serve two modes. With the gallery on the table they explain the skill. Given a person's own
+ * roadmap they are that roadmap's trip brief: its stages, sources, counts, pace, map, upkeep, gaps and a permit
+ * to start. The brief is built by `brief.ts`, which is fetched only when a roadmap is given.
  */
 
 export interface SectionLinks {
@@ -55,7 +61,12 @@ export interface GalleryExample {
   readonly href?: string;
 }
 
-export interface SectionsOptions {
+export interface SectionsOptions extends BriefOptions {
+  /**
+   * A person's own roadmap. With one, the stops are its trip brief. Default: none, and the stops explain the
+   * skill as they do for the gallery.
+   */
+  readonly roadmap?: Roadmap | null;
   /**
    * Interface language. Default: the page's (`uiLang()`). A page that starts in German awaits
    * `loadSectionWords('de')` before it mounts, or the sections show English until the German words arrive.
@@ -71,8 +82,6 @@ export interface SectionsOptions {
   readonly examples?: readonly GalleryExample[];
   /** The day each install path was run from a release. A path without a day is shown as untested. */
   readonly tested?: Readonly<Partial<Record<InstallPath['id'], string>>>;
-  /** Today, for the age of link checks. Default: now. */
-  readonly today?: Date;
   /** Put before every id the sections add to the document. Default: none. */
   readonly idPrefix?: string;
   /** The seed of the contour sheet at the map stop. Default: "zero-to". */
@@ -83,8 +92,6 @@ export interface SectionsOptions {
   onStop?(index: number, id: StopId | null): void;
   /** Called with every command a visitor copies. Nothing is sent anywhere by the sections themselves. */
   onCopy?(command: string): void;
-  /** Scrolls the page to `top` in `seconds`. Default: an eased scroll of the window. */
-  scrollTo?(top: number, seconds: number): void;
 }
 
 export interface Sections {
@@ -107,37 +114,40 @@ export interface Sections {
   /** Scrolls to a stop. */
   go(stop: number | StopId): void;
   setTopic(topic: string): void;
+  /**
+   * Puts a person's own roadmap on the page, or takes it off with null. The stops are built again: as the trip
+   * brief of the roadmap, or as the tour of the skill. The page changes once the brief has been fetched.
+   */
+  setRoadmap(roadmap: Roadmap | null): void;
   /** The current stop, or -1 above the first. */
   readonly current: number;
   /** The length of thread drawn in the route colour, in pixels. */
   readonly threadDone: number;
 }
 
+/** The repository's address, from the one place that names it. */
+const HOME = `https://github.com/${REPOSITORY}`;
+
 export const DEFAULT_LINKS: SectionLinks = {
-  repository: 'https://github.com/OthmanAdi/zero-to',
-  format: 'https://github.com/OthmanAdi/zero-to/blob/main/.agents/skills/zero-to/references/roadmap-format.md',
-  licence: 'https://github.com/OthmanAdi/zero-to/blob/main/LICENSE',
+  repository: HOME,
+  format: `${HOME}/blob/main/.agents/skills/zero-to/references/roadmap-format.md`,
+  licence: `${HOME}/blob/main/LICENSE`,
 };
 
+/** The footer links in their order. The label of each is the string `link` plus its name: `linkRepository`. */
 const LINK_KEYS: readonly (keyof SectionLinks)[] = ['repository', 'format', 'gallery', 'licence', 'changelog'];
-const LINK_LABEL: Readonly<Record<keyof SectionLinks, SectionKey>> = {
-  repository: 'linkRepository',
-  format: 'linkFormat',
-  gallery: 'linkGallery',
-  licence: 'linkLicence',
-  changelog: 'linkChangelog',
-};
 
 /** Below this width the stops are not pinned and the index tabs fold into one. */
 const NARROW = 900;
 
+/** What the folded tab adds to a tab: the gap before its caret and the caret. */
+const FOLD_CARET = 15;
+
+/** The margin a row of tabs keeps from the window's edges when it has no header to stand in. */
+const NAV_MARGIN = 46;
+
 /** The sizes a station is tried at, largest first, until its stop fits the window. */
 const FIT = [1, 0.94, 0.88, 0.82] as const;
-
-const PLAIN_PRINT =
-  '<g fill="none" stroke="var(--zt-ink)" stroke-opacity=".2">' +
-  [1, 2, 3, 4, 5, 6].map((ring) => `<ellipse cx="320" cy="190" rx="${ring * 42}" ry="${ring * 26}" transform="rotate(-10 320 190)"/>`).join('') +
-  '</g><path d="M60 340C180 300 220 240 300 230s60-50 30-44" fill="none" stroke="var(--zt-signal)" stroke-width="2.6" stroke-dasharray="7 5"/>';
 
 interface Layout {
   viewport: number;
@@ -151,6 +161,10 @@ interface Layout {
 
 export function mountSections(root: HTMLElement, options: SectionsOptions = {}): Sections {
   let lang: UiLang = options.lang ?? uiLang();
+  let roadmap = options.roadmap;
+  // The builder of roadmap mode, and the language its words were fetched for.
+  let brief: BriefBuilder | undefined;
+  let briefLang: UiLang | undefined;
   const idPrefix = options.idPrefix ?? '';
   const media = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
   const reduced = options.reduced ?? (() => Boolean(media?.matches));
@@ -179,7 +193,16 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
   const manual: (number | null)[] = [];
   const walker = createWalker();
   // The night behind the header. It stands with the index tabs, and it is shown once the sections are under them.
-  const band = h('div', { class: 'zs-band', 'aria-hidden': 'true' });
+  const band = h('div', { class: 'zs-band', ...HIDDEN });
+  // The tabs are fitted again when their room changes: the window, the tools beside them, or their being shown.
+  let navFrame = 0;
+  const navObserver =
+    typeof ResizeObserver === 'function'
+      ? new ResizeObserver(() => {
+          cancelAnimationFrame(navFrame);
+          navFrame = requestAnimationFrame(fitNav);
+        })
+      : null;
 
   const s = (key: SectionKey, vars?: StringVars) => say(key, vars, lang);
 
@@ -212,13 +235,16 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       });
   }
 
+  /** The label of a stop's tab: its own in roadmap mode, the gallery's otherwise. */
+  const tabName = (index: number): string => stops[index]?.nav ?? s(navKey((STOPS[index] as (typeof STOPS)[number]).id));
+
   function buildNav(): HTMLElement {
     tabs = STOPS.filter((stop) => !stop.centred).map((stop, index) => {
       const link = h(
         'a',
         { class: 'zs-tab zt-label zt-on-paper', href: `#${idPrefix}${stop.anchor}` },
-        h('span', { class: 'zs-tab-n', 'aria-hidden': 'true' }, String(index + 1).padStart(2, '0')),
-        h('span', {}, s(navKey(stop.id))),
+        h('span', { class: 'zs-tab-n', ...HIDDEN }, String(index + 1).padStart(2, '0')),
+        h('span', {}, tabName(index)),
       );
       link.addEventListener('click', (event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -243,10 +269,32 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     nav?.classList.toggle('is-open', open);
   }
 
+  /**
+   * Hangs the index tabs as a row when the row fits the room it is given, and folds them into one tab when it
+   * does not: always under NARROW, and on a wider window when the header's tools, a longer language or the
+   * labels of a roadmap leave the row too little room. A folded tab that is still wider than its room keeps
+   * its number and caret only. Tabs that are not shown, as in a walk, are fitted once they are.
+   */
+  function fitNav(): void {
+    const list = nav?.querySelector<HTMLElement>('.zs-tabs');
+    if (!nav || !navToggle || !list || nav.offsetWidth === 0) return;
+    const width = root.clientWidth || window.innerWidth || 1200;
+    nav.classList.remove('zs-folded', 'zs-tight');
+    const room = options.navHost ? options.navHost.clientWidth : width - 2 * NAV_MARGIN;
+    if (width >= NARROW && list.scrollWidth <= room + 1) {
+      setNavOpen(false);
+      return;
+    }
+    nav.classList.add('zs-folded');
+    // The folded tab names the stop it is at, so it can be as wide as the widest tab with its caret.
+    const widest = Math.max(navToggle.offsetWidth, ...tabs.map((tab) => tab.offsetWidth + FOLD_CARET));
+    nav.classList.toggle('zs-tight', widest > room + 1);
+  }
+
   function buildFooter(): HTMLElement {
     const links = { ...DEFAULT_LINKS, ...options.links };
     const stamps = LINK_KEYS.filter((key) => links[key]).map((key, index) => {
-      const stamp = h('a', { class: 'zs-stamp zt-label zt-on-paper', href: links[key] as string }, s(LINK_LABEL[key]));
+      const stamp = h('a', { class: 'zs-stamp zt-label zt-on-paper', href: links[key] as string }, s(`link${camel(key)}` as SectionKey));
       stamp.style.setProperty('--tilt', `${[-3, 2, -1.5, 3, -2][index % 5]}deg`);
       return h('li', {}, stamp);
     });
@@ -271,13 +319,13 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       { class: 'zs-foot' },
       h('div', { class: 'zs-camp' }, svg(CAMP.viewBox, CAMP.body), h('p', { class: 'zt-title' }, s('footEnd'))),
       ages.length > 0 ? h('section', { class: 'zs-ages', 'aria-labelledby': `${idPrefix}zs-ages-title` }, h('h2', { class: 'zt-label', id: `${idPrefix}zs-ages-title` }, s('footGallery')), h('ul', {}, ...ages)) : null,
-      h('div', { class: 'zs-foot-word', 'aria-hidden': 'true' }, mark),
+      h('div', { class: 'zs-foot-word', ...HIDDEN }, mark),
       h(
         'div',
         { class: 'zs-foot-row' },
         h('nav', { 'aria-label': s('footLinks') }, h('ul', { class: 'zs-stamps' }, ...stamps)),
         h('p', { class: 'zs-foot-note zt-small' }, s('footLicence')),
-        h('a', { class: 'zs-top zt-label', href: options.topHref ?? '#top' }, s('footTop'), h('span', { 'aria-hidden': 'true' }, ' ↑')),
+        h('a', { class: 'zs-top zt-label', href: options.topHref ?? '#top' }, s('footTop'), h('span', HIDDEN, ' ↑')),
       ),
     );
   }
@@ -294,9 +342,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       onMap: requestPrint,
       ...(options.onCopy ? { onCopy: options.onCopy } : {}),
     };
-    stops = buildStops(context);
+    stops = roadmap && brief ? brief(context, roadmap, options) : buildStops(context);
     gaps = stops.map((stop, index) => {
-      const gap = h('div', { class: 'zs-gap', 'aria-hidden': 'true' });
+      const gap = h('div', { class: 'zs-gap', ...HIDDEN });
       gap.style.setProperty('--zs-gap', String(stop.spec.gap));
       if (index === 0) gap.classList.add('zs-gap-first');
       return gap;
@@ -306,6 +354,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     stops.forEach((stop, index) => parts.push(gaps[index] as HTMLElement, stop.section));
     root.replaceChildren(...(options.navHost ? [] : [band, nav]), ...parts, buildFooter());
     options.navHost?.append(band, nav);
+    navObserver?.disconnect();
+    navObserver?.observe(nav);
+    if (options.navHost) navObserver?.observe(options.navHost);
     root.lang = lang;
 
     for (const stop of stops) if (stop.print) stop.print.group.innerHTML = PLAIN_PRINT;
@@ -427,6 +478,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     headPiece = -1;
     applied.fill('');
     render();
+    fitNav();
   }
 
   // -------------------------------------------------------------------------------------------------------
@@ -472,9 +524,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       navToggle?.replaceChildren(
         ...[
           tabbed ? h('span', { class: 'zs-sr' }, `${s('navMenu')}: `) : null,
-          tabbed ? h('span', { class: 'zs-tab-n', 'aria-hidden': 'true' }, String(now + 1).padStart(2, '0')) : null,
-          h('span', {}, tabbed ? s(navKey(tabbed.id)) : s('navMenu')),
-          h('span', { class: 'zs-caret', 'aria-hidden': 'true' }),
+          tabbed ? h('span', { class: 'zs-tab-n', ...HIDDEN }, String(now + 1).padStart(2, '0')) : null,
+          h('span', { class: 'zs-toggle-name' }, tabbed ? tabName(now) : s('navMenu')),
+          h('span', { class: 'zs-caret', ...HIDDEN }),
         ].filter((node): node is HTMLSpanElement => node !== null),
       );
       options.onStop?.(now, spec?.id ?? null);
@@ -544,8 +596,33 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
   // -------------------------------------------------------------------------------------------------------
   // Life.
 
-  /** Builds the page in the current language. If its words are still on their way, builds again when they arrive. */
+  /**
+   * Builds the page in the current language. If its words are still on their way, builds again when they arrive.
+   * A page with a roadmap waits for the brief first and keeps what it shows until then. If the brief cannot be
+   * fetched, the stops explain the skill.
+   */
   function rebuild(): void {
+    if (roadmap && briefLang !== lang) {
+      const wanted = lang;
+      void import('./brief')
+        .then((module) => module.loadBrief(wanted))
+        .then(
+          (builder) => {
+            brief = builder;
+            briefLang = wanted;
+            // A roadmap that was taken off again while the brief was on its way needs no second build.
+            return Boolean(roadmap);
+          },
+          () => {
+            roadmap = null;
+            return true;
+          },
+        )
+        .then((build) => {
+          if (build && !destroyed && lang === wanted) rebuild();
+        });
+      return;
+    }
     build();
     measure();
     if (hasSectionWords(lang)) return;
@@ -588,7 +665,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       destroyed = true;
       cancelAnimationFrame(resizeFrame);
       cancelAnimationFrame(scrollFrame);
+      cancelAnimationFrame(navFrame);
       observer?.disconnect();
+      navObserver?.disconnect();
       window.removeEventListener('resize', remeasure);
       window.removeEventListener('wheel', stopOwnScroll);
       window.removeEventListener('touchstart', stopOwnScroll);
@@ -608,6 +687,10 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     go,
     setTopic(topic) {
       stops.find((stop) => stop.ticket)?.ticket?.setTopic(topic);
+    },
+    setRoadmap(next) {
+      roadmap = next;
+      rebuild();
     },
     get current() {
       return Math.max(-1, current);

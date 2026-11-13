@@ -5,7 +5,7 @@
 export { anchor, outlineHtml, outlineTree, renderOutline, type OutlineOptions } from './outline';
 export { hydrateOutline, findOutline, type HydrateOptions, type HydratedOutline } from './hydrate';
 export { profileSvg, profileTree, type ProfileMarks, type ProfileOptions } from './profile';
-export { marksFor, hereAlong, classAlong } from './marks';
+export { marksFor, hereAlong } from './marks';
 export { roadmapToMarkdown, type RoadmapMarkdownOptions } from './markdown';
 export { studentCopy, hasTeacherParts, type StudentCopyReport } from './student';
 export { calendarIcs, icsEvents, toIcs, type IcsEvent } from './ics';

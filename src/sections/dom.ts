@@ -8,6 +8,9 @@ export type Attrs = Readonly<Record<string, string | number | boolean | null | u
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** The attribute of an element that is decoration: spread it into the attributes of `h`. */
+export const HIDDEN = { 'aria-hidden': 'true' } as const;
+
 /** Creates an element. `class` is the class list, a `true` value is an empty attribute, null and false are left out. */
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag);

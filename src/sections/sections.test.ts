@@ -5,7 +5,9 @@ import { THEMES } from '../roadmap/themes';
 import { SURFACE_KINDS, TIER_NAMES } from '../scene/palette';
 import { TERRAIN_TEMPLATE_IDS, TRAIL_TEMPLATE_IDS } from '../terrain';
 import { TERRAIN_TEMPLATES, TRAIL_TEMPLATES } from '../terrain/catalogue';
-import { GROUNDS, INSTALL_PATHS, MAP_THEMES, POSTS, QUESTIONS, SHAPES, STOPS, TIERS, TRAILS, hasSectionWords, loadSectionWords, mountSections, saySections, type Sections } from './index';
+import { STOPS, loadSectionWords, mountSections, saySections, type Sections } from './index';
+import { hasSectionWords } from './strings';
+import { GROUNDS, INSTALL_PATHS, MAP_THEMES, POSTS, QUESTIONS, SHAPES, TIERS, TRAILS } from './stops';
 import { PRINT, mapPrint } from './mapprint';
 import { DE } from './words.de';
 import { EN } from './words.en';
@@ -149,6 +151,14 @@ describe('what the page says about the map', () => {
       expect(Number(y)).toBeLessThanOrEqual(PRINT.height);
     }
   });
+
+  it('paints the ground bands a roadmap lists, and the theme bands without a list', () => {
+    const choice = { shape: 'volcano', trail: 'spiral', theme: 'classic-topo', seed: 'zero-to' } as const;
+    const grounds = (print: string): string[] => [...new Set([...print.matchAll(/var\(--zt-surface-([a-z]+)\)/g)].map((match) => match[1] as string))].sort();
+    expect(grounds(mapPrint({ ...choice, surfaces: ['sand', 'rock'] }))).toEqual(['rock', 'sand']);
+    const theme = THEMES.find((entry) => entry.id === 'classic-topo');
+    for (const ground of grounds(mapPrint(choice))) expect(theme?.surfaces).toContain(ground);
+  });
 });
 
 describe('the page', () => {
@@ -242,6 +252,64 @@ describe('the page', () => {
     const band = root.querySelector(':scope > .zs-band');
     expect(band).not.toBeNull();
     expect(band?.nextElementSibling?.matches('nav.zs-nav')).toBe(true);
+  });
+
+  it('folds the index tabs into one when their row is wider than the room the header leaves them', () => {
+    // A header slot whose width the test sets, seven tabs of 90 px with 4 px between them, a folded tab of 105 px.
+    let room = 900;
+    let windowWidth = 1000;
+    let shown = true;
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('zs-root') ? windowWidth : this.id === 'slot' ? room : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      if (!shown) return 0;
+      if (this.classList.contains('zs-nav-toggle')) return this.closest('.zs-folded') ? 105 : 0;
+      if (this.classList.contains('zs-tab')) return 90;
+      return this.matches('nav.zs-nav') ? 120 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains('zs-tabs') ? 7 * 90 + 6 * 4 : 0;
+    });
+    const host = document.createElement('div');
+    host.id = 'slot';
+    document.body.append(host);
+    const { sections } = mount({ navHost: host });
+    const nav = host.querySelector('nav.zs-nav') as HTMLElement;
+    const toggle = nav.querySelector('button.zs-nav-toggle') as HTMLButtonElement;
+    const state = () => [nav.classList.contains('zs-folded'), nav.classList.contains('zs-tight')];
+
+    // 654 px of tabs in a room of 900: they hang as a row.
+    expect(state()).toEqual([false, false]);
+    // The header's tools leave 459 px, as at 1000 px wide: one tab hangs alone and opens the rest.
+    room = 459;
+    sections.measure();
+    expect(state()).toEqual([true, false]);
+    toggle.click();
+    expect(nav.classList.contains('is-open')).toBe(true);
+    // Between the brand and the tools of a phone even the one tab is too wide. It keeps its number, and its name
+    // stays in the document for screen readers.
+    windowWidth = 390;
+    room = 34;
+    sections.measure();
+    expect(state()).toEqual([true, true]);
+    expect(toggle.querySelector('.zs-toggle-name')?.textContent).toBe('Sections');
+    // A narrow window folds them whatever room it gives.
+    room = 2000;
+    sections.measure();
+    expect(state()).toEqual([true, false]);
+    // Tabs that are not shown, as in a walk, keep what they were until they are shown again.
+    shown = false;
+    windowWidth = 1440;
+    room = 900;
+    sections.measure();
+    expect(state()).toEqual([true, false]);
+    // Shown on a wide window again: the row, and the stack is closed.
+    shown = true;
+    sections.measure();
+    expect(state()).toEqual([false, false]);
+    expect(nav.classList.contains('is-open')).toBe(false);
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('marks every install path untested until it is given the day it was run', () => {

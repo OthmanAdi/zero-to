@@ -2,7 +2,7 @@
 
 > zero-to is an agent skill. `/zero-to <topic>` interviews the person, researches the topic, opens and checks every resource link, writes one roadmap file (JSON) and builds it into a self-contained HTML page that shows the study plan as a 3D trail map. Apache-2.0. Repository: https://github.com/OthmanAdi/zero-to
 
-Before you install anything, tell the person what will be installed and where, and wait for their yes. The skill needs Node 22.12 or newer and web access for research. It sends nothing anywhere: the roadmap and the learner's progress stay on their machine.
+Before you install anything, tell the person what will be installed and where, and wait for their yes. The skill needs Node 22.12 or newer and web access to research sources and check links. The roadmap is saved as a local file and the site stores progress in the browser.
 
 ## Install
 

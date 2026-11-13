@@ -2,9 +2,9 @@
 
 zero-to is an agent skill that turns one prompt into an interactive learning roadmap: a study plan with checked resources, drawn as a 3D trekking map.
 
-![A brass compass turns above a round table of paper maps. The table turns, the camera dives into one map through a red pin and lands on a paper mountain, where a walker follows a dashed trail past signposts while a note card shows the current step](docs/media/expedition.gif)
+![A compass turns above the Rust roadmap. The camera dives through the red pin and lands beside the walker and the first task](docs/media/expedition.gif)
 
-*Recorded from the site: the example roadmap "Zero to Rust, coming from Python", from the table to the first steps of the walk.*
+*Recorded in the browser from the Rust roadmap’s table to its first task.*
 
 [Live site](https://othmanadi.github.io/zero-to/) | [Gallery](https://othmanadi.github.io/zero-to/gallery/) | [Install](#install) | [Roadmap format](.agents/skills/zero-to/references/roadmap-format.md)
 
@@ -26,7 +26,7 @@ npx skills add OthmanAdi/zero-to --skill zero-to
 | Claude Code, as a plugin | `/plugin marketplace add OthmanAdi/zero-to`, then `/plugin install zero-to@zero-to` | `/zero-to:zero-to` |
 | Any agent, by copying | Copy [`.agents/skills/zero-to`](.agents/skills/zero-to) into the agent's skills folder (Claude Code: `~/.claude/skills/zero-to`) | `/zero-to` |
 
-Before the release, the `skills` CLI row (skills 1.8.1, telemetry off) was run against a local checkout in an empty folder. It installed the skill for Claude Code and Codex, and the installed copy validated a roadmap and built its page with no checkout nearby, which also covers the copy row. The plugin row was run with Claude Code 2.1.323 against the same checkout: the marketplace was added, the plugin installed and Claude Code listed it as enabled. Neither install has yet been followed by a `/zero-to` run in a new agent session, and the commands above that name `OthmanAdi/zero-to` were not run against GitHub before the repository was public.
+The `skills` CLI and the Claude Code plugin were tested from a local checkout. A fresh Claude Code session used the locally installed skill to research sourdough bread baking and build a standalone roadmap. [Trial notes](docs/SKILL-TRIALS.md)
 
 The skill needs Node 22.12 or newer for its command-line tool, and web access for the research. You can also ask your agent to install it by reading [llms.txt](llms.txt).
 
@@ -42,11 +42,11 @@ Anything the prompt already says is not asked again. The interview has at most t
 
 ## What you get
 
-1. Your roadmap lies on a turning table among the other roadmaps you have opened, under a brass compass that floats and turns in the light of a desk lamp. The lit sheet grows its mountain.
+1. Your roadmap lies on a round table under a floating brass compass. The lit sheet grows a paper mountain. Your own roadmap gets a table to itself, and the live gallery holds the examples.
 2. A red pin marks where you are. Click it and the camera dives into the map and lands at your current step, or at the gate if you have not started.
 3. A walker follows the dashed trail up the paper mountain. Each waypoint opens a note card with what the step is for, a question to answer before you open the source, a hands-on task with its minutes, and up to four points to take with you into your field notebook.
 4. Each stage ends at a signpost whose arms list what you should be able to show. You rate yourself there (saw it, did it with the guide, did it alone, could explain it), and the arms tick off as you pass.
-5. The sources of the current step stand as books on a small shelf at the bottom right. Each one says when its link was opened and whether it is free.
+5. The bottom-right shelf shows sources before you start and updates as you walk. Each book shows when its link was opened and whether it is free. On capable devices, Bookmark Bookshelf Studio adds lit materials and adjusts detail to keep the shelf responsive. Classic keeps the same books and controls available on lighter devices and with reduced motion.
 6. An elevation strip under the map shows the whole route by hours, where you are on it, and when you will arrive at your pace.
 
 The landscape comes from the roadmap. Six mountain shapes, five trail styles, eight kinds of ground and seven signposts can be chosen in the interview, or a seed picks them so that the same file always draws the same mountain.
@@ -121,7 +121,7 @@ The [format guide](.agents/skills/zero-to/references/roadmap-format.md) describe
 - The quality of a roadmap depends on the agent's model and its web access. The skill can only check what the agent was able to open.
 - The 3D view needs WebGL. Without it, or with `?view=list`, the site shows the roadmap as a plain page with the same content.
 - The interface is in English and German. Roadmaps can be written in any language, but other scripts use the system fonts.
-- The browser tests run in Chromium, on a 1280 by 800 desktop and on a Pixel 7 sized phone with touch, with a software renderer. Firefox and Safari are not covered, and frame times have not been measured on real graphics hardware.
+- Automated browser coverage uses Chromium at desktop and phone sizes. The shelf was also checked in Chromium on a Radeon 8060S.
 
 ## Commands
 

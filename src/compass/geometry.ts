@@ -43,6 +43,10 @@ export const DIMS = {
   outerRing: { inner: 1.166, outer: 1.212, half: 0.038 },
 } as const;
 
+/** How far the bow rises above the outer ring and how far the drop hangs below it. */
+const BOW_RISE = 0.269;
+const DROP_FALL = 0.2;
+
 /** The radius the requested diameter refers to: the outside of the outer ring. */
 export const OUTER_RADIUS = DIMS.outerRing.outer;
 /** The same for a compass built without the outer ring. */
@@ -61,6 +65,16 @@ export interface Detail {
 
 export const DETAIL_DESKTOP: Detail = { radial: 128, flutes: 120, small: 20, glass: [72, 14] };
 export const DETAIL_PHONE: Detail = { radial: 64, flutes: 64, small: 12, glass: [40, 8] };
+
+/**
+ * How far the unscaled compass reaches above and below its centre when it hangs straight: with the outer ring
+ * from the top of the bow to the tip of the drop, without it from the top of the glass to the knob of the bowl.
+ * Leaning and the swing of the rings only ever bring these points closer to the centre.
+ */
+export const EXTENT = {
+  withOuterRing: { above: OUTER_RADIUS + BOW_RISE, below: OUTER_RADIUS + DROP_FALL },
+  withoutOuterRing: { above: DIMS.glassSeatY + DIMS.glassRise, below: 0.665 },
+} as const;
 
 export function detailFor(phone: boolean): Detail {
   return phone ? DETAIL_PHONE : DETAIL_DESKTOP;
@@ -479,6 +493,55 @@ export function buildNeedle(detail: Detail): BufferGeometry {
   const north = fuse([half(0.66, -1), jewel]);
   const south = half(0.56, 1);
   return fuse([north, south], true);
+}
+
+/**
+ * The shadow of the needle: its outline lying flat just above the dial, solid in the middle and fading to
+ * nothing over a soft edge. The softness is vertex alpha (the colour attribute has four components), so the
+ * blur costs no texture. Like the needle it points along -Z at rest.
+ */
+export function buildNeedleShadow(feather = 0.04): BufferGeometry {
+  const y = DIMS.dialY + DIMS.ringLift + 0.003;
+  // The outline seen from above, going round from the north tip: [x, z, outward x, outward z].
+  const outline: ReadonlyArray<readonly [number, number, number, number]> = [
+    [0, -0.66, 0, -1],
+    [0.068, -0.13, 1, 0],
+    [0.04, 0, 1, 0],
+    [0.068, 0.13, 1, 0],
+    [0, 0.56, 0, 1],
+    [-0.068, 0.13, -1, 0],
+    [-0.04, 0, -1, 0],
+    [-0.068, -0.13, -1, 0],
+  ];
+  const positions: number[] = [0, y, 0];
+  const colors: number[] = [1, 1, 1, 1];
+  for (const [x, z, nx, nz] of outline) {
+    // The solid core is a little smaller than the needle, so the fade straddles the true edge.
+    positions.push(x - nx * feather * 0.35, y, z - nz * feather * 0.35);
+    colors.push(1, 1, 1, 1);
+  }
+  for (const [x, z, nx, nz] of outline) {
+    positions.push(x + nx * feather * 0.65, y, z + nz * feather * 0.65);
+    colors.push(1, 1, 1, 0);
+  }
+  const count = outline.length;
+  const index: number[] = [];
+  // Seen from above the outline runs clockwise, so centre, next, this faces up.
+  for (let k = 0; k < count; k += 1) {
+    const n = (k + 1) % count;
+    const core = 1 + k;
+    const coreNext = 1 + n;
+    const edge = 1 + count + k;
+    const edgeNext = 1 + count + n;
+    index.push(0, coreNext, core);
+    index.push(core, coreNext, edgeNext);
+    index.push(core, edgeNext, edge);
+  }
+  const geometry = new BufferGeometry();
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('color', new Float32BufferAttribute(colors, 4));
+  geometry.setIndex(index);
+  return geometry;
 }
 
 /** The glass: a shallow cap of a large sphere that sits on the bezel. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DIAL_FILL, bandBlockBearing, dialPoint, dialToCanvas, dialUv, layoutDial } from './dial-layout';
+import { DIAL_FILL, LABEL_TURN, bandBlockBearing, dialPoint, dialToCanvas, dialUv, layoutDial } from './dial-layout';
 import { TAU } from './heading';
 
 const radiusOf = (point: { x: number; y: number }): number => Math.hypot(point.x, point.y);
@@ -57,6 +57,31 @@ describe('layoutDial', () => {
     expect(numerals.map((label) => label.text)).toEqual(['30', '60', '120', '150', '210', '240', '300', '330']);
     for (const label of numerals) expect(label.bearing).toBeCloseTo((Number(label.text) * Math.PI) / 180, 12);
     expect(cardinals[0]?.size).toBeGreaterThan(numerals[0]?.size ?? Infinity);
+  });
+
+  it('sets every letter and numeral upright, with N at bearing 0 at the top of the canvas', () => {
+    expect(LABEL_TURN).toBe(0);
+    for (const label of [...layout.ringLabels, ...layout.cardLabels]) expect(label.turn).toBe(0);
+    const at = (text: string): { x: number; y: number } => {
+      const label = [...layout.ringLabels, ...layout.cardLabels].find((item) => item.text === text);
+      if (!label) throw new Error(`no label ${text}`);
+      return dialToCanvas(dialPoint(label.bearing, label.radius), 1024);
+    };
+    const n = layout.ringLabels.find((label) => label.text === 'N');
+    expect(n?.bearing).toBe(0);
+    // Canvas rows count downwards: north is above the centre, south below, east right, west left.
+    expect(at('N').x).toBeCloseTo(512, 6);
+    expect(at('N').y).toBeLessThan(200);
+    expect(at('S').y).toBeGreaterThan(824);
+    expect(at('E').x).toBeGreaterThan(824);
+    expect(at('W').x).toBeLessThan(200);
+    // Clockwise: 30 is right of north, 330 left of it; NE is up and right, SW down and left.
+    expect(at('30').x).toBeGreaterThan(512);
+    expect(at('330').x).toBeLessThan(512);
+    expect(at('NE').x).toBeGreaterThan(512);
+    expect(at('NE').y).toBeLessThan(512);
+    expect(at('SW').x).toBeLessThan(512);
+    expect(at('SW').y).toBeGreaterThan(512);
   });
 
   it('draws a sixteen point rose that stays on the card, long points last', () => {

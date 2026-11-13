@@ -67,6 +67,31 @@ describe('paintDial', () => {
     expect(String(text('N')?.font)).toContain('Georgia');
   });
 
+  it('prints the lettering upright and unmirrored, each label where the layout puts it', () => {
+    const { calls } = paint();
+    // No label is turned, and nothing ever flips the canvas.
+    expect(calls.filter((call) => call.name === 'rotate')).toHaveLength(0);
+    expect(calls.filter((call) => ['scale', 'transform', 'setTransform'].includes(call.name))).toHaveLength(0);
+    const placed = (text: string): { x: number; y: number } => {
+      const index = calls.findIndex((call) => call.name === 'fillText' && call.args[0] === text);
+      const move = calls
+        .slice(0, Math.max(0, index))
+        .reverse()
+        .find((call) => call.name === 'translate');
+      if (index < 0 || !move) throw new Error(`label ${text} was not placed`);
+      return { x: move.args[0] as number, y: move.args[1] as number };
+    };
+    expect(placed('N').x).toBeCloseTo(512, 6);
+    expect(placed('N').y).toBeLessThan(200);
+    expect(placed('S').y).toBeGreaterThan(824);
+    expect(placed('E').x).toBeGreaterThan(824);
+    expect(placed('W').x).toBeLessThan(200);
+    expect(placed('60').x).toBeGreaterThan(512);
+    expect(placed('60').y).toBeLessThan(512);
+    expect(placed('240').x).toBeLessThan(512);
+    expect(placed('240').y).toBeGreaterThan(512);
+  });
+
   it('starts from a white sheet, so the metal ring keeps its own colour', () => {
     const { calls } = paint();
     const first = calls.find((call) => call.name === 'fillRect');

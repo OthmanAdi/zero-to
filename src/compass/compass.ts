@@ -3,6 +3,7 @@ import type { FrameTime, ScenePart, SceneEnvironment } from '../scene/contract';
 import { PALETTE } from '../scene/palette';
 import {
   DIMS,
+  EXTENT,
   INNER_OUTER_RADIUS,
   OUTER_RADIUS,
   buildBody,
@@ -10,6 +11,7 @@ import {
   buildGlass,
   buildInnerRing,
   buildNeedle,
+  buildNeedleShadow,
   buildOuterRing,
   detailFor,
   triangleCount,
@@ -17,7 +19,7 @@ import {
 } from './geometry';
 import { createGround } from './ground';
 import { createHalo } from './halo';
-import { bearingToDirection, needleYaw, normalizeBearing, retarget } from './heading';
+import { bearingToDirection, needleYaw, normalizeBearing, retarget, worldToBody } from './heading';
 import {
   createBrass,
   createCard,
@@ -25,6 +27,7 @@ import {
   createDialTexture,
   createGlass,
   createNeedleNorth,
+  createNeedleShadow,
   createNeedleSouth,
   dialTextureSize,
   type CompassColors,
@@ -40,9 +43,16 @@ export interface CompassOptions {
   readonly environment?: SceneEnvironment;
   /** Colours. Each one falls back to the scene palette. */
   readonly colors?: Partial<CompassColors>;
-  /** Width of the compass across its outermost ring, in scene units. */
+  /**
+   * Width of the compass across its outermost ring, in scene units. With the outer ring the default is the
+   * largest compass that fits, bob included, between `FLOAT_BAND.bottom` and `FLOAT_BAND.top` above the table
+   * (about 1.66: the ring stands upright, so the compass is taller than it is wide). Without it the default is 2.4.
+   */
   readonly diameter?: number;
-  /** Rest height of the centre of the compass above the table. The default lets the lowest part float clear of it. */
+  /**
+   * Rest height of the centre of the compass above the table. By default the lowest part, at the bottom of the
+   * bob, is `FLOAT_BAND.bottom` above the table.
+   */
   readonly height?: number;
   /** The upright outer ring with the bow. Without it the compass is a flat bowl in one ring. */
   readonly outerRing?: boolean;
@@ -58,6 +68,13 @@ export interface CompassOptions {
   readonly restYaw?: number;
   /** The largest tilt `setTilt` can add, in radians. */
   readonly tilt?: number;
+  /**
+   * Where the key lamp stands as seen from the compass: its bearing and its elevation above the horizon, in
+   * radians. Only the small shadow of the needle on the dial uses this. The default is a lamp behind and to the
+   * left of the compass, 60 degrees up.
+   */
+  readonly lightBearing?: number;
+  readonly lightElevation?: number;
   readonly motion?: Partial<ShowpieceMotion>;
   /** The needle spring. */
   readonly spring?: Partial<SpringParams>;
@@ -86,7 +103,14 @@ export interface CompassPart extends ScenePart<Group> {
   readonly heading: number;
   /** Triangles drawn by the whole part. */
   readonly triangles: number;
+  /** The highest point the compass reaches above the origin of `object` (the table top), at the top of the bob. */
+  readonly topY: number;
+  /** The lowest point the compass reaches above the origin of `object`, at the bottom of the bob. */
+  readonly bottomY: number;
 }
+
+/** The band above the table that the default compass floats in, bob included. */
+export const FLOAT_BAND = { bottom: 0.9, top: 3 } as const;
 
 const DEFAULT_ENVIRONMENT: SceneEnvironment = { envMap: null, maxTexture: 2048, phone: false };
 
@@ -105,10 +129,8 @@ export function defaultCompassColors(): CompassColors {
   };
 }
 
-/** How far below the centre the lowest part of the unscaled body reaches. */
-const DROP_BELOW = { withOuterRing: OUTER_RADIUS + 0.2, withoutOuterRing: 0.665 };
-/** The gap between the table and the lowest part at rest. */
-const CLEARANCE = 0.38;
+/** Default width of the compass without the outer ring. */
+const FLAT_DIAMETER = 2.4;
 
 /**
  * The hero of the table: a brass gimbal compass that floats, turns slowly and keeps its needle on the active map.
@@ -120,16 +142,26 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
   const environment = options.environment ?? DEFAULT_ENVIRONMENT;
   const colors: CompassColors = { ...defaultCompassColors(), ...options.colors };
   const withOuterRing = options.outerRing ?? true;
-  const diameter = options.diameter ?? 2.4;
-  const scale = diameter / (2 * (withOuterRing ? OUTER_RADIUS : INNER_OUTER_RADIUS));
-  const below = (withOuterRing ? DROP_BELOW.withOuterRing : DROP_BELOW.withoutOuterRing) * scale;
-  const height = options.height ?? below + CLEARANCE;
   const motion: ShowpieceMotion = { ...SHOWPIECE_MOTION, ...options.motion };
+  const bob = Math.abs(motion.bobHeight);
+  const extent = withOuterRing ? EXTENT.withOuterRing : EXTENT.withoutOuterRing;
+  const widest = withOuterRing ? OUTER_RADIUS : INNER_OUTER_RADIUS;
+  // With the upright ring the height decides the size: the tallest compass that stays inside the band.
+  const fitted = (2 * widest * (FLOAT_BAND.top - FLOAT_BAND.bottom - 2 * bob)) / (extent.above + extent.below);
+  const diameter = options.diameter ?? (withOuterRing ? fitted : FLAT_DIAMETER);
+  const scale = diameter / (2 * widest);
+  const height = options.height ?? FLOAT_BAND.bottom + bob + extent.below * scale;
+  const topY = height + extent.above * scale + bob;
+  const bottomY = height - extent.below * scale - bob;
   const springParams: SpringParams = { ...NEEDLE_SPRING, ...options.spring };
   const lean = options.lean ?? 0.2;
   const leanDirection = bearingToDirection(options.leanBearing ?? Math.PI);
   const restYaw = options.restYaw ?? 0.6;
   const maxTilt = options.tilt ?? 0.07;
+  // The needle's shadow falls away from the lamp. It is short: the needle stands only a little above the dial.
+  const lightElevation = clamp(options.lightElevation ?? Math.PI / 3, 0.3, Math.PI / 2);
+  const shadowAway = bearingToDirection((options.lightBearing ?? -0.59) + Math.PI);
+  const shadowReach = (DIMS.needleY - DIMS.dialY + 0.02) / Math.tan(lightElevation);
 
   const detail = detailFor(environment.phone);
   const setup: MaterialSetup = { colors, envMap: environment.envMap, phone: environment.phone };
@@ -191,7 +223,12 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
 
   const needle = new Mesh(keep(buildNeedle(detail)), [northMaterial, southMaterial]);
   needle.name = 'compass-needle';
-  needle.castShadow = true;
+  // A lamp that lights a whole table cannot resolve a shadow this small; the compass draws its own.
+  needle.castShadow = false;
+
+  const needleShadow = new Mesh(keep(buildNeedleShadow()), own(createNeedleShadow()));
+  needleShadow.name = 'compass-needle-shadow';
+  needleShadow.renderOrder = 1;
 
   const dome = new Mesh(keep(buildGlass(detail)), glass.material);
   dome.name = 'compass-glass';
@@ -214,7 +251,7 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
     innerRing.add(outerRing);
   }
 
-  spinner.add(body, dial, needle, dome, innerRing);
+  spinner.add(body, dial, needleShadow, needle, dome, innerRing);
 
   const groundHalf = 2.9 * scale;
   const ground = createGround(groundHalf, colors.lamp);
@@ -246,6 +283,11 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
 
   const placeNeedle = (tremble: number): void => {
     needle.rotation.y = needleYaw(spring.value + tremble, bodyYaw);
+    // The shadow lies under the needle, pushed away from the lamp. The push is a direction on the table, so it
+    // is turned back into the frame of the body like everything else that must not turn with it.
+    const push = worldToBody(shadowAway.x * shadowReach, shadowAway.z * shadowReach, bodyYaw);
+    needleShadow.rotation.y = needle.rotation.y;
+    needleShadow.position.set(push.x, 0, push.z);
   };
 
   const apply = (frame: FrameTime): void => {
@@ -268,6 +310,9 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
     floater.quaternion.setFromAxisAngle(axis.set(tip.x, tip.y, tip.z), tip.angle);
     bodyYaw = restYaw + pose.spin;
     spinner.rotation.y = bodyYaw;
+    // The dial floats like the card of a ship's compass: it keeps north while the bowl turns under it, so its
+    // lettering always faces a viewer in the south the right way up.
+    dial.rotation.y = needleYaw(0, bodyYaw);
     innerRing.rotation.x = pose.ringRock;
     outerRing.rotation.z = pose.ringSwing;
 
@@ -321,6 +366,12 @@ export function createCompass(options: CompassOptions = {}): CompassPart {
     },
     get triangles(): number {
       return triangles;
+    },
+    get topY(): number {
+      return topY;
+    },
+    get bottomY(): number {
+      return bottomY;
     },
     dispose(): void {
       if (disposed) return;

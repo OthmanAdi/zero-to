@@ -1,7 +1,7 @@
-import { Mesh, Object3D, Vector3, type Material } from 'three';
+import { Box3, Mesh, Object3D, Vector3, type Material } from 'three';
 import { describe, expect, it } from 'vitest';
 import { PALETTE } from '../scene/palette';
-import { createCompass, defaultCompassColors, dialRadiusFor } from './compass';
+import { FLOAT_BAND, createCompass, defaultCompassColors, dialRadiusFor } from './compass';
 import { bearingToDirection, shortestTurn } from './heading';
 
 // No WebGL here: the part is built with a null environment and only its transforms are read.
@@ -55,21 +55,96 @@ describe('createCompass', () => {
     part.dispose();
   });
 
-  it('is as wide as asked and floats clear of the table', () => {
-    const part = createCompass({ diameter: 2.4 });
-    part.update(frame(0, 0, true));
-    part.object.updateMatrixWorld(true);
-    const body = named(part.object, 'compass-body');
-    const floater = named(part.object, 'compass-floater');
-    expect(dialRadiusFor(2.4)).toBeCloseTo(0.77 * body.scale.x, 9);
-    // The lowest point of the outer ring assembly is 0.2 below the ring.
-    const lowest = floater.position.y - (2.4 / 2 + 0.2 * body.scale.x);
-    expect(lowest).toBeGreaterThan(0.25);
+  it('floats between 0.9 and 3.0 above the table by default, bob, lean and swing included', () => {
+    const part = createCompass();
+    expect(part.bottomY).toBeCloseTo(FLOAT_BAND.bottom, 9);
+    expect(part.topY).toBeCloseTo(FLOAT_BAND.top, 9);
     expect(part.object.position.y).toBe(0);
-    const flat = createCompass({ outerRing: false });
-    expect(named(flat.object, 'compass-floater').position.y).toBeLessThan(floater.position.y);
+    // Measure the real geometry over a whole turn; the halo and the ground are not part of the instrument.
+    const body = named(part.object, 'compass-body');
+    const box = new Box3();
+    let lowest = Infinity;
+    let highest = -Infinity;
+    for (let t = 0; t <= 40; t += 0.5) {
+      part.update(frame(t, 0));
+      part.object.updateMatrixWorld(true);
+      box.setFromObject(body, true);
+      lowest = Math.min(lowest, box.min.y);
+      highest = Math.max(highest, box.max.y);
+    }
+    expect(lowest).toBeGreaterThanOrEqual(part.bottomY - 1e-6);
+    expect(highest).toBeLessThanOrEqual(part.topY + 1e-6);
+    // And it uses the band: the fit is not loose.
+    expect(lowest).toBeLessThan(part.bottomY + 0.08);
+    expect(highest).toBeGreaterThan(part.topY - 0.12);
     part.dispose();
+  });
+
+  it('is as wide as asked, and reports where it then floats', () => {
+    const part = createCompass({ diameter: 2.4 });
+    const body = named(part.object, 'compass-body');
+    expect(dialRadiusFor(2.4)).toBeCloseTo(0.77 * body.scale.x, 9);
+    expect(part.bottomY).toBeCloseTo(FLOAT_BAND.bottom, 9);
+    // A ring 2.4 wide stands 2.4 tall, plus bow and drop: it cannot fit under 3.0.
+    expect(part.topY).toBeGreaterThan(FLOAT_BAND.top);
+    const raised = createCompass({ diameter: 2.4, height: 5 });
+    expect(raised.topY - raised.bottomY).toBeCloseTo(part.topY - part.bottomY, 9);
+    expect(named(raised.object, 'compass-floater').position.y).toBe(5);
+    const flat = createCompass({ outerRing: false });
+    expect(flat.bottomY).toBeCloseTo(FLOAT_BAND.bottom, 9);
+    expect(flat.topY).toBeLessThan(2.2);
+    part.dispose();
+    raised.dispose();
     flat.dispose();
+  });
+
+  it('keeps north on the dial away from the viewer while the bowl turns under it', () => {
+    const part = createCompass({ lean: 0, motion: { wobble: 0 } });
+    const dial = named(part.object, 'compass-dial');
+    const bowl = named(part.object, 'compass-bowl');
+    const north = new Vector3();
+    const east = new Vector3();
+    const bowlNorth = new Vector3();
+    let bowlTurned = 0;
+    for (const t of [0, 4, 13, 27, 39]) {
+      part.update(frame(t, 0));
+      part.object.updateMatrixWorld(true);
+      north.set(0, 0, -1).transformDirection(dial.matrixWorld);
+      east.set(1, 0, 0).transformDirection(dial.matrixWorld);
+      expect(north.x).toBeCloseTo(0, 9);
+      expect(north.z).toBeCloseTo(-1, 9);
+      // East stays on the right of a viewer in the south: the dial is not mirrored.
+      expect(east.x).toBeCloseTo(1, 9);
+      bowlNorth.set(0, 0, -1).transformDirection(bowl.matrixWorld);
+      bowlTurned = Math.max(bowlTurned, Math.abs(bowlNorth.x));
+    }
+    expect(bowlTurned).toBeGreaterThan(0.5);
+    part.dispose();
+  });
+
+  it('lays the shadow of the needle under it, pushed away from the lamp', () => {
+    const lightBearing = -0.59;
+    const part = createCompass({ heading: deg(72), lean: 0, motion: { wobble: 0 }, lightBearing });
+    const needle = named(part.object, 'compass-needle');
+    const shadow = named(part.object, 'compass-needle-shadow');
+    const away = bearingToDirection(lightBearing + Math.PI);
+    const a = new Vector3();
+    const b = new Vector3();
+    for (const t of [0, 7, 22]) {
+      part.update(frame(t, 0));
+      part.object.updateMatrixWorld(true);
+      expect(shadow.rotation.y).toBe(needle.rotation.y);
+      needle.getWorldPosition(a);
+      shadow.getWorldPosition(b);
+      const push = b.sub(a);
+      const reach = Math.hypot(push.x, push.z);
+      expect(reach).toBeGreaterThan(0.01);
+      expect(reach).toBeLessThan(0.08);
+      expect(push.x / reach).toBeCloseTo(away.x, 6);
+      expect(push.z / reach).toBeCloseTo(away.z, 6);
+    }
+    expect((needle as Mesh).castShadow).toBe(false);
+    part.dispose();
   });
 
   it('bobs about 0.06 and turns the body while time runs', () => {

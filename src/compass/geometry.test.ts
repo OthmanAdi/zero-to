@@ -4,6 +4,7 @@ import {
   DETAIL_DESKTOP,
   DETAIL_PHONE,
   DIMS,
+  EXTENT,
   OUTER_RADIUS,
   Profile,
   bandProfile,
@@ -14,6 +15,7 @@ import {
   buildGlass,
   buildInnerRing,
   buildNeedle,
+  buildNeedleShadow,
   buildOuterRing,
   detailFor,
   flutedBand,
@@ -137,6 +139,69 @@ describe('built parts', () => {
       expect(uv.getY(i)).toBeGreaterThanOrEqual(0);
       expect(uv.getY(i)).toBeLessThanOrEqual(1);
     }
+  });
+
+  it('maps the painted dial the right way round: north on -Z at the top row, east on +X at the right', () => {
+    const dial = buildDial(DETAIL_DESKTOP);
+    const position = dial.getAttribute('position');
+    const uv = dial.getAttribute('uv');
+    const nearest = (x: number, z: number): number => {
+      let best = 0;
+      let bestDistance = Infinity;
+      for (let i = 0; i < position.count; i += 1) {
+        const distance = Math.hypot(position.getX(i) - x, position.getZ(i) - z);
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = i;
+        }
+      }
+      return best;
+    };
+    const north = nearest(0, -DIMS.dialRadius);
+    const south = nearest(0, DIMS.dialRadius);
+    const east = nearest(DIMS.dialRadius, 0);
+    const west = nearest(-DIMS.dialRadius, 0);
+    // v = 1 is the top row of a flipped canvas texture.
+    expect(uv.getY(north)).toBeGreaterThan(0.95);
+    expect(uv.getY(south)).toBeLessThan(0.05);
+    expect(uv.getX(east)).toBeGreaterThan(0.95);
+    expect(uv.getX(west)).toBeLessThan(0.05);
+    expect(uv.getX(north)).toBeCloseTo(0.5, 6);
+    expect(uv.getY(east)).toBeCloseTo(0.5, 6);
+  });
+
+  it('gives the needle a soft shadow of its own shape, flat on the dial', () => {
+    const shadow = buildNeedleShadow();
+    const needle = bounds(buildNeedle(DETAIL_DESKTOP));
+    const box = bounds(shadow);
+    expect(box.min.y).toBe(box.max.y);
+    expect(box.min.y).toBeGreaterThan(DIMS.dialY + DIMS.ringLift);
+    expect(box.max.y).toBeLessThan(needle.min.y);
+    // It reaches a little past the needle all round, and stays on the dial.
+    expect(box.min.z).toBeLessThan(needle.min.z);
+    expect(box.max.z).toBeGreaterThan(needle.max.z);
+    expect(box.max.x).toBeGreaterThan(needle.max.x);
+    expect(Math.abs(box.min.z)).toBeLessThan(DIMS.dialRadius);
+    const up = facing(shadow, new Vector3(0, 1, 0));
+    expect(up.towards).toBe(up.total);
+    // Solid in the middle, clear at the edge: the blur is in the alpha.
+    const color = shadow.getAttribute('color');
+    expect(color.itemSize).toBe(4);
+    const alphas = Array.from({ length: color.count }, (_, i) => color.getW(i));
+    expect(alphas[0]).toBe(1);
+    expect(alphas.filter((alpha) => alpha === 0)).toHaveLength(8);
+    expect(alphas.filter((alpha) => alpha === 1)).toHaveLength(9);
+  });
+
+  it('knows how far the compass reaches above and below its centre', () => {
+    const ring = bounds(buildOuterRing(DETAIL_DESKTOP, TINTS));
+    expect(ring.max.y).toBeCloseTo(EXTENT.withOuterRing.above, 3);
+    expect(ring.min.y).toBeCloseTo(-EXTENT.withOuterRing.below, 3);
+    const body = bounds(buildBody(DETAIL_DESKTOP, TINTS));
+    const glass = bounds(buildGlass(DETAIL_DESKTOP));
+    expect(body.min.y).toBeCloseTo(-EXTENT.withoutOuterRing.below, 3);
+    expect(glass.max.y).toBeCloseTo(EXTENT.withoutOuterRing.above, 6);
+    expect(body.max.y).toBeLessThan(EXTENT.withoutOuterRing.above);
   });
 
   it('points the needle north (-Z) at rest, red half first', () => {

@@ -53,7 +53,7 @@ export function paintDial(ctx: CanvasRenderingContext2D, options: PaintDialOptio
     const fontPx = px(item.size);
     ctx.save();
     ctx.translate(p.x, p.y);
-    ctx.rotate(item.bearing);
+    if (item.turn !== 0) ctx.rotate(item.turn);
     ctx.font = `${weight} ${fontPx.toFixed(1)}px ${family}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';

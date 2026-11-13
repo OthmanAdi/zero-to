@@ -1,4 +1,4 @@
-export { createCompass, defaultCompassColors, dialRadiusFor } from './compass';
+export { FLOAT_BAND, createCompass, defaultCompassColors, dialRadiusFor } from './compass';
 export type { CompassColors, CompassOptions, CompassPart, HeadingOptions } from './compass';
 export {
   TAU,
@@ -9,6 +9,7 @@ export {
   normalizeBearing,
   retarget,
   shortestTurn,
+  worldToBody,
   yawToBearing,
 } from './heading';
 export { NEEDLE_SPRING, springAtRest, springFromStiffness, springOvershoot, stepSpring } from './spring';

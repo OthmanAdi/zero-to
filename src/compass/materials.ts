@@ -1,7 +1,9 @@
 import {
   CanvasTexture,
+  ClampToEdgeWrapping,
   Color,
   LinearMipmapLinearFilter,
+  MeshBasicMaterial,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   SRGBColorSpace,
@@ -149,33 +151,42 @@ export interface GlassUniforms {
   readonly glassRim: { value: Color };
   readonly glassRimStrength: { value: number };
   readonly glassEdge: { value: number };
+  /** The brightest a reflection on the glass can get, in linear light before tone mapping. */
+  readonly glassCap: { value: number };
 }
 
 /**
  * The glass dome without a transmission pass. The surface has no colour of its own, so all it adds is what it
- * reflects: the room, the lamp and a cool rim where it turns away from the eye. The shader is patched in two
- * places: the rim light is added to the outgoing light, and the reflections are blended on top of the dial at
- * full strength (premultiplied blending) while the alpha only says how much the glass dims what is behind it.
+ * reflects: a faint ghost of the room, one small glint of the lamp and a thin cool rim where it turns away from
+ * the eye. The shader is patched in three places:
+ *
+ * - the rim light is added to the outgoing light;
+ * - the outgoing light goes through a soft knee, so a highlight approaches `glassCap` and no further, however
+ *   strong the lamp of the host is: the glint stays a small bright point instead of growing into a white patch;
+ * - the reflection is laid over the dial instead of added to it: the alpha is at least as large as the brightest
+ *   channel, so reflection plus dial can never exceed white and the rose stays readable under the glint.
  */
 export function createGlass(setup: MaterialSetup): { material: MeshPhysicalMaterial; uniforms: GlassUniforms } {
   const uniforms: GlassUniforms = {
     glassRim: { value: new Color(setup.colors.glass) },
-    glassRimStrength: { value: 0.1 },
-    glassEdge: { value: 0.2 },
+    glassRimStrength: { value: 0.09 },
+    glassEdge: { value: 0.16 },
+    glassCap: { value: 1.5 },
   };
   const material = new MeshPhysicalMaterial({
     color: 0x000000,
     metalness: 0,
-    roughness: 0.06,
+    // The base lobe is wide and weak: a soft bloom round the glint. The clear coat is the glint itself.
+    roughness: 0.3,
     ior: 1.52,
-    specularIntensity: 1,
+    specularIntensity: 0.12,
     specularColor: new Color(setup.colors.glass),
     clearcoat: 1,
-    clearcoatRoughness: 0.03,
+    clearcoatRoughness: 0.07,
     envMap: setup.envMap,
-    envMapIntensity: 0.32,
+    envMapIntensity: 0.1,
     transparent: true,
-    opacity: 0.05,
+    opacity: 0.04,
     premultipliedAlpha: true,
     depthWrite: false,
   });
@@ -183,26 +194,73 @@ export function createGlass(setup: MaterialSetup): { material: MeshPhysicalMater
     shader.uniforms.glassRim = uniforms.glassRim;
     shader.uniforms.glassRimStrength = uniforms.glassRimStrength;
     shader.uniforms.glassEdge = uniforms.glassEdge;
+    shader.uniforms.glassCap = uniforms.glassCap;
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
-        'uniform vec3 glassRim;\nuniform float glassRimStrength;\nuniform float glassEdge;\nvoid main() {',
+        [
+          'uniform vec3 glassRim;',
+          'uniform float glassRimStrength;',
+          'uniform float glassEdge;',
+          'uniform float glassCap;',
+          'void main() {',
+        ].join('\n'),
       )
       .replace(
         '#include <opaque_fragment>',
         [
           'float glassFacing = saturate( abs( dot( normalize( normal ), normalize( vViewPosition ) ) ) );',
-          'float glassFresnel = pow( 1.0 - glassFacing, 4.0 );',
+          'float glassFresnel = pow( 1.0 - glassFacing, 5.0 );',
           'outgoingLight += glassRim * glassRimStrength * glassFresnel;',
+          'float glassPeak = max( outgoingLight.r, max( outgoingLight.g, outgoingLight.b ) );',
+          'outgoingLight *= 1.0 / ( 1.0 + glassPeak / glassCap );',
           '#include <opaque_fragment>',
           'gl_FragColor.a = saturate( diffuseColor.a + glassEdge * glassFresnel );',
         ].join('\n'),
       )
-      // The reflections are already what should be added; do not scale them by the alpha.
-      .replace('#include <premultiplied_alpha_fragment>', '');
+      // By now the colour is tone mapped. Do not scale it by the alpha; raise the alpha to cover it instead.
+      .replace(
+        '#include <premultiplied_alpha_fragment>',
+        'gl_FragColor.a = max( gl_FragColor.a, max( gl_FragColor.r, max( gl_FragColor.g, gl_FragColor.b ) ) );',
+      );
   };
   material.customProgramCacheKey = () => 'zero-to-compass-glass';
   return { material, uniforms };
+}
+
+/**
+ * The soft shadow of the needle on the dial: black, with the softness in the vertex alpha of its geometry. The
+ * shadow maps of a table-sized lamp cannot resolve something this small, so the compass draws it itself.
+ */
+export function createNeedleShadow(): MeshBasicMaterial {
+  return new MeshBasicMaterial({
+    color: 0x0a0704,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+    toneMapped: false,
+  });
+}
+
+/**
+ * How the painted dial is put on the dial plane. The canvas is used as painted: flipped once vertically (the
+ * three.js default, so the top row of the canvas is v = 1, which the dial geometry maps to north), never
+ * mirrored, repeated or turned.
+ */
+export function configureDialTexture<T extends Texture>(texture: T): T {
+  texture.colorSpace = SRGBColorSpace;
+  texture.flipY = true;
+  texture.wrapS = ClampToEdgeWrapping;
+  texture.wrapT = ClampToEdgeWrapping;
+  texture.repeat.set(1, 1);
+  texture.offset.set(0, 0);
+  texture.rotation = 0;
+  texture.anisotropy = 8;
+  texture.minFilter = LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
+  texture.name = 'compass-dial';
+  return texture;
 }
 
 /**
@@ -235,13 +293,7 @@ export function createDialTexture(colors: CompassColors, size: number, seed: num
     colors: dialColors,
     random: createRandom(seed),
   });
-  const texture = new CanvasTexture(canvas);
-  texture.colorSpace = SRGBColorSpace;
-  texture.anisotropy = 8;
-  texture.minFilter = LinearMipmapLinearFilter;
-  texture.generateMipmaps = true;
-  texture.name = 'compass-dial';
-  return texture;
+  return configureDialTexture(new CanvasTexture(canvas));
 }
 
 /** The side of the dial canvas for a device. */

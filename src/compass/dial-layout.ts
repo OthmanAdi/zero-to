@@ -37,7 +37,17 @@ export interface DialLabel {
   /** Font size as a fraction of the dial radius. */
   readonly size: number;
   readonly kind: LabelKind;
+  /**
+   * How far the text is turned on the dial, in radians clockwise. 0 is upright: the top of every letter points
+   * north. The dial keeps north away from the viewer while the body turns under it, so upright text reads the
+   * right way up from the front at every moment; text turned to follow the ring would stand on its head on the
+   * near side.
+   */
+  readonly turn: number;
 }
+
+/** All lettering on the dial is upright. */
+export const LABEL_TURN = 0;
 
 export type FacetTone = 'ink' | 'paper' | 'soft';
 
@@ -117,14 +127,22 @@ export function layoutDial(options: DialLayoutOptions = {}): DialLayout {
   for (let degrees = 0; degrees < 360; degrees += 30) {
     if (degrees % 90 === 0) {
       const text = CARDINALS[degrees / 90] as string;
-      ringLabels.push({ bearing: rad(degrees), radius: labelRadius, text, size: ringWidth * 0.5, kind: 'cardinal' });
+      ringLabels.push({
+        bearing: rad(degrees),
+        radius: labelRadius,
+        text,
+        size: ringWidth * 0.46,
+        kind: 'cardinal',
+        turn: LABEL_TURN,
+      });
     } else {
       ringLabels.push({
         bearing: rad(degrees),
         radius: labelRadius,
         text: String(degrees),
-        size: ringWidth * 0.27,
+        size: ringWidth * 0.25,
         kind: 'numeral',
+        turn: LABEL_TURN,
       });
     }
   }
@@ -165,6 +183,7 @@ export function layoutDial(options: DialLayoutOptions = {}): DialLayout {
     text,
     size: 0.085 * c,
     kind: 'intercardinal' as const,
+    turn: LABEL_TURN,
   }));
 
   const northMark: [DialPoint, DialPoint, DialPoint] = [
@@ -186,8 +205,8 @@ export function dialToCanvas(point: DialPoint, size: number, fill = DIAL_FILL): 
 export const DIAL_FILL = 0.98;
 
 /**
- * Texture coordinates of a point on the dial plane. `x` is east and `z` is south in the frame of the compass body
- * (the scene's +X and +Z when the body is not turned); `dialRadius` is the radius of the dial in the same units.
+ * Texture coordinates of a point on the dial plane. `x` is east and `z` is south in the frame of the dial (the
+ * scene's +X and +Z, because the dial keeps north while the body turns); `dialRadius` is the radius of the dial in the same units.
  * With a flipped canvas texture (the three.js default), v = 1 is the top of the canvas, which is north.
  */
 export function dialUv(x: number, z: number, dialRadius: number): { u: number; v: number } {

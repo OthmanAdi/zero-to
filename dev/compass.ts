@@ -21,7 +21,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
-import { bearingToDirection, createCompass, type CompassPart } from '../src/compass';
+import { bearingToDirection, createCompass, directionToBearing, type CompassPart } from '../src/compass';
 import { createRandom } from '../src/core/random';
 import type { SceneEnvironment } from '../src/scene/contract';
 import { PALETTE } from '../src/scene/palette';
@@ -31,7 +31,7 @@ import { PALETTE } from '../src/scene/palette';
  *
  * Keys 1 to 5 point the needle at the five numbered tags, G toggles the glow, the pointer tilts the compass.
  * URL: ?still=1 freezes time (with &t=seconds to choose the moment), &heading=degrees, &glow=0..1, &phone=1,
- * &reduced=1, &ring=0 (no outer ring), &cam=hero|close|top|low|side.
+ * &reduced=1, &ring=0 (no outer ring), &cam=hero|close|top|low|side|macro.
  */
 const params = new URLSearchParams(window.location.search);
 const flag = (name: string): boolean => params.get(name) === '1';
@@ -166,19 +166,22 @@ BEARINGS.forEach((bearing, i) => {
   scene.add(tag);
 });
 
+// The lamp stands above and behind-left of the compass, so shadows fall towards the viewer.
+const LAMP_POSITION = new Vector3(-2.4, 9, -3.6);
+
 // The compass.
 const compass: CompassPart = createCompass({
   environment,
+  lightBearing: directionToBearing(LAMP_POSITION.x, LAMP_POSITION.z),
+  lightElevation: Math.atan2(LAMP_POSITION.y - 2, Math.hypot(LAMP_POSITION.x, LAMP_POSITION.z)),
   heading: (number('heading', 72) * Math.PI) / 180,
   glow: number('glow', 0.35),
   outerRing: params.get('ring') !== '0',
 });
 scene.add(compass.object);
-const compassHeight = compass.object.getObjectByName('compass-floater')?.position.y ?? 1.5;
 
-// The lamp: above and behind-left of the compass, so shadows fall towards the viewer.
 const lamp = new SpotLight(new Color(PALETTE.lamp), number('lamp', 120), 0, (36 * Math.PI) / 180, 1, 2);
-lamp.position.set(-2.4, 9, -3.6);
+lamp.position.copy(LAMP_POSITION);
 lamp.target.position.set(0, 0.6, 0);
 lamp.castShadow = true;
 lamp.shadow.mapSize.set(2048, 2048);
@@ -192,14 +195,15 @@ scene.add(new HemisphereLight(0x9fb1d0, 0x0b0f17, 0.1));
 
 // The camera: about 24 degrees above the table, looking at the compass.
 const camera = new PerspectiveCamera(30, 1, 0.1, 100);
-const target = new Vector3(0, compassHeight - 0.15, 0);
+const target = new Vector3(0, (compass.topY + compass.bottomY) / 2 - 0.12, 0);
 function placeCamera(): void {
   const poses: Record<string, [number, number, number]> = {
-    hero: [24, 8.6, 0],
-    close: [24, 5.4, 0],
-    top: [78, 6.2, 0],
-    low: [9, 8.5, 0],
-    side: [24, 7.5, 55],
+    hero: [24, 7.4, 0],
+    close: [24, 4.3, 0],
+    top: [78, 4.6, 0],
+    low: [9, 7.4, 0],
+    side: [24, 6.4, 55],
+    macro: [50, 2.3, 0],
   };
   const [elevationDeg, distance, azimuthDeg] = poses[cam] ?? (poses.hero as [number, number, number]);
   const elevation = (elevationDeg * Math.PI) / 180;
@@ -249,7 +253,8 @@ function frame(now: number): void {
     hud.textContent =
       `1-5 needle   G glow   pointer tilt\n` +
       `bearing ${((compass.bearing * 180) / Math.PI).toFixed(1)} deg   heading ${((compass.heading * 180) / Math.PI).toFixed(0)} deg\n` +
-      `part ${compass.triangles} tris   frame ${info.triangles} tris   ${info.calls} calls`;
+      `part ${compass.triangles} tris   frame ${info.triangles} tris   ${info.calls} calls\n` +
+      `floats from y ${compass.bottomY.toFixed(2)} to ${compass.topY.toFixed(2)}`;
   }
   if (frames === 3) document.body.dataset.ready = '1';
   requestAnimationFrame(frame);

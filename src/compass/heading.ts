@@ -57,6 +57,16 @@ export function needleYaw(worldBearing: number, bodyYaw: number): number {
   return bearingToYaw(worldBearing) - bodyYaw;
 }
 
+/**
+ * A flat vector given on the table (x east, z south), expressed in the frame of a body that is turned by
+ * `bodyYaw` (its `rotation.y`). The opposite of what the turn does to its children.
+ */
+export function worldToBody(x: number, z: number, bodyYaw: number): { x: number; z: number } {
+  const cos = Math.cos(bodyYaw);
+  const sin = Math.sin(bodyYaw);
+  return { x: x * cos - z * sin, z: x * sin + z * cos };
+}
+
 /** The bearing a needle with local `rotation.y = localYaw` shows on the table when the body is turned by `bodyYaw`. */
 export function yawToBearing(localYaw: number, bodyYaw: number): number {
   return normalizeBearing(-(localYaw + bodyYaw));

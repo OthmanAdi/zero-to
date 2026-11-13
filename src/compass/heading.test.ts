@@ -9,6 +9,7 @@ import {
   normalizeBearing,
   retarget,
   shortestTurn,
+  worldToBody,
   yawToBearing,
 } from './heading';
 
@@ -65,6 +66,24 @@ describe('bearings and directions', () => {
       expect(directionToBearing(direction.x * 4, direction.z * 4)).toBeCloseTo(deg(degrees), 9);
     }
     expect(directionToBearing(0, 0)).toBe(0);
+  });
+});
+
+describe('worldToBody', () => {
+  it('undoes the turn of the body', () => {
+    const body = new Group();
+    const child = new Object3D();
+    body.add(child);
+    const world = new Vector3();
+    for (const bodyYaw of [0, 0.6, -1.9, 7]) {
+      const local = worldToBody(0.3, -0.4, bodyYaw);
+      body.rotation.y = bodyYaw;
+      child.position.set(local.x, 0, local.z);
+      body.updateMatrixWorld(true);
+      child.getWorldPosition(world);
+      expect(world.x).toBeCloseTo(0.3, 9);
+      expect(world.z).toBeCloseTo(-0.4, 9);
+    }
   });
 });
 

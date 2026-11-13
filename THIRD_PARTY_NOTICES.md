@@ -30,6 +30,12 @@ zero-to is licensed under Apache-2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE
 - Licence: SIL Open Font License 1.1. Full text: [public/licenses/IBM-Plex-Mono-OFL-1.1.txt](public/licenses/IBM-Plex-Mono-OFL-1.1.txt).
 - Source: https://github.com/IBM/plex, packaged as `@fontsource/ibm-plex-mono` version 5.3.0 from npm.
 
+## Vite module preload helper
+
+- Use: when Vite bundles the site it adds a short module-preload helper to the generated JavaScript (inside the main `home-*.js` chunk in `assets/`, and inside the skill's single-file viewer). That helper is the only code from Vite in the build. Vite itself is not shipped.
+- Copyright (c) 2019-present, VoidZero Inc. and Vite contributors.
+- Licence: MIT. Full text: [public/licenses/Vite-MIT.txt](public/licenses/Vite-MIT.txt), the "Vite core license" section of `LICENSE.md` in the npm package `vite` 8.3.7, copied exactly.
+
 ## Bookmark Bookshelf modules
 
 - Use: the resource shelf in the corner of the map and the reader page of each source (the shelf, motion and reader modules, the design tokens and the travelling cover), in `src/bookshelf/`, copied unchanged. A few rules of its base and composition stylesheets are in `src/shelf/`, scoped to the shelf. [PROVENANCE.md](PROVENANCE.md) lists every file.

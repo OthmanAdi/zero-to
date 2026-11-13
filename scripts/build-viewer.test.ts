@@ -1,6 +1,8 @@
 // @vitest-environment node
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { inlineAssets, inlineScript, inlineStyle, outsideReferences } from './build-viewer';
+import { VIEWER_LICENCES, inlineAssets, inlineScript, inlineStyle, licenceComment, outsideReferences, withLicenceComment } from './build-viewer';
 
 describe('the single-file viewer', () => {
   it('writes a script so it cannot close its own element or open a comment', () => {
@@ -38,6 +40,29 @@ describe('the single-file viewer', () => {
     const result = inlineAssets(html, () => null);
     expect(result.scripts).toBe(0);
     expect(outsideReferences(result.html).sort()).toEqual(['./assets/missing.js', './favicon.svg']);
+  });
+
+  it('carries the notices of everything inside it in one comment after the doctype', () => {
+    const comment = licenceComment('zero-to\nCopyright 2026 Someone', [
+      { name: 'three.js (MIT License)', text: 'The MIT License\r\n\r\nCopyright three.js authors' },
+      { name: 'A font (SIL Open Font License 1.1)', text: 'Text with --> and --!> inside' },
+    ]);
+    expect(comment.startsWith('<!--\nzero-to\nCopyright 2026 Someone')).toBe(true);
+    expect(comment).toContain('==== three.js (MIT License) ====\n\nThe MIT License\n\nCopyright three.js authors');
+    // The comment cannot be closed early by a licence text.
+    expect(comment.slice(4, -3)).not.toMatch(/--!?>/);
+    expect(comment.endsWith('\n-->')).toBe(true);
+    const html = withLicenceComment('<!doctype html>\n<html><head></head></html>', comment);
+    expect(html.startsWith(`<!doctype html>\n${comment}\n<html>`)).toBe(true);
+  });
+
+  it('names a licence file for every third-party part of the build, and each one exists', () => {
+    for (const licence of VIEWER_LICENCES) {
+      expect(existsSync(join(import.meta.dirname, '..', 'public', 'licenses', licence.file)), licence.file).toBe(true);
+    }
+    expect(VIEWER_LICENCES.map((licence) => licence.file)).toEqual(
+      expect.arrayContaining(['three.js-MIT.txt', 'Vite-MIT.txt', 'Fraunces-OFL-1.1.txt', 'Atkinson-Hyperlegible-Next-OFL-1.1.txt', 'IBM-Plex-Mono-OFL-1.1.txt']),
+    );
   });
 
   it('finds addresses in styles, and takes data addresses and links in code as harmless', () => {

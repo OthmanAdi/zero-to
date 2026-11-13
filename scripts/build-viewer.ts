@@ -65,6 +65,38 @@ export function outsideReferences(html: string): string[] {
   return [...found];
 }
 
+/** The licence files whose code or fonts end up inside the viewer, in the order the notice lists them. */
+export const VIEWER_LICENCES: readonly { readonly name: string; readonly file: string }[] = [
+  { name: 'three.js (MIT License)', file: 'three.js-MIT.txt' },
+  { name: 'Vite module preload helper (MIT License)', file: 'Vite-MIT.txt' },
+  { name: 'Fraunces (SIL Open Font License 1.1)', file: 'Fraunces-OFL-1.1.txt' },
+  { name: 'Atkinson Hyperlegible Next (SIL Open Font License 1.1)', file: 'Atkinson-Hyperlegible-Next-OFL-1.1.txt' },
+  { name: 'IBM Plex Mono (SIL Open Font License 1.1)', file: 'IBM-Plex-Mono-OFL-1.1.txt' },
+];
+
+/**
+ * The comment at the top of the viewer. The file travels alone (with the skill, and as every page the skill
+ * builds), so the notices of the code and fonts inside it travel in it too.
+ */
+export function licenceComment(notice: string, licences: readonly { readonly name: string; readonly text: string }[]): string {
+  // A comment ends at the first "-->" or "--!>"; neither may appear inside it.
+  const safe = (text: string): string => text.replace(/\r\n?/g, '\n').replace(/--!?>/g, '- ->').trim();
+  const parts = [
+    safe(notice),
+    'Licensed under the Apache License, Version 2.0: https://www.apache.org/licenses/LICENSE-2.0',
+    'Source: https://github.com/OthmanAdi/zero-to',
+    'This file contains third-party code and fonts under their own licences. Their notices and licence texts follow.',
+    ...licences.map((licence) => `==== ${licence.name} ====\n\n${safe(licence.text)}`),
+  ];
+  return `<!--\n${parts.join('\n\n')}\n-->`;
+}
+
+/** Puts the comment right after the doctype, so the page stays in standards mode. */
+export function withLicenceComment(html: string, comment: string): string {
+  const doctype = /^\s*<!doctype html>/i.exec(html);
+  return doctype ? `${doctype[0]}\n${comment}${html.slice(doctype[0].length)}` : `${comment}\n${html}`;
+}
+
 /**
  * Puts the built script and style files into the page. `read` returns the text of a file of the build by the
  * address the page uses for it.
@@ -135,6 +167,15 @@ export async function buildViewer(options: BuildViewerOptions = {}): Promise<Bui
       .replace(/\s*<link\b[^>]*?rel=["'](?:manifest|apple-touch-icon)["'][^>]*>/gi, '')
       .replace(/\s*<link\b[^>]*?rel=["']icon["'][^>]*?type=["']image\/png["'][^>]*>/gi, '')
       .replace(/<link\b[^>]*?rel=["']icon["'][^>]*>/i, () => iconTag);
+
+    const licences = VIEWER_LICENCES.map((licence) => ({
+      name: licence.name,
+      text: readFileSync(join(root, 'public', 'licenses', licence.file), 'utf8'),
+    }));
+    // The first paragraph of NOTICE names the product and its copyright; the rest points to files the viewer
+    // does not travel with, so the comment says it in its own words instead.
+    const notice = readFileSync(join(root, 'NOTICE'), 'utf8').split(/\r?\n\s*\r?\n/)[0] ?? 'zero-to';
+    html = withLicenceComment(html, licenceComment(notice, licences));
 
     const outside = outsideReferences(html);
     if (outside.length > 0) throw new Error(`build-viewer: the viewer still refers to files outside itself: ${outside.slice(0, 8).join(', ')}`);

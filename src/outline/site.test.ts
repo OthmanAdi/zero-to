@@ -95,7 +95,7 @@ describe('headTags', () => {
 
   it('escapes roadmap text in tags and inside the JSON-LD script', () => {
     const roadmap = { ...sample('photography-basics'), title: '</script><script>alert(1)</script> "x"' };
-    const tags = headTags({ kind: 'roadmap', path: 'r/x/', base: null, roadmap, ui: 'en' });
+    const tags = headTags({ kind: 'roadmap', path: 'roadmaps/x/', base: null, roadmap, ui: 'en' });
     expect(tags).not.toContain('</script><script>');
     const head = parseFragment(tags);
     expect(head.querySelectorAll('script')).toHaveLength(1);
@@ -140,7 +140,7 @@ describe('gallery and home pages', () => {
     const page = parseFragment(toHtml(homeTree(all, 'en')));
     expect(page.querySelector('h1')?.textContent).toBeTruthy();
     expect(firstSkip(headingLevels(page))).toBeNull();
-    for (const r of all) expect(page.querySelector(`a[href="r/${r.id}/"]`)).not.toBeNull();
+    for (const r of all) expect(page.querySelector(`a[href="${roadmapPath(r.id)}"]`)).not.toBeNull();
   });
 });
 

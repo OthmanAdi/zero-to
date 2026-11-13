@@ -11,7 +11,7 @@ import { say } from './strings';
 import { el, escapeAttr, road, scriptJson, type ONode } from './tree';
 
 /** Where a gallery roadmap's page lives, below the site base. */
-export const roadmapPath = (id: string): string => `r/${id}/`;
+export const roadmapPath = (id: string): string => `roadmaps/${id}/`;
 export const GALLERY_PATH = 'gallery/';
 export const HOME_PATH = '';
 /** Social images, below the site base. */

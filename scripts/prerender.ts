@@ -1,7 +1,7 @@
 /**
  * Prerenders the search pages into the built site, so every page reads as real HTML before any script runs:
  *
- * - `r/<id>/index.html` for every gallery roadmap: its full outline in the body, its head tags (title,
+ * - `roadmaps/<id>/index.html` for every gallery roadmap: its full outline in the body, its head tags (title,
  *   description, Open Graph, JSON-LD) and the roadmap itself in the `zero-to-roadmap` element for the app;
  * - `gallery/index.html`: every example with its stages and steps as links;
  * - `index.html` (the root): what zero-to is and the examples, under the scene;

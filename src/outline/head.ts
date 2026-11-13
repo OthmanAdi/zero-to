@@ -15,7 +15,7 @@ export type PageKind = 'home' | 'gallery' | 'roadmap';
 
 export interface HeadPage {
   readonly kind: PageKind;
-  /** The page's path below the site base: '' for the root, 'gallery/', 'r/<id>/'. */
+  /** The page's path below the site base: '' for the root, 'gallery/', 'roadmaps/<id>/'. */
   readonly path: string;
   /** The site's https base without a trailing slash, or null: then the page is noindex. */
   readonly base: string | null;
@@ -176,7 +176,7 @@ export function jsonLd(page: HeadPage): Record<string, unknown> {
       mainEntity: {
         '@type': 'ItemList',
         numberOfItems: samples.length,
-        itemListElement: samples.map((r, i) => withUrl({ '@type': 'ListItem', position: i + 1, name: r.title }, absolute(page.base, `r/${r.id}/`))),
+        itemListElement: samples.map((r, i) => withUrl({ '@type': 'ListItem', position: i + 1, name: r.title }, absolute(page.base, `roadmaps/${r.id}/`))),
       },
     };
   }

@@ -2,12 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>zero-to: learning roadmaps you can walk</title>
     <meta name="description" content="Type /zero-to and a topic in your coding agent. Get a 3D trail map of what to learn, in what order, with checked resources and saved progress." />
+    <meta name="theme-color" content="#05070b" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <style>
+      html {
+        background: #05070b;
+        color: #eef0f2;
+      }
+      body {
+        margin: 0;
+      }
+      #zt-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 80;
+        display: none;
+        place-items: center;
+        pointer-events: none;
+        transition: opacity 0.5s ease;
+      }
+      html.map-view #zt-boot {
+        display: grid;
+      }
+      html[data-zt] #zt-boot {
+        opacity: 0;
+      }
+      #zt-boot svg {
+        width: 44px;
+        height: 44px;
+        animation: zt-boot 1.6s ease-in-out infinite alternate;
+      }
+      @keyframes zt-boot {
+        from {
+          opacity: 0.25;
+        }
+        to {
+          opacity: 0.8;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #zt-boot svg {
+          animation: none;
+          opacity: 0.6;
+        }
+      }
+    </style>
+    <script>
+      // With a 3D context the room is shown and the text steps back before the first paint. Without one, or
+      // without scripts, the page is its text.
+      try {
+        var probe = document.createElement('canvas');
+        if ((probe.getContext('webgl2') || probe.getContext('webgl')) && !/[?&]view=list(&|$)/.test(location.search)) {
+          document.documentElement.classList.add('map-view');
+        }
+      } catch (error) {}
+    </script>
   </head>
   <body>
-    <main id="app"></main>
+    <div id="zero-to-outline"></div>
+    <div id="zt-boot" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none">
+        <ellipse cx="16" cy="16" rx="9.5" ry="12" stroke="#eef0f2" stroke-width="3" />
+        <path d="M6.5 27.5 18.005 17.656 13.995 14.344Z" fill="#eef0f2" />
+        <path d="M25.5 4.5 13.995 14.344 18.005 17.656Z" fill="#e2492f" />
+      </svg>
+    </div>
+    <noscript>
+      <style>
+        #zt-boot {
+          display: none !important;
+        }
+      </style>
+    </noscript>
+    <script type="application/json" id="zero-to-roadmap"></script>
+    <script type="application/json" id="zero-to-receipt"></script>
     <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

@@ -1,0 +1,556 @@
+/*
+ * The page: where the canvas, the scroll, the overlay and the cut lie over each other. Every selector the page
+ * adds starts at `zt-`. The packages keep their own styles; the few rules here that name their classes only
+ * decide when a part is in view (the table's interface steps back while the sections scroll over it, and all
+ * of it during the dive).
+ *
+ * Layers, from the back: canvas 0, room overlays 1, scrolling page 2, overlay 10, the page's own layer 12,
+ * curtain 58, red guard 60.
+ */
+
+html.zt-app {
+  background: var(--zt-void, #05070b);
+  overflow-anchor: none;
+}
+
+html.zt-app body {
+  margin: 0;
+  background: transparent;
+  color: var(--zt-text, #eef0f2);
+  font-family: var(--zt-font-text, system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The map view is driven by the wheel, the keys and touch. Its scroll bar would shift the canvas when it goes. */
+html.zt-app.map-view {
+  scrollbar-width: none;
+}
+
+html.zt-app.map-view::-webkit-scrollbar {
+  display: none;
+}
+
+#zt-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  outline: none;
+  touch-action: pan-y;
+}
+
+html.zt-app .zt-overlays {
+  z-index: 1;
+}
+
+html.zt-app:not(.map-view) :is(#zt-stage, .zt-overlays, #zt-page) {
+  display: none;
+}
+
+/* ---- The scrolling page --------------------------------------------------------------------------------- */
+
+#zt-page {
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+
+#zt-page > * {
+  pointer-events: auto;
+}
+
+/* The hero's own screen. The pointer goes through it to the canvas. */
+#zt-page > .zt-hero-space {
+  height: 100vh;
+  height: 100svh;
+  pointer-events: none;
+}
+
+/* The sections come up over the fixed table: clear at their top edge, the room's night a little further down. */
+#zt-sections {
+  background: linear-gradient(180deg, rgb(11 15 23 / 0) 0, rgb(11 15 23 / 0.86) min(17vh, 160px), var(--zt-night, #0b0f17) min(30vh, 280px));
+}
+
+#zt-trek {
+  display: none;
+  height: calc(var(--zt-stretch, 9) * 100vh);
+  pointer-events: none;
+}
+
+html[data-zt-view='walk'] #zt-trek {
+  display: block;
+}
+
+html[data-zt-view='walk'] :is(#zt-sections, .zt-hero-space) {
+  display: none;
+}
+
+/* The index tabs belong to the table. */
+html:is([data-zt-view='walk'], [data-zt-view='list']) .zs-nav {
+  display: none;
+}
+
+/* ---- When the overlay's parts are in view ---------------------------------------------------------------- */
+
+html.zt-app .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf, .zh-header, .zh-note, .zh-profile-host):not([data-off]) {
+  transition:
+    opacity 320ms ease,
+    visibility 0s;
+}
+
+/* The sections have come up: the table's own interface steps back. The header stays. */
+html.zt-away .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf),
+/* The dive: everything goes before the camera falls. */
+html[data-zt-phase='dive'] .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf, .zh-header),
+/* The landing: nothing until the walker stands. */
+html[data-zt-phase='land'] .zh-hud > *,
+html[data-zt-phase='leave'] .zh-hud > :not(.zh-header) {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition:
+    opacity 300ms ease,
+    visibility 0s linear 300ms !important;
+}
+
+/* The shade behind the profile strip comes with the strip. It is never there before, so it has nothing to fade from. */
+html.zt-app .zh-hud::after {
+  transition: opacity 500ms ease;
+}
+
+html[data-zt-phase='land'] .zh-hud::after {
+  opacity: 0;
+  transition: none;
+}
+
+html[data-zt-phase='leave'] .zh-hud::after {
+  opacity: 0;
+}
+
+/*
+ * On a narrow window the sections are not pinned and their text scrolls up under the header. There the header
+ * gets a little night behind it, as it has in the list view.
+ */
+@media (max-width: 899px) {
+  html.zt-away[data-zt-view='table'] .zh-hud > .zh-header {
+    padding-bottom: 16px;
+    background: linear-gradient(180deg, var(--zt-night, #0b0f17) 68%, rgb(11 15 23 / 0));
+  }
+}
+
+/* The intro plays again after a walk: the side card waits for its moment, as it did the first time. */
+html[data-zt-intro='again'] .zh-hud > .zh-side {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: none !important;
+}
+
+/* The finale is the whole map alone: the note is put away. */
+html[data-zt-finale] .zh-hud > .zh-note {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transition:
+    opacity 300ms ease,
+    visibility 0s linear 300ms !important;
+}
+
+/* Without WebGL there is no map to go back to. */
+html.no-webgl .zh-hud .zh-tool:is([data-tool='map'], [data-tool='list']) {
+  display: none;
+}
+
+/* ---- The list view --------------------------------------------------------------------------------------- */
+
+/* The whole page changes at once when the list view opens: the table's interface does not linger over it. */
+html[data-zt-view='list'] .zh-hud > [data-off] {
+  transition: none !important;
+}
+
+html.zt-app:not(.map-view) #zero-to-outline {
+  padding: 96px 0 250px;
+}
+
+@media (max-width: 760px) {
+  html.zt-app:not(.map-view) #zero-to-outline {
+    padding: 76px 0 210px;
+  }
+}
+
+/* ---- The red guard and the curtain ----------------------------------------------------------------------- */
+
+#zt-guard,
+#zt-curtain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  will-change: opacity;
+}
+
+#zt-guard {
+  z-index: 60;
+  background: radial-gradient(
+    circle at var(--zt-guard-x, 50%) var(--zt-guard-y, 50%),
+    var(--zt-guard-a, #e9523a) 0%,
+    var(--zt-guard-b, #e2492f) 55%,
+    var(--zt-guard-c, #d8402a) 100%
+  );
+}
+
+#zt-curtain {
+  z-index: 58;
+  background: var(--zt-void, #05070b);
+}
+
+/* ---- The page's own layer -------------------------------------------------------------------------------- */
+
+#zt-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  color: var(--zt-text, #eef0f2);
+  font-family: var(--zt-font-text, system-ui, sans-serif);
+}
+
+#zt-layer *,
+#zt-layer *::before {
+  box-sizing: border-box;
+}
+
+#zt-layer [hidden] {
+  display: none !important;
+}
+
+#zt-layer button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#zt-layer :is(button, a):focus-visible {
+  outline: 2px solid var(--zt-lamp, #ffd9a0);
+  outline-offset: 2px;
+}
+
+/* The finale line over the whole map. */
+.zt-finale {
+  position: absolute;
+  inset: clamp(92px, 14vh, 136px) 24px auto;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  text-align: center;
+  opacity: var(--zt-finale, 0);
+  transform: translateY(calc((1 - var(--zt-finale, 0)) * 14px));
+  visibility: hidden;
+}
+
+.zt-finale[data-on] {
+  visibility: visible;
+}
+
+.zt-finale-kicker {
+  margin: 0;
+  font: 500 10.5px/1.35 var(--zt-font-label, ui-monospace, monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zt-text-soft, #a9b2bf);
+}
+
+.zt-finale-line {
+  max-width: min(760px, 86vw);
+  margin: 0;
+  font-family: var(--zt-font-display, Georgia, serif);
+  font-size: clamp(26px, 3.1vw, 44px);
+  font-weight: 500;
+  font-variation-settings: 'opsz' 96;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.zt-finale-line em {
+  display: block;
+  font-style: italic;
+  color: var(--zt-signal, #e2492f);
+  letter-spacing: -0.01em;
+}
+
+.zt-finale-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.zt-finale[data-on] .zt-finale-actions > * {
+  pointer-events: auto;
+}
+
+.zt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid rgb(238 240 242 / 0.26);
+  border-radius: 999px;
+  background: rgb(5 8 12 / 0.56);
+  backdrop-filter: blur(6px);
+  font: 500 10.5px/1 var(--zt-font-label, ui-monospace, monospace);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 140ms ease-out;
+}
+
+.zt-chip:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .zt-chip:hover {
+    border-color: rgb(238 240 242 / 0.5);
+    background: rgb(20 27 39 / 0.8);
+  }
+}
+
+.zt-chip[data-kind='go'] {
+  border-color: transparent;
+  background: var(--zt-signal-deep, #b8341f);
+  color: var(--zt-paper-hi, #fbf8f1);
+}
+
+@media (hover: hover) {
+  .zt-chip[data-kind='go']:hover {
+    border-color: transparent;
+    background: var(--zt-signal, #e2492f);
+  }
+}
+
+.zt-chip::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--zt-signal, #e2492f);
+}
+
+.zt-chip[data-kind='go']::before {
+  background: var(--zt-paper-hi, #fbf8f1);
+}
+
+.zt-chip[data-plain]::before {
+  content: none;
+}
+
+/* "Jump to where you are", over the profile strip. */
+.zt-jump {
+  position: absolute;
+  left: 50%;
+  bottom: 148px;
+  translate: -50% 0;
+  pointer-events: auto;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 260ms ease,
+    visibility 0s linear 260ms,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 140ms ease-out;
+}
+
+.zt-jump[data-on] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* Language and the link-check line, under the table's index. */
+.zt-foot {
+  position: absolute;
+  left: 48px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 400 10.5px/1.35 var(--zt-font-label, ui-monospace, monospace);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--zt-text-faint, #8a94a3);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 320ms ease,
+    visibility 0s linear 320ms;
+}
+
+html[data-zt-view='table']:not(.zt-away, [data-zt-phase], [data-zt-intro]) .zt-foot {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.zt-lang {
+  display: inline-flex;
+  gap: 2px;
+  pointer-events: auto;
+}
+
+.zt-lang button {
+  min-width: 34px;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.zt-lang button[aria-pressed='true'] {
+  color: var(--zt-text, #eef0f2);
+  box-shadow: inset 0 -1px 0 var(--zt-signal, #e2492f);
+}
+
+@media (hover: hover) {
+  .zt-lang button:hover {
+    color: var(--zt-text, #eef0f2);
+  }
+}
+
+@media (max-width: 760px) {
+  .zt-foot {
+    left: auto;
+    right: 12px;
+    bottom: auto;
+    top: 62px;
+  }
+
+  .zt-receipt {
+    display: none;
+  }
+
+  .zt-jump {
+    bottom: 176px;
+  }
+}
+
+/* Messages, under the header and clear of the profile strip and the shelf. */
+.zt-toast {
+  position: absolute;
+  left: 50%;
+  top: 84px;
+  translate: -50% 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: max-content;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 14px 14px 14px 18px;
+  border: 1px solid rgb(238 240 242 / 0.16);
+  border-radius: 8px;
+  background: var(--zt-night-soft, #141b27);
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.8);
+  font-size: 15px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.zt-toast p {
+  margin: 0;
+}
+
+.zt-toast ul {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  font: 400 12px/1.5 var(--zt-font-label, ui-monospace, monospace);
+  color: var(--zt-text-soft, #a9b2bf);
+  overflow-wrap: anywhere;
+}
+
+.zt-toast button {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin: -4px -4px 0 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--zt-text-soft, #a9b2bf);
+}
+
+/* A roadmap file held over the page. */
+#zt-drop {
+  position: fixed;
+  inset: 14px;
+  z-index: 70;
+  display: none;
+  place-items: center;
+  border: 2px dashed var(--zt-signal, #e2492f);
+  border-radius: 14px;
+  background: rgb(5 7 11 / 0.72);
+  color: var(--zt-text, #eef0f2);
+  font: 500 clamp(20px, 2.4vw, 30px) / 1.2 var(--zt-font-display, Georgia, serif);
+  text-align: center;
+  pointer-events: none;
+}
+
+html[data-zt-drop] #zt-drop {
+  display: grid;
+}
+
+/* The numbers of the page, with ?hud. */
+.zt-debug {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgb(5 7 11 / 0.78);
+  font: 11px/1.45 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  color: #a9b2bf;
+  white-space: pre;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.zt-app .zh-hud > *,
+  .zt-finale,
+  .zt-jump,
+  .zt-foot {
+    transition-duration: 0.01s !important;
+  }
+}
+
+html[data-zt-motion='reduced'] :is(.zt-finale, .zt-jump, .zt-foot) {
+  transition-duration: 0.01s !important;
+}
+
+@media print {
+  #zt-stage,
+  #zt-page,
+  #zt-layer,
+  #zt-guard,
+  #zt-curtain,
+  #zt-drop,
+  #zt-boot,
+  .zt-overlays {
+    display: none !important;
+  }
+}

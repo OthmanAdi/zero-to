@@ -17,6 +17,7 @@ import { mountReader, type ReaderHandle } from '../bookshelf/reader';
 import { createCover, mountShelf, VARIANTS, type ShelfHandle, type Variant } from '../bookshelf/shelf';
 import './dock.css';
 import { uiLang } from '../i18n';
+import { adaptiveShelfPaint } from './adaptive-paint';
 import { dockHeader, dockHeaderParts, pinFor, placeOf, restedLine, toShelfItems, volumeLabel } from './items';
 import { readerDoc, readerLabels } from './page';
 import { say } from './strings';
@@ -198,6 +199,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     onLoopChange: (loop) => motionRef?.setLoop(loop),
   });
   shelf.element.setAttribute('aria-describedby', header.id);
+  const paint = adaptiveShelfPaint(shelf, reducedMotion);
 
   // The Bookshelf row writes its keyboard hint, each volume's name and its live "came to rest" line in English,
   // and writes them again in frames of its own. The dock says them in the interface language: right after it
@@ -329,12 +331,16 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
   // ---------------------------------------------------------------------------------------------------------
   // Phone sheet
 
+  const panelVisible = (): boolean => !phone || sheetOpen;
+  const syncPaint = (): void => paint.setVisible(panelVisible() && entries.length > 0);
+
   function setSheet(open: boolean, focusAfter = true): void {
     if (sheetOpen === open) return;
     sheetOpen = open;
     root.dataset.sheet = open ? 'open' : 'closed';
     toggle.setAttribute('aria-expanded', String(open));
     panel.toggleAttribute('inert', phone && !open);
+    syncPaint();
     if (open) {
       shelf.refresh();
       if (focusAfter) requestAnimationFrame(() => shelf.focusCurrent());
@@ -358,6 +364,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
       motion.setTiming(shelf.variant.motion);
     }
     shelf.refresh();
+    syncPaint();
   }
 
   const onPhoneChange = (event: MediaQueryListEvent): void => {
@@ -417,7 +424,6 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
   }
 
   const coverAspect = (): number => shelf.variant.geometry.coverWidth / shelf.variant.geometry.bookHeight;
-  const panelVisible = (): boolean => !phone || sheetOpen;
 
   function takeOff(item: DockItem, active: ReaderHandle): boolean {
     if (!panelVisible()) return false;
@@ -430,7 +436,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     const scale = shelfCover.width > 0 ? flightLayoutWidth(start, end) / shelfCover.width : 1;
     cover.style.setProperty('--bb-cover-k', String(scale));
     const spineEdge = Math.abs(Math.sin((placement.yaw * Math.PI) / 180)) * shelf.variant.geometry.spineWidth * scale;
-    flight = createFlight({
+    const flightOptions = {
       cover,
       clothClass: `bb-cloth--${item.cloth}`,
       start,
@@ -438,7 +444,8 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
       spineEdge,
       sheen: { opacity: placement.sheen, sweep: placement.sweep },
       host: readerLayer(),
-    });
+    };
+    flight = paint.flight(flightOptions, item.id) ?? createFlight(flightOptions);
     flight.set(motion.state.openTime);
     return true;
   }
@@ -563,6 +570,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
     header.title = dockHeader(entries, ui);
     root.dataset.count = String(entries.length);
     root.dataset.empty = entries.length === 0 ? '1' : '0';
+    syncPaint();
   }
 
   /** Redraws ticks after a change in the session. The row keeps its volumes and its place. */
@@ -648,6 +656,7 @@ export function createShelfDock(host: HTMLElement, session: ShelfSession, option
       stopIntents();
       detachGesture();
       landFlight();
+      paint.destroy();
       reader?.destroy();
       reader = null;
       setBackgroundInert(false);

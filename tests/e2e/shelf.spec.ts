@@ -37,6 +37,26 @@ function watchErrors(page: Page): string[] {
   return errors;
 }
 
+/** Keep the real WebGL drawing but exercise the capable-device branch on the software test browser. */
+async function reportCapableHardware(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { value: 8 });
+    Object.defineProperty(navigator, 'deviceMemory', { value: 8 });
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, kind: string, options?: WebGLContextAttributes) {
+      return Reflect.apply(getContext, this, [
+        kind,
+        options?.failIfMajorPerformanceCaveat ? { ...options, failIfMajorPerformanceCaveat: false } : options,
+      ]);
+    } as typeof getContext;
+    const getParameter = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function (parameter: number) {
+      if (parameter === 0x9246 || parameter === this.RENDERER) return 'Test graphics adapter';
+      return getParameter.call(this, parameter);
+    };
+  });
+}
+
 test.describe('the dock', () => {
   test.skip(({ isMobile }) => isMobile, 'the phone shows a button and a sheet instead');
 
@@ -106,6 +126,7 @@ test.describe('the dock', () => {
   });
 
   test('opens without a travelling cover under reduced motion', async ({ page }) => {
+    await reportCapableHardware(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`${PAGE}?road=sample&stage=2&still=1`);
     await settled(page);
@@ -115,6 +136,44 @@ test.describe('the dock', () => {
     // project's browser runs with, so the wait is generous; what this test asserts is that nothing travels.
     await expect(page.locator('.bb-reader')).toHaveAttribute('data-open', '1', { timeout: 6000 });
     await expect(page.locator('.bb-flight')).toHaveCount(0);
+    await expect(page.locator('.bb-studio')).toHaveCount(0);
+  });
+
+  test('renders Studio on a capable device and keeps the same controls after WebGL loss', async ({ page }, info) => {
+    test.setTimeout(90_000);
+    const errors = watchErrors(page);
+    await reportCapableHardware(page);
+    await page.goto(`${PAGE}?road=sample&stage=0&n=3&still=1`);
+    const shelf = page.locator('.bb-shelf');
+    const studio = shelf.locator('canvas.bb-studio');
+    await expect(shelf).toHaveAttribute('data-paint', 'studio', { timeout: 45_000 });
+    await expect(studio).toHaveAttribute('data-volumes', '3');
+    await shot(page, info, 'studio', page.locator('.zt-dock'));
+
+    const first = await shelf.getAttribute('data-focus-id');
+    await focusShelf(page);
+    await page.keyboard.press('ArrowRight');
+    await expect(shelf).not.toHaveAttribute('data-focus-id', first ?? '');
+    await settled(page);
+    const second = await shelf.getAttribute('data-focus-id');
+
+    await studio.evaluate((canvas: HTMLCanvasElement) => {
+      canvas.getContext('webgl2')?.getExtension('WEBGL_lose_context')?.loseContext();
+    });
+    await expect(studio).toHaveCount(0);
+    await expect(shelf).not.toHaveAttribute('data-paint', 'studio');
+    await expect(shelf).toHaveAttribute('data-focus-id', second ?? '');
+    await expect(shelf.locator('button.bb-book__control:focus')).toBeVisible();
+
+    await page.keyboard.press('Enter');
+    const reader = page.locator('.bb-reader');
+    await expect(reader).toHaveAttribute('data-open', '1');
+    await expect(reader.locator('a.bb-reader__open')).toHaveAttribute('href', /^https?:\/\//);
+    await page.keyboard.press('Escape');
+    await expect(reader).toHaveCount(0);
+    await expect(shelf.locator('button.bb-book__control:focus')).toBeVisible();
+    await expect(studio).toHaveCount(0);
+    expect(errors).toEqual([]);
   });
 });
 

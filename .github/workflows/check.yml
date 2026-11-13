@@ -1,0 +1,27 @@
+# Runs the type check, the unit tests and the build on every pull request, and checks that the skill's
+# viewer file matches a fresh build of the site.
+name: Check
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Type check, unit tests and build
+        run: npm run check
+      - name: The skill's viewer matches the source
+        run: |
+          npm run build:viewer
+          git diff --exit-code --stat -- .agents/skills/zero-to/viewer/zero-to.html

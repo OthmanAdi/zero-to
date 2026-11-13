@@ -1,0 +1,55 @@
+# Builds the static site with its prerendered gallery pages and social images, and publishes it to GitHub Pages.
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# The build job only reads the repository. Only the deploy job may publish.
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SITE_ORIGIN: https://othmanadi.github.io/zero-to
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Type check, unit tests and build
+        run: npm run check
+      - name: Browser for the social images
+        run: npx playwright install --with-deps chromium
+      - name: Social images
+        run: npm run og-images
+      - name: Gallery pages, sitemap and robots.txt
+        run: npm run prerender
+      - name: Instructions for agents
+        run: cp llms.txt dist/llms.txt
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

@@ -2230,6 +2230,59 @@ function injectRoadmap(template, roadmap, receipt) {
 	}
 	return applySplices(template, splices);
 }
+// src/roadmap/themes.ts
+var THEMES;
+var init_themes = __esmMin((() => {
+	THEMES = [
+		{
+			id: "classic-topo",
+			name: "Classic topo",
+			surfaces: [
+				"grass",
+				"forest",
+				"rock",
+				"snow"
+			],
+			signpost: "timber",
+			lampKelvin: 2900
+		},
+		{
+			id: "alpine-winter",
+			name: "Alpine winter",
+			surfaces: [
+				"forest",
+				"scree",
+				"rock",
+				"snow"
+			],
+			signpost: "snow-pole",
+			lampKelvin: 4200
+		},
+		{
+			id: "desert-expedition",
+			name: "Desert expedition",
+			surfaces: [
+				"sand",
+				"dirt",
+				"rock"
+			],
+			signpost: "cairn",
+			lampKelvin: 2500
+		},
+		{
+			id: "coastal-survey",
+			name: "Coastal survey",
+			surfaces: [
+				"water",
+				"sand",
+				"grass",
+				"rock"
+			],
+			signpost: "buoy",
+			lampKelvin: 3600
+		}
+	];
+}));
 // src/look/theme.ts
 /** Reads `#rgb` or `#rrggbb`. */
 function hexToRgb(hex) {
@@ -3472,24 +3525,21 @@ function mapCatalogue() {
 			field: "map.theme",
 			default: null,
 			note: "A theme sets the surface order for \"auto\", a default signpost and the lamp colour.",
-			options: MAP_THEMES.map((id) => ({
-				id,
-				name: nameOf(id)
+			options: THEMES.map((theme) => ({
+				id: theme.id,
+				name: theme.name,
+				description: `Ground ${theme.surfaces.join(", ")}. Signposts ${theme.signpost}. Lamp ${theme.lampKelvin} K.`
 			}))
 		}
 	};
 }
 var MAP_THEMES;
 var init_catalogue = __esmMin((() => {
+	init_themes();
 	init_signposts();
 	init_palette();
 	init_catalogue$1();
-	MAP_THEMES = [
-		"classic-topo",
-		"alpine-winter",
-		"desert-expedition",
-		"coastal-survey"
-	];
+	MAP_THEMES = THEMES.map((theme) => theme.id);
 }));
 // src/cli/run.ts
 /**

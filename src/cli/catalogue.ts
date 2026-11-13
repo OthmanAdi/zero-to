@@ -2,9 +2,9 @@
  * The map options an agent can pick from when it writes `map` (and `checkpoint.signpost`) in a roadmap.
  *
  * Terrain and trail templates come from `src/terrain/catalogue.ts`, the surfaces from the scene palette and the
- * signposts from `src/props/signposts.ts`. None of these pull in the 3D code. The themes are listed here, as the
- * build specification names them, until a scene module exports a theme list; `catalogue.test.ts` then compares.
+ * signposts from `src/props/signposts.ts` and the themes from `src/roadmap/themes.ts`. None of these pull in the 3D code.
  */
+import { THEMES } from '../roadmap/themes';
 import { DEFAULT_SIGNPOST, SIGNPOST_CATALOGUE, SIGNPOST_KEYS } from '../props/signposts';
 import { SURFACE_KINDS } from '../scene/palette';
 import { TERRAIN_TEMPLATES, TRAIL_TEMPLATES } from '../terrain/catalogue';
@@ -27,7 +27,7 @@ export interface OptionGroup {
   readonly options: readonly Option[];
 }
 
-export const MAP_THEMES = ['classic-topo', 'alpine-winter', 'desert-expedition', 'coastal-survey'] as const;
+export const MAP_THEMES = THEMES.map((theme) => theme.id);
 
 function nameOf(id: string): string {
   const words = id.split('-').join(' ');
@@ -64,7 +64,11 @@ export function mapCatalogue(): Readonly<Record<'terrain' | 'trail' | 'surfaces'
       field: 'map.theme',
       default: null,
       note: 'A theme sets the surface order for "auto", a default signpost and the lamp colour.',
-      options: MAP_THEMES.map((id) => ({ id, name: nameOf(id) })),
+      options: THEMES.map((theme) => ({
+        id: theme.id,
+        name: theme.name,
+        description: `Ground ${theme.surfaces.join(', ')}. Signposts ${theme.signpost}. Lamp ${theme.lampKelvin} K.`,
+      })),
     },
   };
 }

@@ -1,0 +1,943 @@
+{
+  "schema": "zero-to/1",
+  "id": "langgraph-for-a-python-dev",
+  "title": "Zero to LangGraph, coming from Python",
+  "topic": "LangGraph for a Python dev",
+  "summary": "Five stages from a first state graph to a tested agent that pauses for a human: state and reducers, tools, memory and interrupts, workflow patterns, tests and a local server.",
+  "lang": "en",
+  "checkedOn": "2026-11-13",
+  "freshness": "fast",
+  "brief": {
+    "audience": "self",
+    "goal": "Build, test and run a small agent with LangGraph that pauses for a human decision and keeps its state.",
+    "startLevel": "adjacent",
+    "targetTier": "gold",
+    "hoursPerWeek": 6,
+    "startDate": "2026-11-16",
+    "deadline": "2027-01-24",
+    "style": "build",
+    "budget": {
+      "max": 20,
+      "currency": "EUR"
+    },
+    "resourceLangs": [
+      "en"
+    ],
+    "projects": "capstone",
+    "gating": "guided"
+  },
+  "capstone": {
+    "title": "A support-ticket triage agent",
+    "brief": "One graph that grows at every camp: plain functions first, then a model, then a human approval step, then batches, then tests and a local server."
+  },
+  "map": {
+    "terrain": "ridge",
+    "trail": "ridge-walk",
+    "surfaces": "auto"
+  },
+  "stages": [
+    {
+      "id": "state-graphs",
+      "title": "State, nodes and edges",
+      "tier": "bronze",
+      "summary": "Install LangGraph and build graphs from plain functions, with no model and no API key.",
+      "waypoints": [
+        {
+          "id": "first-graph",
+          "title": "Install and run a first graph",
+          "note": "After this step langgraph is installed in a clean environment and you have run a compiled graph with no model and no API key.",
+          "predict": "A node is a plain function. Will it return the whole state or only what changed?",
+          "do": "Create a virtual environment and run pip install -U langgraph. Type the smallest graph from the overview (START, one node, END), compile it and invoke it. Then change what the node returns and run it again.",
+          "takeaways": [
+            "pip install -U langgraph installs the library. Running a graph made of plain functions needs no model and no key.",
+            "You build a StateGraph(State), add nodes and edges, and must compile() it before calling invoke.",
+            "graph.invoke(input) returns the final state as a dict.",
+            "A node is a function that takes the state and returns a partial update."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "resources": [
+            "lg-overview",
+            "py-venv"
+          ],
+          "checks": [
+            {
+              "q": "What must you do to a StateGraph after adding nodes and edges and before you call invoke?",
+              "kind": "recall",
+              "answer": "Call compile(). Compilation checks the graph structure and returns the runnable graph."
+            }
+          ]
+        },
+        {
+          "id": "state-reducers",
+          "title": "State and reducers",
+          "note": "State is a typed dict. A key without a reducer is overwritten by each update. A key with a reducer merges updates.",
+          "predict": "Two nodes in a row both return {\"log\": [\"x\"]}. Is log [\"x\"] or [\"x\", \"x\"] at the end?",
+          "do": "Write a State with one plain key and one key annotated with operator.add. Write two nodes that each return an update for both keys, run them in sequence and print the state after each node.",
+          "takeaways": [
+            "Nodes return partial updates, not the full state.",
+            "With no reducer a new value overwrites the old value for that key.",
+            "Annotated[list[str], operator.add] makes a key append instead of overwrite.",
+            "A reducer is a function of (current value, update) that returns the new value."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "graph-api"
+          ],
+          "checks": [
+            {
+              "q": "State has foo: int and bar: Annotated[list[str], operator.add]. It is {\"foo\": 1, \"bar\": [\"hi\"]} and a node returns {\"bar\": [\"bye\"]}. What is the state now?",
+              "kind": "apply",
+              "answer": "{\"foo\": 1, \"bar\": [\"hi\", \"bye\"]}. foo is untouched because the update did not mention it, and bar is appended by the reducer."
+            }
+          ]
+        },
+        {
+          "id": "edges-loops",
+          "title": "Edges, branches and loops",
+          "note": "A routing function chooses the next node. Routing back to an earlier node makes a loop, and the recursion limit stops a runaway one.",
+          "predict": "A conditional edge always routes back to the same node. What do you expect to happen?",
+          "do": "Add a counter to the state and a node that increments it. Add a conditional edge that returns the node name to loop, or END once the counter reaches 3. Then break the condition on purpose and read the error.",
+          "takeaways": [
+            "add_edge always goes from one node to the next. add_conditional_edges calls a function that returns the next node name or END.",
+            "The routing function can return a list of names to run several nodes in parallel in the next super-step.",
+            "The recursion limit caps the super-steps in one run. Going over it raises GraphRecursionError.",
+            "For each node use static edges or dynamic routing (conditional edges or Command), not both."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "resources": [
+            "graph-api",
+            "stategraph-ref"
+          ],
+          "checks": [
+            {
+              "q": "What is a super-step?",
+              "kind": "explain",
+              "answer": "One round of execution. Nodes that run in parallel share a super-step, nodes that run in sequence use separate ones. The run ends when no node is active and no messages are in transit."
+            }
+          ]
+        },
+        {
+          "id": "graph-drills",
+          "title": "Three tiny graphs from scratch",
+          "note": "Repetition with the docs closed: the three shapes that everything later builds on.",
+          "do": "Without copying, build (1) a linear graph of three nodes, (2) a graph that branches on a value and rejoins, (3) a loop that stops after N rounds. Print the node name and the state inside every node.",
+          "takeaways": [
+            "Draw the graph on paper first: nodes as boxes, edges as arrows. Then write the code.",
+            "Compilation checks the graph structure, for example for orphaned nodes, so a bad wiring fails before the first run."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 90,
+          "resources": [
+            "stategraph-ref"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Base camp",
+        "show": [
+          "Show a graph whose state has one overwritten key and one appended key, and explain the difference.",
+          "Show a loop that ends on a condition, and name what stops it if the condition is wrong.",
+          "Explain in one sentence what a super-step is."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Skeleton of the triage graph",
+        "brief": "The support-ticket agent as plain functions. No model yet.",
+        "minutes": 90,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "guided",
+            "task": "Build a graph with three nodes: classify (returns a fixed label), draft (returns a fixed reply) and send (prints it). Route urgent labels to a second draft node."
+          }
+        ]
+      }
+    },
+    {
+      "id": "tools-and-models",
+      "title": "A model with tools",
+      "tier": "silver",
+      "summary": "Add a model and tools, read the message list, and design the state before wiring nodes.",
+      "waypoints": [
+        {
+          "id": "calculator-agent",
+          "title": "The quickstart agent",
+          "note": "Build the docs calculator agent: a model node, a tool node and a loop that runs until the model stops asking for tools.",
+          "predict": "The model can answer or ask for a tool. Which edge must be conditional, and what does it check?",
+          "do": "Create an API key with a model provider, type the quickstart into one file and run it on \"Add 3 and 4\". Then ask something that needs two tools and read the printed messages.",
+          "takeaways": [
+            "@tool turns a typed function with a docstring into a tool. The docstring tells the model what the tool does.",
+            "model.bind_tools(tools) lets the model return tool calls instead of text.",
+            "should_continue checks the last message for tool_calls: if there are some it goes to tool_node, otherwise to END.",
+            "The loop is llm_call, tool_node, llm_call again, until the model makes no tool call."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": [
+            "quickstart",
+            "lc-tools"
+          ],
+          "checks": [
+            {
+              "q": "Why does the quickstart graph have an edge from tool_node back to llm_call?",
+              "kind": "explain",
+              "answer": "The model has to read the tool result before it can answer or ask for another tool. Without the edge the run would end after the first tool."
+            }
+          ]
+        },
+        {
+          "id": "messages-state",
+          "title": "Messages as state",
+          "note": "Chat history is a list in the state with an appending reducer. See what goes into it and how the model reads it.",
+          "predict": "After a tool runs, what must be added to the message list before the model is called again?",
+          "do": "Print every message after the calculator agent finishes. Mark which ones the model wrote and which one the tool wrote, and find the field that links a tool result to the call that asked for it.",
+          "takeaways": [
+            "Messages are appended with a reducer, so each node adds to the history instead of replacing it.",
+            "A tool result is a ToolMessage whose tool_call_id matches the model call that asked for it.",
+            "The model sees the whole list on every call, so a long history costs more tokens.",
+            "init_chat_model builds a chat model for the provider you choose. Other providers need their own key and package."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 40,
+          "resources": [
+            "lc-models",
+            "graph-api"
+          ]
+        },
+        {
+          "id": "design-first",
+          "title": "Design before you wire",
+          "note": "Map the steps, decide what each one does, then design the state. The docs walk through this order with an email agent.",
+          "predict": "For an email agent, would you keep the raw email in state or a ready-made prompt string?",
+          "do": "Take the triage idea: read ticket, classify, look up docs, draft, human review, send. Write the steps on paper, label each as a model step, data step, action step or user-input step, and write the State class with raw data only.",
+          "takeaways": [
+            "Break the work into discrete steps. Each node does one thing.",
+            "Keep raw data in state and format prompts inside the nodes that need them.",
+            "The graph checkpoints at node boundaries, so smaller nodes repeat less work after a failure or a pause.",
+            "Transient failures get retry policies. Problems a user can fix pause with interrupt()."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 50,
+          "resources": [
+            "thinking"
+          ]
+        },
+        {
+          "id": "tool-drills",
+          "title": "Add two tools of your own",
+          "note": "Make the agent yours: new tools, a bad input and a tool that fails.",
+          "do": "Add two tools to the calculator agent: one that looks up a fake ticket by id in a dict, one that raises an error on an unknown id. Run both, read what happens after the error and write down how you would handle it.",
+          "takeaways": [
+            "The model chooses a tool from its name, type hints and docstring, so write them for the model.",
+            "In the quickstart tool_node an uncaught error stops the run. Catch it and return text the model can read."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 90,
+          "resources": [
+            "lc-tools"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Tool camp",
+        "show": [
+          "Run your agent on a question that needs two tool calls and show the message list.",
+          "Explain why the loop ends.",
+          "Show the State class for the triage agent and say why it holds raw data."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Put a model in the triage graph",
+        "brief": "Replace the fixed classify and draft nodes with model calls. The graph shape stays.",
+        "minutes": 120,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "changed",
+            "task": "Make classify return one of three labels from a model and draft write a reply for that label. Keep the nodes small and the state raw."
+          }
+        ]
+      }
+    },
+    {
+      "id": "memory-and-pauses",
+      "title": "Memory and pauses",
+      "tier": "silver",
+      "summary": "Save state with a checkpointer, keep it across restarts and stop for a human decision.",
+      "waypoints": [
+        {
+          "id": "checkpointer",
+          "title": "Remember a conversation",
+          "note": "Compile with a checkpointer and pass a thread_id. The same id continues the conversation, a new id starts fresh.",
+          "predict": "You invoke the graph twice with the same thread_id. Does the second call see the first call?",
+          "do": "Compile the calculator agent with InMemorySaver. Ask \"Add 3 and 4\", then ask \"Now multiply that by 2\" on the same thread_id. Repeat the second question on a new thread_id and compare.",
+          "takeaways": [
+            "compile(checkpointer=InMemorySaver()) saves a checkpoint of the state after each step.",
+            "config={\"configurable\": {\"thread_id\": ...}} picks the thread to load. A new id starts with empty state.",
+            "A checkpointer is short-term memory for one thread. A store is long-term memory across threads.",
+            "InMemorySaver keeps checkpoints in RAM, so they are lost when the process restarts."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "persistence",
+            "checkpointers"
+          ],
+          "checks": [
+            {
+              "q": "Why does the follow-up question only work on the same thread_id?",
+              "kind": "explain",
+              "answer": "The checkpointer loads the saved state for that thread, so the earlier messages are there. A new thread_id has no saved state."
+            }
+          ]
+        },
+        {
+          "id": "survive-restart",
+          "title": "Survive a restart",
+          "note": "Swap the in-memory saver for SQLite so the state outlives the process.",
+          "predict": "After you stop and restart the script, what is left of the thread with InMemorySaver? With SqliteSaver?",
+          "do": "Install langgraph-checkpoint-sqlite and compile with SqliteSaver on a file. Run once and stop the script. Start it again with the same thread_id and read the saved state with graph.get_state.",
+          "takeaways": [
+            "langgraph-checkpoint-sqlite is a separate package. SqliteSaver stores checkpoints in a local SQLite file.",
+            "The docs call SQLite ideal for experiments and local work, and point to PostgresSaver for production.",
+            "graph.get_state(config) returns the latest saved state of a thread."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 60,
+          "resources": [
+            "checkpointers"
+          ]
+        },
+        {
+          "id": "human-approval",
+          "title": "Pause for a human",
+          "note": "interrupt() stops the graph and hands a question to the caller. Command(resume=...) answers it on the same thread.",
+          "predict": "A node calls interrupt(\"Send this reply?\"). Where does the question show up, and how do you answer it?",
+          "do": "Add a review node before send in the triage graph. It calls interrupt with the draft and returns whether it was approved. Run until the pause, print the payload, resume with True, then run again and resume with False.",
+          "takeaways": [
+            "interrupt() needs a checkpointer and a thread_id. The payload must be JSON-serializable.",
+            "With invoke the pause shows up as result[\"__interrupt__\"]. You resume with Command(resume=value) on the same thread.",
+            "On resume the node restarts from its first line, so code before interrupt() must be safe to run twice.",
+            "Do not wrap interrupt() in a bare try/except, and keep several interrupts in the same order."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": [
+            "interrupts"
+          ],
+          "checks": [
+            {
+              "q": "Your review node sends an email and then calls interrupt(). What goes wrong on resume?",
+              "kind": "apply",
+              "answer": "The node restarts from the top, so the email is sent a second time. Put the side effect after the interrupt, or make it idempotent."
+            }
+          ]
+        },
+        {
+          "id": "time-travel",
+          "title": "Replay and fork",
+          "note": "Every checkpoint is a restore point. Replay re-runs from one. Fork changes the state first.",
+          "predict": "If you replay from an old checkpoint, are the later model calls read from a cache or made again?",
+          "do": "List a thread's checkpoints with get_state_history, pick one before the draft node and replay from it. Then fork it with a changed ticket text and compare the two drafts.",
+          "takeaways": [
+            "get_state_history lists a thread's checkpoints, newest first.",
+            "Replay re-executes the nodes after the checkpoint, including model calls, so the result can differ.",
+            "Fork updates the state at a checkpoint and resumes from there, which creates an alternative path."
+          ],
+          "minutes": 60,
+          "practiceMinutes": 45,
+          "optional": true,
+          "resources": [
+            "time-travel"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Memory camp",
+        "show": [
+          "Show two threads with different histories on the same graph.",
+          "Show state that survives stopping and restarting your script.",
+          "Show a pause with its printed question, one resume that approves and one that rejects."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Add human approval",
+        "brief": "The triage graph drafts a reply and waits for a person before it sends.",
+        "minutes": 120,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "changed",
+            "task": "On rejection, loop back to draft with the reviewer's comment in the state. Cap the number of rewrites at three."
+          }
+        ]
+      }
+    },
+    {
+      "id": "patterns",
+      "title": "Workflow patterns",
+      "tier": "gold",
+      "summary": "Route, fan out, map over a list with Send, split into subgraphs and stream the result.",
+      "waypoints": [
+        {
+          "id": "routing-parallel",
+          "title": "Routing and parallel branches",
+          "note": "Two standard patterns: send the input down the right branch, or run independent branches at once and merge the results.",
+          "predict": "What must the state hold so a routing function can choose between a billing ticket and a bug ticket?",
+          "do": "In the triage graph let classify return one of three labels as structured output, and route each label to its own draft node. Then add two lookup nodes that run in parallel and a node that merges their results.",
+          "takeaways": [
+            "Workflows follow predetermined code paths. Agents decide their own steps and tool use.",
+            "Routing classifies the input and sends it down a specialised path through a conditional edge.",
+            "Parallel nodes share one super-step, so give a key they both write a reducer that merges updates.",
+            "The docs list five patterns: prompt chaining, parallelization, routing, orchestrator-worker, evaluator-optimizer."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 90,
+          "resources": [
+            "workflows"
+          ]
+        },
+        {
+          "id": "send-map-reduce",
+          "title": "Map-reduce with Send",
+          "note": "When the number of items is only known at run time, Send starts one worker per item.",
+          "predict": "Edges are fixed when you build the graph. How could a graph run one worker per item of a list of unknown length?",
+          "do": "Add a node that turns a batch of tickets into a list, and a conditional edge that returns [Send(\"draft\", {\"ticket\": t}) for t in tickets]. Give the results key an operator.add reducer and run it on five tickets.",
+          "takeaways": [
+            "Send(node, state) runs that node once with its own input. Return a list of them from a conditional edge.",
+            "The workers run in parallel and write to shared keys, so those keys need a reducer.",
+            "Use Send for orchestrator-worker shapes, where the number of tasks is only known at run time."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 70,
+          "resources": [
+            "graph-api"
+          ]
+        },
+        {
+          "id": "subgraphs",
+          "title": "Subgraphs",
+          "note": "A compiled graph can be a node in another graph. Use it to split a big graph into parts you can test alone.",
+          "predict": "Parent and subgraph have different state keys. How can they still pass data?",
+          "do": "Move the draft-and-review part of the triage graph into its own compiled graph and use it in the parent. Check what the parent sees when the subgraph runs.",
+          "takeaways": [
+            "If parent and subgraph share state keys, pass the compiled subgraph straight to add_node.",
+            "If their state schemas differ, call the subgraph from a function that maps parent state to its input and back.",
+            "By default a subgraph inherits the parent's checkpointer, so interrupts still work inside it."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "subgraphs"
+          ]
+        },
+        {
+          "id": "streaming",
+          "title": "Stream what happens",
+          "note": "stream() yields output while the graph runs. Pick a stream mode for state changes, full state, model tokens or custom messages.",
+          "predict": "What is the difference between getting the full state after each step and getting only what each node changed?",
+          "do": "Run the triage graph with stream_mode \"updates\", then \"values\", then \"messages\". Print what arrives for each, and decide which you would use for a progress bar and which for a chat window.",
+          "takeaways": [
+            "The \"values\" mode streams the full state after each step. The \"updates\" mode streams only the changes.",
+            "The \"messages\" mode streams model tokens with metadata. The \"custom\" mode carries data a node emits with get_stream_writer.",
+            "Pass a list of modes to get several kinds of output at once.",
+            "The \"checkpoints\" and \"tasks\" modes need a checkpointer."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 55,
+          "resources": [
+            "streaming"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Pattern camp",
+        "show": [
+          "Show one conditional route and one parallel fan-out in the same graph.",
+          "Show Send creating one worker per item.",
+          "Show a subgraph used as a node, and say which stream mode you would use for a progress bar."
+        ],
+        "pass": 0.66
+      },
+      "project": {
+        "title": "Scale the triage graph",
+        "brief": "The agent handles a whole batch of tickets in one run.",
+        "minutes": 120,
+        "capstone": true,
+        "rungs": [
+          {
+            "level": "changed",
+            "task": "Handle a batch of tickets in one run with Send, and route each ticket to the right drafting branch."
+          }
+        ]
+      }
+    },
+    {
+      "id": "ship-it",
+      "title": "Test, run and ship",
+      "tier": "gold",
+      "summary": "Test nodes and graphs with pytest, serve the graph locally, trace a run and review your own work.",
+      "waypoints": [
+        {
+          "id": "pytest-nodes",
+          "title": "Test nodes and graphs",
+          "note": "Test one node alone, then the whole graph with a fresh checkpointer for each test.",
+          "predict": "How would you test one node without calling a model or any other node?",
+          "do": "Install pytest. Write tests that call graph.nodes[\"classify\"].invoke(...) with a stand-in for the model, one end-to-end test with a fresh InMemorySaver and thread_id, and one test for the rejection path.",
+          "takeaways": [
+            "Build the graph inside the test or a fixture and compile it with a new checkpointer, so tests share no state.",
+            "compiled_graph.nodes[\"name\"].invoke(state) runs a single node and bypasses the checkpointer.",
+            "Test the rejection and failure paths, not only the happy path.",
+            "pytest collects functions named test_*, and a plain assert shows both values when it fails."
+          ],
+          "minutes": 120,
+          "practiceMinutes": 100,
+          "resources": [
+            "test-graphs",
+            "pytest-start"
+          ],
+          "checks": [
+            {
+              "q": "Why compile the graph with a new checkpointer inside each test?",
+              "kind": "explain",
+              "answer": "A shared checkpointer keeps state between tests, so one test can change the result of another. A fresh one per test keeps them independent."
+            }
+          ]
+        },
+        {
+          "id": "local-server",
+          "title": "Run it as a server",
+          "note": "langgraph dev starts a local Agent Server with an API and a Studio view of your graph.",
+          "predict": "A dev server needs more than a plain script. A config file, an account key, or both?",
+          "do": "Install langgraph-cli, set up the project as the docs describe and point it at the triage graph. Run langgraph dev, send one request from Studio and one from the API docs page.",
+          "takeaways": [
+            "pip install -U \"langgraph-cli[inmem]\" gives you langgraph dev. The docs say Python 3.11 or newer.",
+            "langgraph dev starts an in-memory Agent Server on port 2024 with Studio and an API docs page.",
+            "The docs list a LangSmith API key (free to sign up) as a prerequisite.",
+            "The in-memory server is for development and testing. The docs send you elsewhere for production."
+          ],
+          "minutes": 90,
+          "practiceMinutes": 70,
+          "resources": [
+            "local-server"
+          ]
+        },
+        {
+          "id": "tracing",
+          "title": "Trace a run",
+          "note": "A trace records every node and model call of a run, so you can see where time and tokens go.",
+          "do": "Create a LangSmith account and API key, turn on tracing with the environment variables from the quickstart, and run the triage graph. Find the node in the trace that took longest.",
+          "takeaways": [
+            "The quickstart turns tracing on with LANGSMITH_TRACING=true and a LANGSMITH_API_KEY in the shell.",
+            "A trace shows the tool calls and model responses of a run, which makes a wrong loop easy to spot."
+          ],
+          "minutes": 45,
+          "practiceMinutes": 35,
+          "optional": true,
+          "resources": [
+            "langsmith",
+            "quickstart"
+          ]
+        },
+        {
+          "id": "review-and-own",
+          "title": "Review your own graph",
+          "note": "Read the finished triage graph as a stranger would, and fix three things.",
+          "do": "List the nodes, find one node that does two jobs, one state key nobody reads and one path without a test. Fix each, then run the tests and the local server once more.",
+          "takeaways": [
+            "Split a node that does two jobs. The graph checkpoints between nodes, so smaller nodes repeat less after a failure.",
+            "A state key nobody reads is a candidate for deletion. Less state means fewer bugs to track."
+          ],
+          "minutes": 75,
+          "practiceMinutes": 65,
+          "resources": [
+            "thinking"
+          ]
+        }
+      ],
+      "checkpoint": {
+        "title": "Summit camp",
+        "show": [
+          "Run pytest on your graph and show that it passes, including a rejection test.",
+          "Show the graph answering a request under langgraph dev.",
+          "Explain to someone else why your graph has the nodes it has."
+        ],
+        "pass": 1
+      },
+      "project": {
+        "title": "Build an agent of your own",
+        "brief": "A different agent with a pause for a human, a checkpointer and tests.",
+        "minutes": 300,
+        "capstone": true,
+        "resources": [
+          "academy"
+        ],
+        "rungs": [
+          {
+            "level": "own",
+            "task": "Pick an agent from the menu. Design the state on paper first, then build it with a human pause, a checkpointer and tests. Keep the docs closed for the first draft."
+          }
+        ],
+        "choices": [
+          "Expense approval agent",
+          "Meeting notes to action items",
+          "Code review helper that asks before it commits"
+        ],
+        "criteria": [
+          "Runs end to end under langgraph dev",
+          "Pauses for a person before any side effect",
+          "At least five passing tests",
+          "You can explain every node and every state key"
+        ]
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "lg-overview",
+      "title": "LangGraph overview",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/overview",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Gives the install command and a minimal graph that needs no model or API key, the first thing this roadmap builds.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "py-venv",
+      "title": "Python tutorial: Virtual Environments and Packages",
+      "by": "Python Software Foundation",
+      "url": "https://docs.python.org/3/tutorial/venv.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 20,
+      "why": "The official walkthrough for creating and activating a virtual environment, so langgraph is installed in a clean place.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "graph-api",
+      "title": "LangGraph: Graph API overview",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/graph-api",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 60,
+      "why": "Defines state, reducers, nodes, edges, super-steps, Send, Command and the recursion limit. The reference for stages 1 and 4.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "stategraph-ref",
+      "title": "StateGraph API reference",
+      "by": "LangChain",
+      "url": "https://reference.langchain.com/python/langgraph/graph/state/StateGraph",
+      "type": "reference",
+      "cost": "free",
+      "lang": "en",
+      "level": "bronze",
+      "minutes": 15,
+      "why": "Lists the StateGraph methods used in the drills: add_node, add_edge, add_conditional_edges and compile.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "quickstart",
+      "title": "LangGraph quickstart: a calculator agent",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/quickstart",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 45,
+      "why": "A complete model, tool and loop agent in one file, with the should_continue routing function and bind_tools.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "lc-tools",
+      "title": "LangChain: Tools",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langchain/tools",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Explains the @tool decorator and why a tool needs a clear docstring and type hints.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "lc-models",
+      "title": "LangChain: Models",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langchain/models",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 25,
+      "why": "Shows init_chat_model and how a model returns tool calls, which the model node in the agent depends on.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "thinking",
+      "title": "LangGraph: Thinking in the Graph API",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/thinking-in-graph-api",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 40,
+      "why": "Walks through designing an email agent: steps first, then state, then nodes. Also covers node size and interrupt().",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "persistence",
+      "title": "LangGraph: Persistence",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/persistence",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 20,
+      "why": "Explains checkpointers versus stores, and the warning that InMemorySaver loses everything when the process restarts.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "checkpointers",
+      "title": "LangGraph: Checkpointers",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/checkpointers",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 40,
+      "why": "Covers threads, checkpoints, get_state and the SqliteSaver package, which needs its own install.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "interrupts",
+      "title": "LangGraph: Interrupts",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/interrupts",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 50,
+      "why": "Defines interrupt() and Command(resume=...), the rule that a node restarts on resume, and the try/except trap.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "time-travel",
+      "title": "LangGraph: Use time-travel",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/use-time-travel",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "minutes": 30,
+      "why": "Explains replay and fork from a checkpoint, with get_state_history and update_state.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "workflows",
+      "title": "LangGraph: Workflows and agents",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/workflows-agents",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 60,
+      "why": "Code for prompt chaining, parallelization, routing, orchestrator-worker and evaluator-optimizer in one place.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "subgraphs",
+      "title": "LangGraph: Subgraphs",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/use-subgraphs",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "Shows the two ways to use a subgraph and the checkpointer modes that decide what it remembers.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "streaming",
+      "title": "LangGraph: Streaming",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/streaming",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "A table of stream modes (values, updates, messages, custom, checkpoints, tasks, debug) with runnable examples.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "test-graphs",
+      "title": "LangGraph: Test",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/test",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 25,
+      "why": "Shows a fresh graph and checkpointer per test, testing one node through graph.nodes, and partial execution.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "pytest-start",
+      "title": "pytest: Get Started",
+      "by": "pytest-dev",
+      "url": "https://docs.pytest.org/en/stable/getting-started.html",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 15,
+      "why": "The first pytest page: write a test_ function, use assert, and run the suite.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "local-server",
+      "title": "LangGraph: Run a local server",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/oss/python/langgraph/local-server",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 40,
+      "why": "Steps for langgraph-cli, langgraph dev, Studio and the API docs page, with the LangSmith key prerequisite.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "langsmith",
+      "title": "LangSmith Observability",
+      "by": "LangChain",
+      "url": "https://docs.langchain.com/langsmith/observability",
+      "type": "docs",
+      "cost": "free",
+      "lang": "en",
+      "level": "gold",
+      "minutes": 20,
+      "why": "Explains traces and how to create a LangSmith account and API key for tracing a run.",
+      "check": {
+        "status": "verified",
+        "on": "2026-11-13",
+        "http": 200
+      }
+    },
+    {
+      "id": "academy",
+      "title": "LangChain Academy: Introduction to LangGraph (Python)",
+      "by": "LangChain",
+      "url": "https://academy.langchain.com/courses/intro-to-langgraph",
+      "type": "course",
+      "cost": "free",
+      "lang": "en",
+      "level": "silver",
+      "why": "A video course on the same ideas. Optional extra on the project shelf.",
+      "check": {
+        "status": "gated",
+        "on": "2026-11-13",
+        "http": 200,
+        "note": "The course page showed a sign-in screen on 2026-11-13. Title read, lessons not read. Open it yourself before relying on it."
+      }
+    }
+  ]
+}

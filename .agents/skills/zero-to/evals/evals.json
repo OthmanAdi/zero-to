@@ -1,0 +1,77 @@
+{
+  "skill": "zero-to",
+  "note": "Scenarios for checking that an agent can follow the skill. Each expected_output is a list of objectively checkable statements. Network access is required for the research steps. Results of runs are recorded in docs/SKILL-TRIALS.md when they have been made.",
+  "evals": [
+    {
+      "id": "self-learner-full-run",
+      "prompt": "/zero-to Rust for a Python developer. I have about 5 hours a week and want to build a small command-line tool by spring.",
+      "files": [],
+      "expected_output": [
+        "The agent did not ask who the roadmap is for, the hours per week or the goal again; it echoed them.",
+        "The interview used at most three rounds of at most four questions, each with the recommended option first.",
+        "A trip card with total hours and a projected arrival date was printed before research started.",
+        "A file <id>.roadmap.json exists and `node <skill>/scripts/zero-to.mjs validate <file>` exits 0 with no errors.",
+        "brief.audience is self, brief.hoursPerWeek is 5 and brief.deadline is a date in March, April or May of the coming spring.",
+        "Every resource URL in the file returns HTTP 200 or is marked gated or unverified with a note, and no URL returns 404 or 410.",
+        "Every waypoint has a do task, a predict question and at least one takeaway.",
+        "A self-contained <id>.html was written with the build command and contains a non-empty script element with id zero-to-roadmap.",
+        "The final report lists the file paths, a share link, the stage list with total hours and the counts of opened, kept, dead and flagged links."
+      ]
+    },
+    {
+      "id": "teacher-german-class",
+      "prompt": "/zero-to Bruchrechnung für meine 6. Klasse, 24 Schüler, zweimal pro Woche 45 Minuten, 6 Wochen, nur ein Beamer im Raum.",
+      "files": [],
+      "expected_output": [
+        "The interview followed the teacher branch and did not ask for hours per week, deadline, learning style or strictness.",
+        "The roadmap's lang is de and its titles, notes and tasks are in German.",
+        "class.size is 24, class.sessionsPerWeek is 2, class.sessionMinutes is 45, class.devices is teacher, and class.sessions has one entry per planned session.",
+        "Tasks work without student devices, as the devices answer requires.",
+        "`node <skill>/scripts/zero-to.mjs student <file>` produced a student copy that validates and contains no teacherNote and no class.sessions.",
+        "Two HTML files were built: one from the teacher file and one from the student copy."
+      ]
+    },
+    {
+      "id": "defaults-and-random-map",
+      "prompt": "/zero-to music theory --defaults",
+      "files": [],
+      "expected_output": [
+        "The agent asked no questions and listed every default it took.",
+        "map.terrain and map.trail are random or absent, and the build output draws the same mountain on two loads (same seed).",
+        "The roadmap validates and every waypoint has at least one verified source or a gap line."
+      ]
+    },
+    {
+      "id": "chosen-map",
+      "prompt": "/zero-to photography basics. I want a volcano with a spiral trail, desert ground and cairns as signposts.",
+      "files": [],
+      "expected_output": [
+        "map.terrain is volcano, map.trail is spiral and map.signpost is cairn.",
+        "map.surfaces lists sand, dirt and rock in some order from the foot up, or map.theme is desert-expedition with surfaces auto.",
+        "The agent took the option names from the catalogue command or references/map-and-assets.md and did not invent a key."
+      ]
+    },
+    {
+      "id": "recheck",
+      "prompt": "/zero-to recheck rust-for-a-python-dev.roadmap.json",
+      "files": ["rust-for-a-python-dev.roadmap.json"],
+      "expected_output": [
+        "check-links was run and its receipt totals were reported.",
+        "No stage, waypoint or task text changed, and every waypoint id is the same as before.",
+        "checkedOn is today's date and every resource's check.on is today's date.",
+        "The file still validates."
+      ]
+    },
+    {
+      "id": "no-invented-links",
+      "prompt": "/zero-to the history of the Hanseatic League for a 10th grade project, sources in German preferred.",
+      "files": [],
+      "expected_output": [
+        "Every resource in the file was fetched in this run; the run receipt lists each URL with its HTTP status.",
+        "No resource is marked verified whose page the agent did not read.",
+        "Where no source could be checked, the waypoint carries a gap line with search terms instead of a link.",
+        "German sources are ranked before English ones on each waypoint where both exist."
+      ]
+    }
+  ]
+}

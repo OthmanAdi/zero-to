@@ -1,7 +1,7 @@
 import {
   ACESFilmicToneMapping,
   Color,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PMREMGenerator,
   PerspectiveCamera,
   SRGBColorSpace,
@@ -59,7 +59,7 @@ export function createStage(options: StageOptions): Stage {
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.type = PCFShadowMap;
 
   const scene = new Scene();
   scene.background = new Color(options.background ?? PALETTE.night);

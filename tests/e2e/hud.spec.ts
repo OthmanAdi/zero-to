@@ -212,6 +212,8 @@ test.describe('wide window', () => {
 
   for (const lang of ['en', 'de'] as const) {
     test(`no overlay lies on another at 1024 by 768 (${lang})`, async ({ page }, info) => {
+      // Seven loads of the page, each with its settle wait, under the software renderer: more than the default budget.
+      test.slow();
       const size = { width: 1024, height: 768 };
       await open(page, `done=4&ui=${lang}`, size);
       expect(overlaps(await boxes(page))).toEqual([]);
@@ -313,6 +315,8 @@ test.describe('wide window', () => {
   });
 
   test('the note teaches: guess first, then do, then pin a key point into the notebook', async ({ page }, info) => {
+    // A full walk view at 1440 by 900 rasterised in software: with other browsers beside it, it outlasts the default budget.
+    test.slow();
     await open(page, 'mode=walk&p=0.3&side=left', { width: 1440, height: 900 });
     const note = page.locator('.zh-note');
     // Walk to a step that asks for a guess: the question comes before the sources.

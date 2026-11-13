@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: terrain</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0f17;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #label {
+        position: fixed;
+        left: 20px;
+        bottom: 18px;
+        max-width: min(720px, calc(100vw - 40px));
+        font: 12px/1.5 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+        color: #c8cfda;
+        opacity: 0.82;
+        pointer-events: none;
+        white-space: pre-wrap;
+      }
+      #label b {
+        color: #f3ece0;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <div id="label"></div>
+    <script type="module" src="./terrain.ts"></script>
+  </body>
+</html>

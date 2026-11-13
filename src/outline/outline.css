@@ -1,0 +1,1861 @@
+/*
+ * The outline: a calm reading page on the night room. The roadmap's head and the stage list sit on the night;
+ * every stage is a sheet of paper with its steps strung on a dashed route. The route's colour (signal) appears
+ * only where it means the route or "you are here". Colours and faces come from the look's --zt-* properties;
+ * the fallbacks are the same values, so the page reads correctly before any script runs.
+ *
+ * Print: the outline prints as black on white with every link followed by its address. The trail card, the
+ * notebook handout and the session pages print alone through #zo-print-root.
+ */
+
+.zo-outline {
+  --zo-night: var(--zt-night, #0b0f17);
+  --zo-text: var(--zt-text, #eef0f2);
+  --zo-text-soft: var(--zt-text-soft, #a9b2bf);
+  --zo-text-faint: var(--zt-text-faint, #8a94a3);
+  --zo-paper: var(--zt-paper, #f3ece0);
+  --zo-paper-hi: var(--zt-paper-hi, #fbf8f1);
+  --zo-paper-shade: var(--zt-paper-shade, #d9cdb8);
+  --zo-ink: var(--zt-ink, #1f2a3d);
+  --zo-ink-soft: var(--zt-ink-soft, #5a6577);
+  --zo-signal: var(--zt-signal, #e2492f);
+  --zo-signal-deep: var(--zt-signal-deep, #b8341f);
+  --zo-lamp: var(--zt-lamp, #ffd9a0);
+  --zo-gated: var(--zt-status-gated, #8a5a12);
+  --zo-rule: rgba(31, 42, 61, 0.14);
+  --zo-wash: rgba(31, 42, 61, 0.05);
+  --zo-room-rule: rgba(238, 240, 242, 0.14);
+  --zo-display: var(--zt-font-display, 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Noto Serif', serif);
+  --zo-text-face: var(--zt-font-text, 'Atkinson Hyperlegible Next', 'Segoe UI', system-ui, -apple-system, 'Noto Sans', sans-serif);
+  --zo-label-face: var(--zt-font-label, 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, 'SF Mono', Menlo, monospace);
+  --zo-gutter: clamp(16px, 4vw, 40px);
+  --zo-tier-bronze: var(--zt-tier-bronze, #b8794a);
+  --zo-tier-silver: var(--zt-tier-silver, #aeb6c0);
+  --zo-tier-gold: var(--zt-tier-gold, #e0b44c);
+  --zo-tier-diamond: var(--zt-tier-diamond, #b9c8ff);
+
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 820px;
+  margin: 0 auto;
+  padding: clamp(40px, 8vw, 88px) var(--zo-gutter) 72px;
+  color: var(--zo-text);
+  font-family: var(--zo-text-face);
+  font-size: 17px;
+  line-height: 1.6;
+  text-align: start;
+  /* A long code name or address breaks where it must, so it can never push the page wider than the phone. */
+  overflow-wrap: anywhere;
+  hyphens: manual;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Grids in the outline size their one column to the sheet, never to the longest word in it. */
+.zo-outline :is(.zo-head, .zo-stage-head, .zo-step-head, .zo-item-head, .zo-body, .zo-sources, .zo-source, .zo-predict, .zo-checks, .zo-check, .zo-tools, .zo-panel, .zo-gallery-item > article, .zo-capstone, .zo-class, .zo-session, .zo-gap, .zo-teacher) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+:where(.zo-outline) *,
+:where(.zo-outline) *::before,
+:where(.zo-outline) *::after {
+  box-sizing: border-box;
+}
+
+:where(.zo-outline) :where(h1, h2, h3, h4, p, ul, ol, figure, dl, dd) {
+  margin: 0;
+  padding: 0;
+}
+
+:where(.zo-outline) :where(ul, ol) {
+  list-style: none;
+}
+
+.zo-outline [hidden] {
+  display: none !important;
+}
+
+/* While the map is shown, the prerendered outline steps back; the list view (L, the skip link) brings it again. */
+html.map-view #zero-to-outline {
+  display: none;
+}
+
+/* A page that is only the outline (no WebGL, list view, a crawler) gets the night behind it. */
+html:has(> body > #zero-to-outline .zo-outline):not(.map-view),
+html:has(> body > .zo-outline) {
+  background: var(--zt-night, #0b0f17);
+}
+
+/* ---- Type helpers ------------------------------------------------------------------------------------- */
+
+.zo-label {
+  font-family: var(--zo-label-face);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.zo-kicker {
+  font-family: var(--zo-label-face);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  color: var(--zo-text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.zo-kicker-word {
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zo-text);
+}
+
+.zo-tag {
+  display: inline-block;
+  margin-inline-start: 10px;
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  vertical-align: 1px;
+}
+
+.zo-hint {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--zo-ink-soft);
+}
+
+.zo-outline a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.zo-outline a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* ---- Head on the night ------------------------------------------------------------------------------- */
+
+.zo-head {
+  display: grid;
+  gap: 18px;
+  max-width: 680px;
+}
+
+.zo-title {
+  font-family: var(--zo-display);
+  font-size: clamp(36px, 5.6vw, 58px);
+  font-weight: 500;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'opsz' 144, 'SOFT' 40, 'WONK' 0;
+  color: var(--zo-text);
+  text-wrap: balance;
+}
+
+.zo-summary {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--zo-text-soft);
+  text-wrap: pretty;
+}
+
+.zo-goal {
+  font-size: 16px;
+  color: var(--zo-text-soft);
+}
+
+.zo-goal .zo-label {
+  color: var(--zo-text);
+  margin-inline-end: 6px;
+}
+
+.zo-checked {
+  font-family: var(--zo-label-face);
+  font-size: 12.5px;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--zo-text-faint);
+}
+
+.zo-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zo-facts li {
+  padding: 3px 11px;
+  border: 1px solid var(--zo-room-rule);
+  border-radius: 999px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--zo-text-soft);
+}
+
+.zo-continue:empty {
+  display: none;
+}
+
+.zo-continue-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 18px 10px 16px;
+  border: 1px solid var(--zo-room-rule);
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--zo-text);
+  background: rgba(238, 240, 242, 0.04);
+}
+
+.zo-continue-link::before {
+  content: '';
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--zo-signal);
+  box-shadow: 0 0 0 3px rgba(226, 73, 47, 0.25);
+  align-self: center;
+}
+
+.zo-continue-word {
+  font-family: var(--zo-label-face);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zo-text-soft);
+}
+
+.zo-continue-title {
+  font-family: var(--zo-display);
+  font-size: 18px;
+}
+
+/* ---- Profile: a printed strip of paper --------------------------------------------------------------- */
+
+.zo-profile {
+  margin-top: 44px;
+  padding: 20px 22px 16px;
+  color: var(--zo-ink);
+  background-color: var(--zo-paper);
+  background-image:
+    radial-gradient(130% 70% at 28% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 62%),
+    repeating-linear-gradient(176deg, rgba(31, 42, 61, 0.018) 0 1px, transparent 1px 5px);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 2px 5px rgba(0, 0, 0, 0.32), 0 26px 40px -22px rgba(0, 0, 0, 0.78);
+}
+
+.zo-profile-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.zo-profile-svg text {
+  font-family: var(--zo-label-face);
+  font-size: 15px;
+}
+
+.zo-profile-svg .zo-p-tier {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.zo-profile-svg .zo-p-num {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.zo-profile-svg .zo-p-label {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.zo-profile-svg .zo-p-small {
+  font-size: 13px;
+}
+
+.zo-profile-caption {
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--zo-ink-soft);
+}
+
+/* ---- Stages list on the night ------------------------------------------------------------------------ */
+
+.zo-toc {
+  margin-top: 52px;
+}
+
+.zo-toc-title {
+  color: var(--zo-text-soft);
+  margin-bottom: 10px;
+}
+
+.zo-toc-list {
+  border-top: 1px solid var(--zo-room-rule);
+}
+
+.zo-toc-item {
+  border-bottom: 1px solid var(--zo-room-rule);
+}
+
+.zo-toc-link {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: baseline;
+  gap: 4px 14px;
+  min-height: 48px;
+  padding: 12px 4px;
+  text-decoration: none;
+  color: var(--zo-text);
+}
+
+.zo-toc-link:hover .zo-toc-name {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.zo-toc-n {
+  font-family: var(--zo-label-face);
+  font-size: 12px;
+  color: var(--zo-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.zo-toc-n::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-inline-end: 8px;
+  border-radius: 50%;
+  background: var(--zo-tier, var(--zo-tier-bronze));
+  vertical-align: 1px;
+}
+
+.zo-toc-name {
+  font-family: var(--zo-display);
+  font-size: 19px;
+  line-height: 1.3;
+}
+
+.zo-toc-meta {
+  font-family: var(--zo-label-face);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--zo-text-faint);
+  white-space: nowrap;
+}
+
+[data-tier='bronze'] {
+  --zo-tier: var(--zo-tier-bronze);
+}
+[data-tier='silver'] {
+  --zo-tier: var(--zo-tier-silver);
+}
+[data-tier='gold'] {
+  --zo-tier: var(--zo-tier-gold);
+}
+[data-tier='diamond'] {
+  --zo-tier: var(--zo-tier-diamond);
+}
+
+/* ---- A stage: a sheet of paper ------------------------------------------------------------------------ */
+
+.zo-stage,
+.zo-capstone,
+.zo-class {
+  position: relative;
+  margin-top: 56px;
+  padding: clamp(24px, 5vw, 48px) clamp(18px, 5vw, 52px) clamp(28px, 5vw, 48px);
+  color: var(--zo-ink);
+  background-color: var(--zo-paper);
+  background-image:
+    radial-gradient(130% 50% at 28% 0%, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 62%),
+    repeating-linear-gradient(176deg, rgba(31, 42, 61, 0.016) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, rgba(217, 205, 184, 0) 85%, rgba(217, 205, 184, 0.35) 100%);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 0 0 1px rgba(31, 42, 61, 0.06), 0 2px 5px rgba(0, 0, 0, 0.32),
+    0 26px 40px -22px rgba(0, 0, 0, 0.78);
+  scroll-margin-top: 24px;
+}
+
+/* A band of the stage's tier colour along the top edge, like the cloth of a cover. */
+.zo-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  border-radius: 3px 3px 0 0;
+  background: var(--zo-tier, var(--zo-tier-bronze));
+  opacity: 0.85;
+}
+
+.zo-stage-head {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+}
+
+.zo-stage-kicker {
+  color: var(--zo-ink-soft);
+}
+
+.zo-tag-entry {
+  color: var(--zo-signal-deep);
+}
+
+.zo-stage-title {
+  font-family: var(--zo-display);
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 500;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  font-variation-settings: 'opsz' 96, 'SOFT' 40, 'WONK' 0;
+  text-wrap: balance;
+}
+
+.zo-stage-meta {
+  font-family: var(--zo-label-face);
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  color: var(--zo-ink-soft);
+}
+
+.zo-tier-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-inline-end: 8px;
+  border-radius: 50%;
+  background: var(--zo-tier, var(--zo-tier-bronze));
+  box-shadow: 0 0 0 1px rgba(31, 42, 61, 0.25);
+  vertical-align: 0;
+}
+
+.zo-stage-summary {
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.zo-stage-progress:empty {
+  display: none;
+}
+
+.zo-stage-progress {
+  font-family: var(--zo-label-face);
+  font-size: 12.5px;
+  color: var(--zo-ink);
+}
+
+/* ---- Steps on a dashed route -------------------------------------------------------------------------- */
+
+.zo-steps {
+  position: relative;
+  margin-top: 34px;
+  padding-inline-start: 34px;
+}
+
+.zo-step {
+  position: relative;
+  padding-bottom: 40px;
+  scroll-margin-top: 24px;
+}
+
+/* The route: dashed ink between the markers, solid in the route's colour where it is walked. */
+.zo-step::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -25px;
+  top: 14px;
+  bottom: -12px;
+  width: 0;
+  border-inline-start: 2px dashed rgba(31, 42, 61, 0.32);
+}
+
+.zo-step:last-child::before {
+  bottom: 10px;
+}
+
+.zo-step[data-done]::before {
+  border-inline-start: 3px solid var(--zo-signal);
+  inset-inline-start: -25.5px;
+}
+
+/* The step's marker on the route. */
+.zo-step::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: -31px;
+  top: 7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--zo-paper-hi);
+  border: 2px solid var(--zo-ink);
+}
+
+.zo-step[data-optional]::after {
+  width: 10px;
+  height: 10px;
+  inset-inline-start: -29px;
+  top: 9px;
+  border-style: dotted;
+}
+
+.zo-step[data-done]::after {
+  background: var(--zo-ink);
+}
+
+/* You are here: the red pin's head, with a paper ring. */
+.zo-step[data-here]::after {
+  inset-inline-start: -33px;
+  top: 5px;
+  width: 18px;
+  height: 18px;
+  background: var(--zo-signal);
+  border: 3px solid var(--zo-paper-hi);
+  box-shadow: 0 0 0 1px rgba(31, 42, 61, 0.5), 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.zo-step-head,
+.zo-item-head {
+  display: grid;
+  gap: 6px;
+}
+
+.zo-step-kicker {
+  color: var(--zo-ink-soft);
+}
+
+.zo-step-title {
+  font-family: var(--zo-display);
+  font-size: clamp(22px, 3vw, 25px);
+  font-weight: 500;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  font-variation-settings: 'opsz' 48, 'SOFT' 40, 'WONK' 0;
+  text-wrap: balance;
+}
+
+.zo-step-meta {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--zo-ink-soft);
+}
+
+.zo-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  max-width: 640px;
+}
+
+.zo-note,
+.zo-task {
+  font-size: 17px;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.zo-task {
+  font-weight: 500;
+}
+
+.zo-sub {
+  margin-top: 10px;
+  font-family: var(--zo-label-face);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zo-ink-soft);
+}
+
+.zo-predict {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--zo-wash);
+  border-inline-start: 3px solid rgba(31, 42, 61, 0.38);
+  border-radius: 0 3px 3px 0;
+}
+
+.zo-predict .zo-label {
+  color: var(--zo-ink-soft);
+}
+
+.zo-predict-q {
+  font-size: 16.5px;
+  line-height: 1.55;
+}
+
+/* ---- Sources ---------------------------------------------------------------------------------------- */
+
+.zo-sources {
+  display: grid;
+  gap: 2px;
+}
+
+.zo-source {
+  display: grid;
+  gap: 3px;
+  padding: 12px 0;
+  border-top: 1px solid var(--zo-rule);
+}
+
+.zo-source:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.zo-source-kind {
+  color: var(--zo-ink-soft);
+  font-size: 10.5px;
+}
+
+.zo-source-head {
+  font-size: 16.5px;
+  line-height: 1.4;
+}
+
+.zo-source-title {
+  font-weight: 600;
+}
+
+a.zo-source-title {
+  text-decoration-color: rgba(31, 42, 61, 0.45);
+}
+
+.zo-source-by,
+.zo-source-nolink {
+  color: var(--zo-ink-soft);
+  font-size: 15px;
+}
+
+.zo-why {
+  font-size: 15.5px;
+  line-height: 1.5;
+}
+
+.zo-source-line {
+  font-family: var(--zo-label-face);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--zo-ink-soft);
+}
+
+.zo-source-flag {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--zo-ink);
+  padding-inline-start: 10px;
+  border-inline-start: 3px solid var(--zo-gated);
+}
+
+.zo-source[data-status='unverified'] .zo-source-flag {
+  border-inline-start-style: dashed;
+  border-inline-start-color: var(--zo-ink-soft);
+}
+
+.zo-flag-word {
+  font-family: var(--zo-label-face);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zo-gated);
+}
+
+.zo-source[data-status='unverified'] .zo-flag-word {
+  color: var(--zo-ink-soft);
+}
+
+.zo-source-note {
+  font-size: 14px;
+  color: var(--zo-ink-soft);
+}
+
+.zo-gap {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px dashed rgba(31, 42, 61, 0.35);
+  border-radius: 3px;
+  font-size: 15px;
+}
+
+.zo-gap .zo-label,
+p.zo-gap.zo-label {
+  color: var(--zo-ink-soft);
+}
+
+/* ---- Checks, key points, lists ------------------------------------------------------------------------ */
+
+.zo-checks {
+  display: grid;
+  gap: 12px;
+  counter-reset: zo-q;
+}
+
+.zo-check {
+  display: grid;
+  gap: 6px;
+  padding-inline-start: 30px;
+  position: relative;
+  counter-increment: zo-q;
+}
+
+.zo-check::before {
+  content: counter(zo-q);
+  position: absolute;
+  inset-inline-start: 0;
+  top: 1px;
+  width: 21px;
+  height: 21px;
+  border: 1.5px solid rgba(31, 42, 61, 0.5);
+  border-radius: 50%;
+  font-family: var(--zo-label-face);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--zo-ink-soft);
+}
+
+.zo-q {
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.zo-options {
+  display: grid;
+  gap: 2px;
+  font-size: 15.5px;
+}
+
+.zo-options li::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-inline-end: 10px;
+  border: 1.5px solid rgba(31, 42, 61, 0.55);
+  border-radius: 50%;
+}
+
+.zo-answer summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 4px 12px;
+  border: 1px solid rgba(31, 42, 61, 0.28);
+  border-radius: 6px;
+  font-size: 14.5px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.zo-answer summary::-webkit-details-marker {
+  display: none;
+}
+
+.zo-answer[open] summary {
+  background: var(--zo-wash);
+}
+
+.zo-answer-text {
+  margin-top: 8px;
+  padding-inline-start: 12px;
+  border-inline-start: 2px solid rgba(31, 42, 61, 0.25);
+  font-size: 15.5px;
+}
+
+.zo-withheld {
+  font-size: 14.5px;
+  font-style: italic;
+  color: var(--zo-ink-soft);
+}
+
+.zo-takeaways,
+.zo-list,
+.zo-show {
+  display: grid;
+  gap: 6px;
+}
+
+.zo-takeaways li,
+.zo-list li {
+  position: relative;
+  padding-inline-start: 18px;
+  line-height: 1.5;
+}
+
+.zo-takeaways li::before,
+.zo-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 2px;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(31, 42, 61, 0.55);
+}
+
+.zo-show li {
+  position: relative;
+  padding-inline-start: 30px;
+  line-height: 1.5;
+}
+
+.zo-show li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.15em;
+  width: 17px;
+  height: 17px;
+  border: 1.5px solid var(--zo-ink);
+  border-radius: 3px;
+  background: var(--zo-paper-hi);
+}
+
+.zo-teacher {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  background: rgba(138, 90, 18, 0.07);
+  border-inline-start: 3px solid var(--zo-gated);
+  font-size: 15.5px;
+}
+
+/* ---- Signpost and camp: the stage's two ends ------------------------------------------------------------ */
+
+.zo-signpost,
+.zo-camp {
+  position: relative;
+  margin-top: 8px;
+  margin-inline-start: 34px;
+  padding: 24px 0 8px;
+  border-top: 1px solid var(--zo-rule);
+  scroll-margin-top: 24px;
+}
+
+.zo-signpost::before,
+.zo-camp::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -34px;
+  top: 26px;
+  width: 18px;
+  height: 18px;
+  background: var(--zo-ink);
+}
+
+/* A signpost: a board on a post. */
+.zo-signpost::before {
+  clip-path: polygon(0 10%, 78% 10%, 100% 30%, 78% 50%, 56% 50%, 56% 100%, 44% 100%, 44% 50%, 0 50%);
+}
+
+/* A camp: a tent. */
+.zo-camp::before {
+  clip-path: polygon(50% 0, 100% 100%, 62% 100%, 50% 62%, 38% 100%, 0 100%);
+}
+
+.zo-signpost[data-passed] .zo-status {
+  color: var(--zo-ink);
+  font-weight: 600;
+}
+
+.zo-rungs {
+  display: grid;
+  gap: 8px;
+  counter-reset: zo-rung;
+}
+
+.zo-rung {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid var(--zo-rule);
+  border-radius: 3px;
+  background: rgba(251, 248, 241, 0.6);
+}
+
+.zo-rung .zo-label {
+  color: var(--zo-ink-soft);
+}
+
+.zo-capstone {
+  display: grid;
+  gap: 12px;
+}
+
+.zo-capstone .zo-stage-kicker {
+  color: var(--zo-ink-soft);
+}
+
+/* ---- Class plan ------------------------------------------------------------------------------------- */
+
+.zo-class {
+  display: grid;
+  gap: 14px;
+}
+
+.zo-sessions {
+  display: grid;
+  gap: 0;
+  margin-top: 10px;
+}
+
+.zo-session {
+  display: grid;
+  gap: 6px;
+  padding: 16px 0;
+  border-top: 1px solid var(--zo-rule);
+}
+
+.zo-session-title {
+  font-family: var(--zo-display);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.zo-session-title .zo-label {
+  display: block;
+  margin-bottom: 2px;
+  font-family: var(--zo-label-face);
+  color: var(--zo-ink-soft);
+}
+
+.zo-session > .zo-label {
+  margin-top: 4px;
+  color: var(--zo-ink-soft);
+}
+
+/* ---- Footer ------------------------------------------------------------------------------------------ */
+
+.zo-foot {
+  display: grid;
+  gap: 4px;
+  margin-top: 56px;
+  font-size: 14px;
+  color: var(--zo-text-faint);
+}
+
+/* ---- Hydrated controls ---------------------------------------------------------------------------------- */
+
+.zo-tools:empty {
+  display: none;
+}
+
+.zo-tools {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.zo-tools-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.zo-here {
+  justify-self: start;
+  font-family: var(--zo-label-face);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--zo-signal-deep);
+}
+
+.zo-here::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: 8px;
+  border-radius: 50%;
+  background: var(--zo-signal);
+  vertical-align: 1px;
+}
+
+.zo-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 14px 6px 10px;
+  border: 1.5px solid rgba(31, 42, 61, 0.55);
+  border-radius: 6px;
+  background: var(--zo-paper-hi);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.zo-done-box {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--zo-ink);
+  cursor: pointer;
+}
+
+.zo-step[data-done] .zo-done {
+  border-color: var(--zo-ink);
+}
+
+.zo-status {
+  font-size: 14px;
+  color: var(--zo-ink-soft);
+}
+
+.zo-status:empty {
+  display: none;
+}
+
+.zo-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1px solid rgba(31, 42, 61, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--zo-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.zo-btn:hover {
+  background: var(--zo-wash);
+}
+
+.zo-work {
+  margin-inline-start: auto;
+}
+
+/* Focus: ink with the lamp as a halo on paper, the lamp on the night. */
+.zo-outline :is(a, button, input, summary, textarea, select):focus-visible {
+  outline: 2px solid var(--zt-focus-room, #ffd9a0);
+  outline-offset: 2px;
+}
+
+.zo-outline :is(.zo-stage, .zo-capstone, .zo-class, .zo-profile, .zo-card) :is(a, button, input, summary, textarea, select):focus-visible {
+  outline-color: var(--zo-ink);
+  box-shadow: 0 0 0 4px var(--zo-lamp);
+}
+
+/* The working card sits in the sheet: flat, its own head left out (the step's head is right above). */
+.zo-card {
+  margin-top: 16px;
+  max-width: 640px;
+}
+
+.zo-card > .zl-card {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.zo-card > .zl-card > .zl-head {
+  display: none;
+}
+
+/* ---- Panels on the night: reviews, pace, notebook, exports ----------------------------------------------- */
+
+.zo-slot:empty {
+  display: none;
+}
+
+.zo-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 52px;
+}
+
+.zo-panel-title {
+  font-family: var(--zo-display);
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--zo-text);
+}
+
+.zo-panel > .zo-hint {
+  color: var(--zo-text-soft);
+}
+
+.zo-panel .zl-card {
+  max-width: 640px;
+}
+
+.zo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.zo-panel .zo-btn {
+  border-color: var(--zo-room-rule);
+  color: var(--zo-text);
+}
+
+.zo-panel .zo-btn:hover {
+  background: rgba(238, 240, 242, 0.06);
+  border-color: rgba(238, 240, 242, 0.3);
+}
+
+/* ---- Gallery and home ----------------------------------------------------------------------------------- */
+
+.zo-gallery-list {
+  display: grid;
+  gap: 28px;
+  margin-top: 44px;
+}
+
+.zo-panel .zo-gallery-list {
+  margin-top: 4px;
+}
+
+.zo-gallery-item > article {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: clamp(22px, 4vw, 36px) clamp(18px, 4vw, 40px);
+  color: var(--zo-ink);
+  background: var(--zo-paper);
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 2px 5px rgba(0, 0, 0, 0.32), 0 26px 40px -22px rgba(0, 0, 0, 0.78);
+}
+
+.zo-gallery-item > article::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  border-radius: 3px 3px 0 0;
+  background: var(--zo-tier, var(--zo-tier-bronze));
+}
+
+.zo-gallery-item .zo-kicker,
+.zo-gallery-item .zo-checked {
+  color: var(--zo-ink-soft);
+}
+
+.zo-gallery-item .zo-summary {
+  color: var(--zo-ink);
+  font-size: 17px;
+}
+
+.zo-gallery-title {
+  font-family: var(--zo-display);
+  font-size: clamp(24px, 3.4vw, 30px);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+}
+
+.zo-gallery-title a {
+  text-decoration: none;
+}
+
+.zo-gallery-title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.zo-gallery-stages {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  counter-reset: zo-gs;
+}
+
+.zo-gallery-stages > li {
+  counter-increment: zo-gs;
+  padding-inline-start: 30px;
+  position: relative;
+  line-height: 1.45;
+}
+
+.zo-gallery-stages > li::before {
+  content: counter(zo-gs);
+  position: absolute;
+  inset-inline-start: 0;
+  font-family: var(--zo-label-face);
+  font-size: 12px;
+  color: var(--zo-ink-soft);
+}
+
+.zo-gallery-stages .zo-toc-meta {
+  color: var(--zo-ink-soft);
+}
+
+.zo-gallery-steps {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 8px;
+  font-size: 15px;
+  color: var(--zo-ink-soft);
+}
+
+.zo-gallery-stages a {
+  text-decoration-color: rgba(31, 42, 61, 0.3);
+}
+
+.zo-gallery-steps a {
+  text-decoration: none;
+}
+
+.zo-gallery-steps a:hover {
+  text-decoration: underline;
+}
+
+.zo-gallery-go .zo-btn {
+  margin-top: 6px;
+}
+
+.zo-home .zo-gallery-go > a:not(.zo-btn) {
+  color: var(--zo-text);
+}
+
+/* ---- Phones ------------------------------------------------------------------------------------------- */
+
+@media (max-width: 560px) {
+  .zo-outline {
+    font-size: 16.5px;
+  }
+
+  .zo-toc-link {
+    grid-template-columns: 28px 1fr;
+  }
+
+  .zo-toc-meta {
+    grid-column: 2;
+  }
+
+  .zo-steps {
+    padding-inline-start: 26px;
+  }
+
+  .zo-step::before {
+    inset-inline-start: -19px;
+  }
+
+  .zo-step[data-done]::before {
+    inset-inline-start: -19.5px;
+  }
+
+  .zo-step::after {
+    inset-inline-start: -25px;
+  }
+
+  .zo-step[data-optional]::after {
+    inset-inline-start: -23px;
+  }
+
+  .zo-step[data-here]::after {
+    inset-inline-start: -27px;
+  }
+
+  .zo-signpost,
+  .zo-camp {
+    margin-inline-start: 26px;
+  }
+
+  .zo-signpost::before,
+  .zo-camp::before {
+    inset-inline-start: -27px;
+  }
+
+  .zo-rung {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .zo-work {
+    margin-inline-start: 0;
+  }
+
+  .zo-profile {
+    padding: 14px 12px 12px;
+  }
+
+  .zo-profile-svg .zo-p-tier,
+  .zo-profile-svg .zo-p-small,
+  .zo-profile-svg .zo-p-label {
+    display: none;
+  }
+}
+
+/* ---- The print root and its preview -------------------------------------------------------------------- */
+
+#zo-print-root {
+  display: none;
+}
+
+/* A preview on screen of what will print, for checking a handout before the dialog. */
+html[data-print-preview] body > :not(#zo-print-root) {
+  display: none !important;
+}
+
+html[data-print-preview] {
+  background: #6b7280;
+}
+
+html[data-print-preview] #zo-print-root {
+  display: block;
+}
+
+html[data-print-preview] .zo-print-page {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 24px auto;
+  padding: 12mm 13mm;
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* ---- Print pages: trail card, notebook handout, session pages ------------------------------------------- */
+
+.zo-print-page {
+  --zo-ink: var(--zt-ink, #1f2a3d);
+  --zo-ink-soft: var(--zt-ink-soft, #5a6577);
+  --zo-signal: var(--zt-signal, #e2492f);
+  --zo-signal-deep: var(--zt-signal-deep, #b8341f);
+  --zo-rule: rgba(31, 42, 61, 0.22);
+  --zo-label-face: var(--zt-font-label, 'IBM Plex Mono', ui-monospace, Consolas, monospace);
+  --zo-display: var(--zt-font-display, 'Fraunces', Georgia, serif);
+  --zo-tier-bronze: var(--zt-tier-bronze, #b8794a);
+  --zo-tier-silver: var(--zt-tier-silver, #aeb6c0);
+  --zo-tier-gold: var(--zt-tier-gold, #e0b44c);
+  --zo-tier-diamond: var(--zt-tier-diamond, #b9c8ff);
+  box-sizing: border-box;
+  color: var(--zo-ink);
+  font-family: var(--zt-font-text, 'Atkinson Hyperlegible Next', 'Segoe UI', system-ui, sans-serif);
+  font-size: 10.5pt;
+  line-height: 1.42;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.zo-print-page *,
+.zo-print-page *::before {
+  box-sizing: border-box;
+}
+
+.zo-print-page :where(h2, h3, h4, p, ul, ol, figure, table) {
+  margin: 0;
+  padding: 0;
+}
+
+.zo-print-page :where(ul, ol) {
+  list-style: none;
+}
+
+.zo-print-page a {
+  color: inherit;
+}
+
+.zo-tc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-bottom: 2.5mm;
+  border-bottom: 0.4mm solid var(--zo-ink);
+  font-family: var(--zo-label-face);
+  font-size: 8pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.zo-tc-word {
+  font-family: var(--zo-display);
+  font-size: 12pt;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+}
+
+.zo-tc-brand {
+  font-family: var(--zo-label-face);
+  font-size: 8pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zo-ink-soft);
+}
+
+.zo-tc-title {
+  margin-top: 5mm;
+  font-family: var(--zo-display);
+  font-size: 22pt;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+}
+
+.zo-tc-facts {
+  margin-top: 1.5mm;
+  font-family: var(--zo-label-face);
+  font-size: 8.5pt;
+  color: var(--zo-ink-soft);
+}
+
+.zo-tc-who {
+  display: flex;
+  align-items: baseline;
+  gap: 3mm;
+  margin-top: 4mm;
+  font-size: 9.5pt;
+}
+
+.zo-tc-who .zo-label {
+  font-family: var(--zo-label-face);
+  font-size: 7.5pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.zo-tc-blank {
+  flex: 1;
+  border-bottom: 0.3mm solid var(--zo-ink);
+  min-height: 5mm;
+}
+
+.zo-tc-started {
+  color: var(--zo-ink-soft);
+}
+
+.zo-tc-profile {
+  margin-top: 4mm;
+}
+
+.zo-tc-profile svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 58mm;
+}
+
+.zo-tc-profile svg text {
+  font-family: var(--zo-label-face);
+  font-size: 15px;
+}
+
+.zo-tc-caption {
+  margin-top: 1mm;
+  font-size: 8.5pt;
+  color: var(--zo-ink-soft);
+}
+
+.zo-tc-table {
+  width: 100%;
+  margin-top: 4mm;
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+
+.zo-tc-table th {
+  padding: 1.2mm 1.5mm;
+  border-bottom: 0.4mm solid var(--zo-ink);
+  font-family: var(--zo-label-face);
+  font-size: 7pt;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: start;
+}
+
+.zo-tc-table td {
+  padding: 1.3mm 1.5mm;
+  border-bottom: 0.2mm solid var(--zo-rule);
+  vertical-align: top;
+}
+
+.zo-tc-table tr[data-here] td {
+  font-weight: 600;
+}
+
+.zo-tc-table tr[data-here] .zo-tc-n {
+  color: var(--zo-signal-deep);
+}
+
+.zo-tc-n {
+  width: 7mm;
+  font-family: var(--zo-label-face);
+}
+
+.zo-tc-num {
+  text-align: end !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.zo-print-page .zo-tier-dot {
+  display: inline-block;
+  width: 2.4mm;
+  height: 2.4mm;
+  margin-inline-end: 1.5mm;
+  border-radius: 50%;
+  background: var(--zo-tier, var(--zo-tier-bronze));
+  box-shadow: 0 0 0 0.2mm rgba(31, 42, 61, 0.4);
+}
+
+.zo-tc-cols {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 6mm;
+  margin-top: 5mm;
+}
+
+.zo-print-page h3.zo-label,
+.zo-print-page .zo-label {
+  font-family: var(--zo-label-face);
+  font-size: 7.5pt;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--zo-ink-soft);
+}
+
+.zo-print-page h3.zo-label {
+  margin-bottom: 1.5mm;
+}
+
+.zo-tc-step {
+  font-family: var(--zo-display);
+  font-size: 12.5pt;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.zo-tc-task {
+  margin-top: 1mm;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.zo-tc-source {
+  margin-top: 1.5mm;
+  font-size: 9pt;
+}
+
+.zo-print-page .zo-list li {
+  position: relative;
+  padding-inline-start: 3.5mm;
+}
+
+.zo-print-page .zo-list li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.55em;
+  width: 1.4mm;
+  height: 1.4mm;
+  border-radius: 50%;
+  background: var(--zo-ink-soft);
+}
+
+.zo-tc-notes {
+  margin-top: 5mm;
+}
+
+.zo-lines {
+  display: grid;
+}
+
+.zo-line {
+  display: block;
+  height: 8mm;
+  border-bottom: 0.2mm solid var(--zo-rule);
+}
+
+.zo-tc-foot {
+  margin-top: 4mm;
+  font-size: 7.5pt;
+  color: var(--zo-ink-soft);
+}
+
+/* One sheet, whatever happens: the card never runs onto a second page. */
+.zo-trail-card {
+  max-height: 268mm;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+.zo-session-page,
+.zo-handout {
+  display: grid;
+  align-content: start;
+  gap: 2.5mm;
+}
+
+.zo-session-page {
+  break-after: page;
+}
+
+.zo-session-page:last-child {
+  break-after: auto;
+}
+
+.zo-session-h {
+  margin-top: 3mm;
+  font-family: var(--zo-display);
+  font-size: 18pt;
+  font-weight: 500;
+  line-height: 1.12;
+}
+
+.zo-session-h .zo-label {
+  display: block;
+  margin-bottom: 1mm;
+}
+
+.zo-print-page .zo-step-meta {
+  font-size: 9pt;
+  color: var(--zo-ink-soft);
+}
+
+.zo-print-page h3.zo-label {
+  margin-top: 3mm;
+}
+
+.zo-session-step {
+  display: grid;
+  gap: 1mm;
+  padding: 2mm 0;
+  border-top: 0.2mm solid var(--zo-rule);
+  break-inside: avoid;
+}
+
+.zo-session-step h4 {
+  font-family: var(--zo-display);
+  font-size: 11.5pt;
+  font-weight: 500;
+}
+
+.zo-print-page .zo-teacher {
+  padding: 1.5mm 2.5mm;
+  border-inline-start: 0.8mm solid var(--zt-status-gated, #8a5a12);
+  background: rgba(138, 90, 18, 0.07);
+  font-size: 9.5pt;
+}
+
+.zo-print-page .zo-checks {
+  display: grid;
+  gap: 1mm;
+  padding-inline-start: 5mm;
+  list-style: decimal;
+  font-size: 9.5pt;
+}
+
+.zo-handout-stage {
+  margin-top: 4mm;
+  font-family: var(--zo-display);
+  font-size: 13pt;
+  font-weight: 500;
+}
+
+.zo-handout-step {
+  margin-top: 1mm;
+  font-size: 10.5pt;
+  font-weight: 600;
+}
+
+.zo-handout-list {
+  display: grid;
+  gap: 1.5mm;
+}
+
+.zo-handout-list li {
+  break-inside: avoid;
+}
+
+/* Roadmap text is never upper-cased or tracked wide, even inside a label line. */
+:is(.zo-outline, .zo-print-page) :is(.zo-label, .zo-tc-brand, .zo-kicker) [lang][dir='auto'] {
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+
+.zo-print-page .zo-task {
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: 500;
+}
+
+/* ---- Print ------------------------------------------------------------------------------------------ */
+
+@page {
+  size: A4;
+  margin: 13mm 13mm 14mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  /* One kind at a time: the print root alone, or the outline alone. */
+  html[data-print]:not([data-print='outline']) body > :not(#zo-print-root) {
+    display: none !important;
+  }
+
+  html[data-print]:not([data-print='outline']) #zo-print-root {
+    display: block;
+  }
+
+  html[data-print='outline'] body > :not(:has(.zo-outline)):not(.zo-outline) {
+    display: none !important;
+  }
+
+  .zo-print-page {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .zo-outline {
+    --zo-text: var(--zo-ink);
+    --zo-text-soft: var(--zo-ink-soft);
+    --zo-text-faint: var(--zo-ink-soft);
+    --zo-room-rule: rgba(31, 42, 61, 0.25);
+    max-width: none;
+    padding: 0;
+    color: var(--zo-ink);
+    font-size: 10.5pt;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .zo-title {
+    font-size: 26pt;
+  }
+
+  .zo-summary {
+    font-size: 12pt;
+  }
+
+  .zo-profile,
+  .zo-stage,
+  .zo-capstone,
+  .zo-class,
+  .zo-gallery-item > article {
+    margin-top: 8mm;
+    padding: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .zo-stage::before,
+  .zo-gallery-item > article::before {
+    display: none;
+  }
+
+  .zo-stage {
+    break-before: page;
+  }
+
+  .zo-stage-title {
+    font-size: 19pt;
+  }
+
+  .zo-step-title {
+    font-size: 13.5pt;
+  }
+
+  .zo-note,
+  .zo-task,
+  .zo-stage-summary {
+    font-size: 10.5pt;
+  }
+
+  .zo-steps {
+    margin-top: 5mm;
+  }
+
+  .zo-step {
+    padding-bottom: 6mm;
+    break-inside: avoid-page;
+  }
+
+  .zo-step-head,
+  .zo-item-head,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid-page;
+  }
+
+  .zo-source,
+  .zo-check,
+  .zo-rung {
+    break-inside: avoid;
+  }
+
+  /* Controls and working cards do not print; the reading text always does. */
+  .zo-tools,
+  .zo-card,
+  .zo-slot,
+  .zo-panel,
+  .zo-answer,
+  .zo-continue {
+    display: none !important;
+  }
+
+  .zo-outline [data-zo-body][hidden] {
+    display: grid !important;
+  }
+
+  /* Links print their address. */
+  .zo-outline a[href^='http']::after,
+  .zo-print-page a[href^='http']::after {
+    content: ' <' attr(href) '>';
+    font-family: var(--zo-label-face, monospace);
+    font-size: 8pt;
+    font-weight: 400;
+    color: var(--zo-ink-soft);
+    word-break: break-all;
+  }
+
+  .zo-toc-link {
+    min-height: 0;
+    padding: 1.5mm 0;
+  }
+}

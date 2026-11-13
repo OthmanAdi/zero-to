@@ -1,0 +1,887 @@
+/*
+ * Shelf structure and the default look. Variant looks live in variants.css.
+ * Rule of the house: nothing between .bb-shelf__row and a face may set
+ * overflow, filter or opacity below 1, or the 3D context flattens.
+ */
+
+/*
+ * Materials, drawn once by the browser as small tiles and repeated. Noise rather than a fine line
+ * pattern: lines shimmer on a moving plane, noise does not. Cloth has a grain running along the
+ * spine; paper has none. Defined on the root as well, so a cover shown outside the shelf matches.
+ */
+:root,
+.bb-shelf {
+  --bb-weave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95 .32' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='72' height='72' filter='url(%23n)'/%3E%3C/svg%3E");
+  --bb-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.7 .7' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='72' height='72' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.bb-shelf {
+  --bb-shelf-height: clamp(17rem, 46vh, 25rem);
+  --bb-spine-w: 58px;
+  --bb-book-h: 340px;
+  --bb-cover-w: 206px;
+  --bb-floor-y: 30px;
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'scene scene scene'
+    'prev caption next'
+    '. actions .';
+  column-gap: var(--bb-s-4);
+  width: 100%;
+  overflow-x: clip;
+  color: var(--bb-ink);
+}
+
+.bb-shelf__scene {
+  grid-area: scene;
+  position: relative;
+  height: var(--bb-shelf-height);
+  perspective: 2000px;
+  perspective-origin: 50% 50%;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  /* The page scrolls up and down through the shelf and can be pinched larger over it; sideways is the row. */
+  touch-action: pan-y pinch-zoom;
+}
+
+.bb-shelf__scene:active {
+  cursor: grabbing;
+}
+
+.bb-shelf__backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bb-shelf__floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% - var(--bb-floor-y));
+  height: 14px;
+  background: linear-gradient(rgba(26, 24, 21, 0.12), rgba(26, 24, 21, 0));
+  pointer-events: none;
+}
+
+.bb-shelf__row {
+  position: absolute;
+  left: 50%;
+  bottom: var(--bb-floor-y);
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform-style: preserve-3d;
+}
+
+/* ---------- one volume ---------- */
+
+.bb-book {
+  position: absolute;
+  left: calc(var(--bb-spine-w) / -2);
+  bottom: 0;
+  width: var(--bb-spine-w);
+  height: var(--bb-book-h);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+}
+
+/*
+ * Contact shadow: a patch lying on the floor under the volume, inside the 3D scene. The eye is level with
+ * the books, so the floor is seen almost edge on: the patch is darkest along the foot and fades back under
+ * the body, and it reaches half a gap past each side so neighbouring patches meet and darken the gaps.
+ * It turns with the volume and stays on the floor when the body is lifted.
+ */
+.bb-book::after {
+  content: '';
+  position: absolute;
+  left: calc(var(--bb-gap, 10px) / -2);
+  bottom: 0;
+  width: calc(100% + var(--bb-gap, 10px));
+  height: calc(var(--bb-cover-w) + 8px);
+  transform-origin: 50% 100%;
+  transform: translateZ(8px) rotateX(90deg);
+  background: linear-gradient(
+    to top,
+    rgba(26, 24, 21, 0),
+    rgba(26, 24, 21, 0.3) 8px,
+    rgba(26, 24, 21, 0.14) 30px,
+    rgba(26, 24, 21, 0) 70%
+  );
+  pointer-events: none;
+}
+
+.bb-book__body {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transform-origin: 50% 100%;
+  transition: transform var(--bb-dur-2) var(--bb-ease-spring);
+}
+
+/*
+ * Reactions. The body moves, never the volume's place or its shadow, so the floor shows the lift.
+ * A resting spine reaches toward a mouse: it rises and tips its head forward, only while the row is
+ * still. The presented volume lifts a little under the pointer or keyboard focus, and a press pushes
+ * its cover back, the start of opening.
+ */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):hover .bb-book__body {
+    transform: translateY(-10px) rotateX(-2deg);
+  }
+
+  .bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):active .bb-book__body {
+    transform: translateY(-6px) scale(0.985);
+    transition-duration: var(--bb-dur-1);
+  }
+
+  .bb-shelf[data-open='0'] .bb-book.is-turned:hover .bb-book__body {
+    transform: translateY(-6px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bb-shelf[data-open='0'] .bb-book.is-turned:has(.bb-book__control:focus-visible) .bb-book__body {
+    transform: translateY(-6px);
+  }
+
+  /* The front board faces along the volume's own x axis, so pushing the cover away is a move along -x. */
+  .bb-shelf[data-open='0'] .bb-book.is-turned:active .bb-book__body {
+    transform: translateY(-3px) translateX(-3px);
+    transition-duration: var(--bb-dur-1);
+  }
+}
+
+.bb-book::after {
+  opacity: 0.78;
+  transition: opacity var(--bb-dur-2) var(--bb-ease-out);
+}
+
+.bb-shelf[data-open='0'] .bb-book.is-turned:hover::after,
+.bb-shelf[data-open='0'] .bb-book.is-turned:has(.bb-book__control:focus-visible)::after,
+.bb-shelf[data-open='0']:not([data-settled='0']) .bb-book:not(.is-centre):hover::after {
+  opacity: 1;
+}
+
+/*
+ * Arrivals and departures. A volume new to the row rises into its place; one the person has just added
+ * drops in from above, a little tilted, lands and settles; one whose link left lifts, tilts and fades while
+ * its neighbours close the gap. The body moves and each face fades by itself: fading the volume as a whole
+ * would flatten it. The contact shadow stays on the floor and comes and goes with the volume.
+ */
+.bb-book.is-leaving {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bb-book.is-rising .bb-book__body {
+    animation: bb-rise var(--bb-dur-3) var(--bb-ease-out) var(--bb-delay, 0ms) backwards;
+  }
+
+  .bb-book.is-rising .bb-book__spine,
+  .bb-book.is-rising .bb-book__board,
+  .bb-book.is-rising .bb-book__slip,
+  .bb-book.is-rising::after,
+  .bb-shelf__bookend.is-rising .bb-bookend__edge,
+  .bb-shelf__bookend.is-rising .bb-bookend__face {
+    animation: bb-appear var(--bb-dur-3) var(--bb-ease-out) var(--bb-delay, 0ms) backwards;
+  }
+
+  .bb-book.is-arriving .bb-book__body {
+    animation: bb-drop var(--bb-dur-4) linear var(--bb-delay, 0ms) backwards;
+  }
+
+  .bb-book.is-arriving .bb-book__spine,
+  .bb-book.is-arriving .bb-book__board,
+  .bb-book.is-arriving .bb-book__slip {
+    animation: bb-appear var(--bb-dur-2) linear var(--bb-delay, 0ms) backwards;
+  }
+
+  /* The shadow gathers under the volume as it comes down. */
+  .bb-book.is-arriving::after {
+    animation: bb-appear var(--bb-dur-3) var(--bb-ease-in-out) var(--bb-delay, 0ms) backwards;
+  }
+
+  .bb-book.is-leaving .bb-book__body {
+    animation: bb-leave var(--bb-dur-2) var(--bb-ease-in-out) forwards;
+  }
+
+  .bb-book.is-leaving .bb-book__spine,
+  .bb-book.is-leaving .bb-book__board,
+  .bb-book.is-leaving .bb-book__slip,
+  .bb-book.is-leaving::after {
+    animation: bb-vanish var(--bb-dur-2) linear forwards;
+  }
+
+  .bb-book.is-arrived:not(:has(.bb-book__control:focus-visible)) .bb-book__ring {
+    animation: bb-outline calc(var(--bb-dur-4) * 2) linear forwards;
+  }
+}
+
+@keyframes bb-rise {
+  from {
+    transform: translateY(24px);
+  }
+}
+
+@keyframes bb-appear {
+  from {
+    opacity: 0;
+  }
+}
+
+/* A fall gathers speed: the steps between these stops grow, and each is crossed at an even pace. */
+@keyframes bb-drop {
+  0% {
+    transform: translateY(-120px) rotateZ(3deg);
+  }
+
+  14% {
+    transform: translateY(-112px) rotateZ(2.8deg);
+  }
+
+  28% {
+    transform: translateY(-90px) rotateZ(2.25deg);
+  }
+
+  41% {
+    transform: translateY(-53px) rotateZ(1.3deg);
+  }
+
+  55% {
+    transform: translateY(0) rotateZ(0deg);
+    animation-timing-function: var(--bb-ease-out);
+  }
+
+  72% {
+    transform: translateY(-3px) rotateZ(-0.4deg);
+    animation-timing-function: var(--bb-ease-in-out);
+  }
+
+  100% {
+    transform: translateY(0) rotateZ(0deg);
+  }
+}
+
+@keyframes bb-leave {
+  to {
+    transform: translateY(-30px) rotateZ(2deg);
+  }
+}
+
+@keyframes bb-vanish {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The outline comes in with the volume it is drawn on, stays while the eye finds it, and goes quietly. */
+@keyframes bb-outline {
+  0%,
+  12% {
+    opacity: 0;
+  }
+
+  30%,
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* A volume out of view is kept for its control only: nothing of it is drawn until the row brings it round. */
+.bb-book.is-away .bb-book__body,
+.bb-book.is-away::after {
+  display: none;
+}
+
+/* The one operable control per volume. Present for keyboard and screen readers, invisible, never a pointer target. */
+.bb-book__control {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * Focus ring: a complete rectangle around the face that shows, drawn as a child of that face so it
+ * turns with it and nothing in the 3D scene can cut it off. The cover once the volume is turned to the
+ * viewer, the spine before. A halo keeps it apart from any cloth or ground it sits on.
+ */
+.bb-book__ring {
+  position: absolute;
+  inset: -6px;
+  display: none;
+  border: var(--bb-focus-width-wide) solid var(--bb-focus-ring);
+  border-radius: 4px;
+  box-shadow: 0 0 0 var(--bb-focus-offset) var(--bb-focus-halo);
+  pointer-events: none;
+}
+
+/* Laid over the front board, a ring's width larger on every side and a pixel in front of it. */
+.bb-book__ring--cover {
+  inset: auto;
+  left: 100%;
+  bottom: -6px;
+  width: calc(var(--bb-cover-w) + 12px);
+  height: calc(100% + 12px);
+  transform-origin: 0 50%;
+  transform: rotateY(90deg) translateX(-6px) translateZ(1px);
+}
+
+.bb-book:not(.is-turned):has(.bb-book__control:focus-visible) .bb-book__ring--spine,
+.bb-book.is-turned:has(.bb-book__control:focus-visible) .bb-book__ring--cover {
+  display: block;
+}
+
+/*
+ * A volume that was just added carries a thin outline in the accent for a moment, unless it holds the
+ * focus ring. Both faces are outlined, so the outline turns with the volume instead of changing sides.
+ */
+.bb-book.is-arrived:not(:has(.bb-book__control:focus-visible)) .bb-book__ring {
+  display: block;
+  border: 2px solid var(--bb-accent);
+  box-shadow: none;
+}
+
+/* The row's instructions are read with each volume's name, and where an arrow took the row is said: neither is shown. */
+.bb-shelf__hint,
+.bb-shelf__status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.bb-book__spine {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--bb-spine-w) * 0.14);
+  padding: calc(var(--bb-spine-w) * 0.2) 0 calc(var(--bb-spine-w) * 0.2);
+  border-radius: 2px;
+  background-color: var(--cloth);
+  /* A faint highlight and falloff across the width reads as a rounded cloth spine. */
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.13),
+    rgba(255, 255, 255, 0) 30%,
+    rgba(0, 0, 0, 0) 68%,
+    rgba(0, 0, 0, 0.2)
+  );
+  color: var(--cloth-ink);
+  /* Headcap and tailcap: the cloth turns over the board at head and tail and catches light on the top edge. */
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.07),
+    inset 0 3px 2px -1px rgba(0, 0, 0, 0.28),
+    inset 0 -3px 2px -1px rgba(0, 0, 0, 0.24);
+  backface-visibility: hidden;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* The weave lies over the cloth and under the lettering. A look that replaces the spine's own gradients keeps it. */
+.bb-book__spine::before,
+.bb-book__board::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bb-weave) 0 0 / 72px 72px;
+  pointer-events: none;
+}
+
+.bb-book__spine::before {
+  z-index: -1;
+}
+
+/* The number at the head is printed only where a look asks for it (`--bb-spine-mark: 1`), and never under 9 px. */
+.bb-spine__mark {
+  display: none;
+  font-family: var(--bb-font-mono);
+  font-size: max(9px, calc(var(--bb-spine-w) * 0.17));
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  opacity: 0.86;
+}
+
+.bb-shelf[data-mark='1'] .bb-spine__mark {
+  display: block;
+}
+
+.bb-book[data-narrow] .bb-spine__mark {
+  visibility: hidden;
+}
+
+/* Bands at head and tail belong to one series of spines; the others keep the space so every title has the same room. */
+.bb-book__spine:not([data-treatment='bands']) .bb-spine__rule {
+  visibility: hidden;
+}
+
+.bb-spine__rule {
+  flex: none;
+  width: 62%;
+  height: 4px;
+  border-top: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  opacity: 0.55;
+}
+
+.bb-spine__title {
+  flex: 1;
+  min-height: 0;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--bb-font-serif);
+  font-size: max(11px, calc(var(--bb-spine-w) * 0.285));
+  font-weight: 600;
+  letter-spacing: 0.012em;
+  line-height: 1;
+  /* The shelf fits the size and decides the line break; the box only keeps a letter from spilling. */
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.bb-spine__title[data-lines='2'] {
+  line-height: 1.02;
+}
+
+.bb-spine__title.is-clipped,
+.bb-spine__title.is-clipped .bb-spine__label {
+  text-overflow: ellipsis;
+}
+
+/* A paper label pasted on the cloth, hugging the title. Its own ink, whatever the look letters spines in. */
+.bb-spine__label {
+  display: inline-block;
+  max-inline-size: 100%;
+  padding-inline: calc(var(--bb-spine-w) * 0.16);
+  padding-block: calc(var(--bb-spine-w) * 0.08);
+  border-radius: 1px;
+  background: #efe6d2;
+  box-shadow:
+    inset 0 0 0 0.5px rgba(0, 0, 0, 0.25),
+    0 0.5px 0 rgba(0, 0, 0, 0.2);
+  color: #2a2620;
+  text-shadow: none;
+  white-space: pre;
+  overflow: hidden;
+}
+
+/* The imprint device: the site's initial knocked out of a small shape in the cloth's second colour. */
+.bb-spine__device {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: max(14px, calc(var(--bb-spine-w) * 0.44));
+  aspect-ratio: 1;
+  color: var(--cloth);
+}
+
+.bb-spine__device::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--cloth-art);
+}
+
+.bb-spine__device[data-shape='square']::before {
+  inset: 8%;
+  border-radius: 1px;
+}
+
+.bb-spine__device[data-shape='lozenge']::before {
+  inset: 15%;
+  border-radius: 1px;
+  rotate: 45deg;
+}
+
+.bb-spine__device[data-shape='shield']::before {
+  inset: 4% 10%;
+  border-radius: 1px 1px 50% 50% / 1px 1px 42% 42%;
+}
+
+.bb-spine__initial {
+  position: relative;
+  font-family: var(--bb-font-serif);
+  font-size: max(9px, calc(var(--bb-spine-w) * 0.26));
+  font-weight: 600;
+  line-height: 1;
+}
+
+/*
+ * Reading slip: a card standing in the pages of a volume in progress, its top above the head. Across the
+ * thickness it sits as far from the front board (on the right) as the reading has got. It stands a third
+ * of the way back and half turned, so it shows whether the spine or the cover faces the viewer.
+ */
+.bb-book__slip {
+  position: absolute;
+  left: calc((1 - var(--bb-slip, 0)) * (var(--bb-spine-w) - 10px) + 2px);
+  bottom: 100%;
+  width: max(8px, calc(var(--bb-spine-w) * 0.16));
+  height: calc(var(--bb-book-h) * 0.04);
+  border-radius: 1px 1px 0 0;
+  background: var(--bb-accent);
+  transform-origin: 50% 100%;
+  transform: translateZ(calc(var(--bb-cover-w) * -0.3)) rotateY(45deg);
+  pointer-events: none;
+}
+
+/* A small check at the head of a volume marked as read. */
+.bb-spine__done {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: max(10px, calc(var(--bb-spine-w) * 0.2));
+  visibility: hidden;
+}
+
+.bb-spine__done::before {
+  content: '';
+  width: 0.55em;
+  height: 0.3em;
+  margin-top: -0.15em;
+  border-bottom: max(1.5px, 0.12em) solid currentColor;
+  border-left: max(1.5px, 0.12em) solid currentColor;
+  font-size: max(10px, calc(var(--bb-spine-w) * 0.24));
+  rotate: -45deg;
+}
+
+.bb-book.is-done .bb-spine__done {
+  visibility: visible;
+}
+
+/*
+ * The two boards stand on the spine's edges and run back into the shelf. Each faces away from the spine,
+ * so only the one turned toward the viewer is drawn: the front board for volumes left of the eye, the
+ * back board for those right of it.
+ */
+.bb-book__board {
+  position: absolute;
+  bottom: 0;
+  display: block;
+  width: var(--bb-cover-w);
+  height: 100%;
+  background-color: var(--cloth);
+  backface-visibility: hidden;
+}
+
+.bb-book__board--front {
+  left: 100%;
+  border-radius: 0 2px 2px 0;
+  transform-origin: 0 50%;
+  transform: rotateY(90deg);
+}
+
+.bb-book__board--back {
+  right: 100%;
+  border-radius: 2px 0 0 2px;
+  transform-origin: 100% 50%;
+  transform: rotateY(-90deg);
+}
+
+/*
+ * A broad soft highlight crossing the board as it turns toward the viewer, the way cloth catches a light.
+ * The shelf writes its strength and place per frame, only for volumes that are turning.
+ */
+.bb-book__sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(100deg, transparent 30%, var(--bb-light-sheen, #fffaf0) 50%, transparent 70%)
+    calc(var(--bb-sweep, 0) * 100%) 0 / 260% 100% no-repeat;
+  opacity: var(--bb-sheen, 0);
+  pointer-events: none;
+}
+
+/* The print shows only as the volume turns toward the viewer, so laying it on or taking it off is never seen. */
+.bb-book__cover > .bb-cover {
+  opacity: clamp(0, calc((var(--bb-turn, 0) - 0.2) * 2.5), 1);
+}
+
+.bb-book__shade {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--bb-light-tint, #000);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/*
+ * Bookends close a row that does not loop: a thin plate standing across the row, built like a volume
+ * (an edge facing the viewer and two faces running back), with a curved back so it reads as a bookend.
+ * It is shorter than a volume, and a volume that leans toward it rests on its top corner.
+ */
+.bb-shelf {
+  --bb-bookend: #4b4842;
+}
+
+.bb-shelf__bookend {
+  position: absolute;
+  left: calc(var(--bb-bookend-w, 6px) / -2);
+  bottom: 0;
+  width: var(--bb-bookend-w, 6px);
+  height: var(--bb-bookend-h, calc(var(--bb-book-h) * 0.62));
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.bb-shelf__bookend[hidden] {
+  display: none;
+}
+
+.bb-bookend__edge,
+.bb-bookend__face {
+  position: absolute;
+  bottom: 0;
+  height: 100%;
+  background-color: var(--bb-bookend);
+  backface-visibility: hidden;
+}
+
+.bb-bookend__edge {
+  left: 0;
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 60%);
+}
+
+.bb-bookend__face {
+  width: calc(var(--bb-cover-w) * 0.55);
+}
+
+.bb-bookend__face--front {
+  left: 100%;
+  border-radius: 0 60% 0 0 / 0 34% 0 0;
+  transform-origin: 0 50%;
+  transform: rotateY(90deg);
+}
+
+.bb-bookend__face--back {
+  right: 100%;
+  border-radius: 60% 0 0 0 / 34% 0 0 0;
+  transform-origin: 100% 50%;
+  transform: rotateY(-90deg);
+}
+
+.bb-book.is-turned {
+  cursor: pointer;
+}
+
+/* ---------- arrows, caption, actions ---------- */
+
+.bb-shelf__nav {
+  display: contents;
+}
+
+.bb-shelf__nav[hidden] {
+  display: none;
+}
+
+.bb-shelf__arrow {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-top: var(--bb-s-2);
+  border: var(--bb-hairline) solid var(--bb-rule-strong);
+  border-radius: var(--bb-r-1);
+  background: transparent;
+  color: var(--bb-ink);
+  font-family: var(--bb-font-mono);
+  font-size: 1rem;
+  line-height: 1;
+  transition-property: background-color, color, scale;
+  transition-duration: var(--bb-dur-1);
+  transition-timing-function: var(--bb-ease-out);
+}
+
+.bb-shelf__arrow:hover {
+  background: var(--bb-ink);
+  color: var(--bb-paper);
+}
+
+.bb-shelf__arrow:active {
+  scale: 0.96;
+}
+
+/* At an end of the row the arrow that points past it is spent: still there to be found, plainly not to be pressed. */
+.bb-shelf__arrow[aria-disabled='true'] {
+  border-color: var(--bb-rule);
+  color: var(--bb-ink-faint);
+  cursor: default;
+}
+
+.bb-shelf__arrow[aria-disabled='true']:hover {
+  background: transparent;
+  color: var(--bb-ink-faint);
+}
+
+.bb-shelf__arrow[aria-disabled='true']:active {
+  scale: none;
+}
+
+.bb-shelf__arrow--prev {
+  grid-area: prev;
+  margin-left: var(--bb-s-5);
+}
+
+.bb-shelf__arrow--next {
+  grid-area: next;
+  margin-right: var(--bb-s-5);
+}
+
+.bb-shelf__caption {
+  grid-area: caption;
+  min-height: 4.25rem;
+  padding-top: var(--bb-s-2);
+  text-align: center;
+}
+
+.bb-shelf__title {
+  font-family: var(--bb-font-serif);
+  font-size: var(--bb-text-lead);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: var(--bb-leading-snug);
+  text-wrap: balance;
+}
+
+/* The source or the person's note: words, never set as a label. */
+.bb-shelf__meta {
+  margin-top: var(--bb-s-1);
+  color: var(--bb-ink-soft);
+  font-family: var(--bb-font-serif);
+  font-size: var(--bb-text-ui);
+  line-height: var(--bb-leading-ui);
+  text-wrap: balance;
+}
+
+.bb-shelf__meta.is-note {
+  font-style: italic;
+}
+
+.bb-shelf__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--bb-s-2);
+  padding-top: var(--bb-s-3);
+}
+
+.bb-shelf__actions:empty {
+  display: none;
+}
+
+.bb-shelf__empty {
+  grid-column: 1 / -1;
+  padding: var(--bb-s-5);
+  color: var(--bb-ink-soft);
+  font-style: italic;
+  text-align: center;
+}
+
+.bb-shelf[data-empty='1'] .bb-shelf__scene,
+.bb-shelf[data-empty='1'] .bb-shelf__arrow,
+.bb-shelf[data-empty='1'] .bb-shelf__caption {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .bb-shelf {
+    --bb-shelf-height: clamp(15rem, 40vh, 19rem);
+    column-gap: var(--bb-s-2);
+  }
+
+  .bb-shelf__arrow--prev {
+    margin-left: var(--bb-s-3);
+  }
+
+  .bb-shelf__arrow--next {
+    margin-right: var(--bb-s-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-book__body,
+  .bb-book::after,
+  .bb-shelf__arrow {
+    transition: none;
+  }
+
+  .bb-shelf__arrow:active {
+    scale: none;
+  }
+
+  /* With motion the row stays painted under the page so closing finds it in place; here the page simply covers it. */
+  .bb-shelf[data-open='1'] .bb-shelf__scene {
+    visibility: hidden;
+  }
+}
+
+@media (forced-colors: active) {
+  /* The printed cover has its own rules in the cover stylesheet. */
+  .bb-book__spine,
+  .bb-book__board,
+  .bb-bookend__edge,
+  .bb-bookend__face {
+    border: 1px solid CanvasText;
+    forced-color-adjust: none;
+  }
+
+  .bb-book__sheen {
+    display: none;
+  }
+
+  .bb-book__slip {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .bb-book__ring {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    box-shadow: 0 0 0 var(--bb-focus-offset) Canvas;
+  }
+
+  /* The outline of a volume that was just added is drawn in the text colour, apart from the focus ring. */
+  .bb-book.is-arrived:not(:has(.bb-book__control:focus-visible)) .bb-book__ring {
+    border-color: CanvasText;
+  }
+
+  .bb-shelf__arrow[aria-disabled='true'],
+  .bb-shelf__arrow[aria-disabled='true']:hover {
+    border-color: GrayText;
+    color: GrayText;
+  }
+}

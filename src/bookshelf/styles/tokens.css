@@ -1,0 +1,160 @@
+/*
+ * Design tokens shared by every module.
+ * Modules read these custom properties and never hard-code colour, type or spacing.
+ * A variant overrides a subset of them on its own root element.
+ */
+:root {
+  /* ground and ink */
+  --bb-color-scheme: light;
+  --bb-paper: #efebe2;
+  --bb-paper-raised: #f6f3ec;
+  --bb-sheet: #fbf9f4;
+  --bb-ink: #1a1815;
+  --bb-ink-soft: #524d46;
+  /* Faint is the smallest text on the page, so it still reaches 4.5:1 on every light ground. */
+  --bb-ink-faint: #67615a;
+  --bb-rule: rgba(26, 24, 21, 0.16);
+  --bb-rule-strong: rgba(26, 24, 21, 0.62);
+
+  /* one accent, used for the active state and the reading ribbon */
+  --bb-accent: #b5301a;
+  --bb-accent-strong: #8f2412;
+  --bb-accent-ink: #fff8f1;
+  --bb-focus: #1c5fd4;
+
+  /*
+   * Roles a look overrides as a set. The toast is the page inverted, so it follows the look
+   * without its own values; the focus ring follows the look's focus colour unless the look
+   * names a ring that holds 3:1 on more of its grounds. The halo is a second band for a ring
+   * that crosses dark and light grounds at once.
+   */
+  --bb-focus-ring: var(--bb-focus);
+  --bb-focus-halo: var(--bb-sheet);
+  --bb-focus-width: 2px;
+  --bb-focus-width-wide: 3px;
+  --bb-focus-offset: 2px;
+  --bb-danger: #a3261a;
+  --bb-danger-ink: #fff8f1;
+  --bb-danger-wash: #f7e6e1;
+  --bb-toast-bg: var(--bb-ink);
+  --bb-toast-ink: var(--bb-paper-raised);
+  --bb-backdrop: rgba(26, 24, 21, 0.42);
+
+  /* type */
+  --bb-font-serif: 'Newsreader Variable', 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --bb-font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /*
+   * One scale at a ratio of about 1.2. Each size has its own line height so lines of
+   * different sizes still land on a 4px grid. Mono capitals at the micro size are for
+   * metadata figures only (counts, percent, minutes, dates), never for controls or for
+   * anything a person typed.
+   */
+  --bb-text-brand: 1.1875rem; /* 19: the wordmark */
+  --bb-text-micro: 0.6875rem; /* 11 / 16 */
+  --bb-text-small: 0.875rem; /* 14 / 20: hints, fine print, toasts, field labels */
+  --bb-text-ui: 0.9375rem; /* 15 / 20: buttons, tabs, menus, the bar */
+  --bb-text-body: 1rem; /* 16 / 24: inputs, notes, dialog body */
+  --bb-text-read: clamp(1.0625rem, 0.9rem + 0.6vw, 1.1875rem); /* 17 to 19, reader body */
+  --bb-text-lead: 1.4375rem; /* 23 / 30: caption title, dialog title, homepage deck */
+  --bb-text-title: 1.75rem; /* 28 / 34: reader h2 */
+  --bb-text-heading: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem); /* 28 to 44: reader title, section titles */
+  --bb-text-display: clamp(2.75rem, 5vw + 1rem, 5.25rem); /* 44 to 84: homepage hero only */
+
+  --bb-line-micro: 1rem;
+  --bb-line-small: 1.25rem;
+  --bb-line-ui: 1.25rem;
+  --bb-line-body: 1.5rem;
+  --bb-line-lead: 1.875rem;
+  --bb-line-title: 2.125rem;
+
+  --bb-leading-display: 0.98;
+  --bb-leading-tight: 1.1;
+  --bb-leading-snug: 1.25;
+  --bb-leading-ui: 1.33;
+  --bb-leading-body: 1.5;
+  --bb-leading-read: 1.58;
+
+  --bb-track-label: 0.08em;
+  --bb-track-display: -0.03em;
+  --bb-track-heading: -0.02em;
+
+  /* Display and heading sizes carry their own contrast through the optical size; small titles need the weight. */
+  --bb-weight-text: 400;
+  --bb-weight-ui: 500;
+  --bb-weight-display: 500;
+  --bb-weight-title: 600;
+
+  /* spacing scale */
+  --bb-s-1: 0.25rem;
+  --bb-s-2: 0.5rem;
+  --bb-s-3: 0.75rem;
+  --bb-s-4: 1rem;
+  --bb-s-5: 1.5rem;
+  --bb-s-6: 2rem;
+  --bb-s-7: 3rem;
+  --bb-s-8: 4rem;
+  --bb-s-9: 6rem;
+
+  /*
+   * Roles on top of the scale. 8 inside a group, 24 between groups, 32 between regions,
+   * 48 and up only on the homepage.
+   */
+  --bb-gutter: clamp(1.25rem, 2.5vw, 2.5rem);
+  --bb-bar-h: 3.5rem;
+  --bb-tabs-h: 2.5rem;
+  --bb-dock-h: 3.5rem;
+  --bb-control-h: 2.5rem;
+  --bb-target-min: 1.5rem;
+  --bb-stage-headroom: 2.5rem;
+  --bb-stage-floor: 2rem;
+
+  /* shape */
+  --bb-r-1: 2px;
+  --bb-r-2: 4px;
+  --bb-hairline: 1px;
+
+  /*
+   * Motion: three curves and four durations, nothing else. The spring curve overshoots a
+   * little and is for things that rise toward the hand.
+   */
+  --bb-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --bb-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --bb-ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+  --bb-dur-1: 120ms; /* press */
+  --bb-dur-2: 220ms; /* hover, a small change of state */
+  --bb-dur-3: 360ms; /* menus, dialogs, arrivals */
+  --bb-dur-4: 600ms; /* large moves */
+
+  /* layers: the first three order things inside one component, the rest order the page */
+  --bb-z-shelf: 1;
+  --bb-z-bar: 2;
+  --bb-z-raised: 3;
+  --bb-z-menu: 30;
+  --bb-z-chrome: 20;
+  --bb-z-reader: 40;
+  --bb-z-flight: 50;
+  --bb-z-dialog: 60;
+  --bb-z-toast: 70;
+}
+
+/* The one dark look: scrollbars, form controls and their pop-ups follow it. */
+:root[data-variant='night'] {
+  --bb-color-scheme: dark;
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --bb-tabs-h: 2.75rem;
+    --bb-stage-headroom: 1.5rem;
+    --bb-stage-floor: 1.5rem;
+  }
+}
+
+/* A finger needs more room than a pointer: every control and the shelf tabs grow to 44px. */
+@media (pointer: coarse) {
+  :root {
+    --bb-control-h: 2.75rem;
+    --bb-tabs-h: 2.75rem;
+    --bb-target-min: 2.75rem;
+  }
+}

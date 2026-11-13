@@ -1,0 +1,375 @@
+/*
+ * The front cover: cloth, type, plate and mark. Used on the shelf and on its own beside the reader.
+ * Everything is sized in container units, so one cover works at any scale.
+ *
+ * The grid is fixed: widths in cqw, heights in % of the cover. The head (title block) takes the top 47 %,
+ * the plate hangs from the line at 50 % and stands on the foot line, and the foot carries the small print.
+ * None of these lines moves with the length of the title, so covers of one look line up on the shelf.
+ */
+
+.bb-cover {
+  position: absolute;
+  inset: 0;
+  display: block;
+  container: bb-cover / inline-size;
+  /*
+   * --bb-cover-k is the size of this cover relative to the one on the shelf. A cover shown larger on its
+   * own (beside the reader) sets it, so shadow, corners and hairlines match the flying volume that was
+   * scaled up by a transform, and the two can swap without a visible step.
+   */
+  border-radius: calc(2px * var(--bb-cover-k, 1)) calc(3px * var(--bb-cover-k, 1)) calc(3px * var(--bb-cover-k, 1))
+    calc(2px * var(--bb-cover-k, 1));
+  background-color: var(--cloth);
+  color: var(--cloth-ink);
+  overflow: hidden;
+  /* Cast away from a light at the upper left. A look with another light sets --bb-cover-shadow. */
+  box-shadow: var(
+    --bb-cover-shadow,
+    calc(5px * var(--bb-cover-k, 1)) calc(9px * var(--bb-cover-k, 1)) calc(20px * var(--bb-cover-k, 1))
+      calc(-11px * var(--bb-cover-k, 1)) rgba(26, 24, 21, 0.5),
+    calc(1px * var(--bb-cover-k, 1)) calc(2px * var(--bb-cover-k, 1)) calc(3px * var(--bb-cover-k, 1)) rgba(26, 24, 21, 0.12)
+  );
+}
+
+/*
+ * The board itself, laid over everything printed on it: the cloth's weave, the joint groove near the
+ * spine (its far wall catches the light), and the edges where the cloth turns over the board. Printing
+ * follows the cloth, so the groove crosses a band printed up to the spine as it would on a real case.
+ */
+.bb-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image:
+    var(--bb-weave, none),
+    var(
+      --bb-cover-joint,
+      linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.26) 0,
+        rgba(0, 0, 0, 0.05) 2.4%,
+        rgba(0, 0, 0, 0.3) 3.4%,
+        rgba(255, 255, 255, 0.1) 4.3%,
+        rgba(255, 255, 255, 0) 7%
+      )
+    );
+  background-size:
+    calc(72px * var(--bb-cover-k, 1)) calc(72px * var(--bb-cover-k, 1)),
+    100% 100%;
+  box-shadow: var(
+    --bb-cover-edge,
+    inset calc(-1px * var(--bb-cover-k, 1)) 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 calc(1px * var(--bb-cover-k, 1)) 0 rgba(255, 255, 255, 0.07),
+    inset 0 calc(-1px * var(--bb-cover-k, 1)) 0 rgba(0, 0, 0, 0.2)
+  );
+  pointer-events: none;
+}
+
+/* The inner margin is wider than the outer one: the joint takes the first few percent at the spine side. */
+.bb-cover__head {
+  position: absolute;
+  top: 10cqw;
+  right: 9cqw;
+  bottom: 53%;
+  left: 12cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 3cqw;
+}
+
+/*
+ * --bb-cover-title is worked out from the title itself (longest word, length, lines), so a short title
+ * stands large and a German compound still fits. The line clamp is only the last guard: the size is
+ * chosen so the title never reaches it.
+ */
+.bb-cover__title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--bb-cover-lines, 4);
+  line-clamp: var(--bb-cover-lines, 4);
+  overflow: hidden;
+  font-family: var(--bb-font-serif);
+  font-size: max(9px, var(--bb-cover-title, 12.6cqw));
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.04;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+/* A word longer than the line at the smallest size: hyphenated in the cover's language, never cut off. */
+.bb-cover__title--break {
+  -webkit-hyphens: auto;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+
+.bb-cover__author {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-family: var(--bb-font-serif);
+  font-size: 5.6cqw;
+  font-style: italic;
+  line-height: 1.2;
+}
+
+.bb-cover__plate {
+  position: absolute;
+  top: 50%;
+  right: 9cqw;
+  bottom: 14cqw;
+  left: 12cqw;
+  border-top: calc(1px * var(--bb-cover-k, 1)) solid currentColor;
+  color: var(--cloth-art);
+}
+
+.bb-cover__art {
+  position: absolute;
+  inset: 5cqw 0 0;
+  display: block;
+  width: 100%;
+  height: calc(100% - 5cqw);
+  isolation: isolate;
+}
+
+/*
+ * Two inks. The second is mixed from the art and lettering colours and overprints the first, so where
+ * the two passes cross, and where the second lands a fraction off register, it reads as printed.
+ */
+.bb-cover__ink--1 {
+  color: var(--bb-cover-ink-1, var(--cloth-art));
+}
+
+.bb-cover__ink--2 {
+  color: var(--bb-cover-ink-2, color-mix(in srgb, var(--cloth-art) 55%, var(--cloth-ink)));
+  mix-blend-mode: multiply;
+}
+
+.bb-cover__foot {
+  position: absolute;
+  right: 9cqw;
+  bottom: 5cqw;
+  left: 12cqw;
+  display: flex;
+  align-items: baseline;
+  gap: 2cqw;
+  line-height: 1.2;
+}
+
+/* The publisher's line: the site's own name, small, where a binder puts the imprint. */
+.bb-cover__imprint {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--bb-font-serif);
+  font-size: max(9px, 4.4cqw);
+  font-style: italic;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 74%;
+}
+
+.bb-cover__done {
+  display: block;
+  flex: none;
+  align-self: center;
+  width: max(9px, 4.4cqw);
+  height: max(9px, 4.4cqw);
+}
+
+.bb-cover__done > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The accession number. Printed only where a look asks for it with --bb-cover-mark: 1. It stands apart
+ * at the outer corner, so a centred imprint stays centred.
+ */
+.bb-cover__mark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  font-family: var(--bb-font-mono);
+  font-size: max(9px, 4.2cqw);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  opacity: var(--bb-cover-mark, 0);
+}
+
+/* ---------- label: the title on a paper label pasted on the cloth, the drawing small below ---------- */
+
+/*
+ * The label stands on the 47 % line. It keeps one size for ordinary titles and grows upward, cut to fit,
+ * only for a long one, the way a binder cuts a label to its lettering.
+ */
+.bb-cover[data-layout='label'] .bb-cover__head {
+  top: auto;
+  right: 10cqw;
+  left: 13cqw;
+  justify-content: center;
+  align-items: center;
+  min-height: 29%;
+  max-height: calc(47% - 6cqw);
+  padding: 5.5cqw 6cqw;
+  border-radius: calc(1px * var(--bb-cover-k, 1));
+  background: var(--bb-cover-paper, #f1ead9);
+  color: var(--bb-cover-paper-ink, #24211c);
+  text-align: center;
+  box-shadow:
+    0 calc(0.5px * var(--bb-cover-k, 1)) 0 rgba(0, 0, 0, 0.2),
+    0 0 0 calc(0.5px * var(--bb-cover-k, 1)) rgba(0, 0, 0, 0.1);
+}
+
+.bb-cover[data-layout='label'] .bb-cover__head::before {
+  content: '';
+  position: absolute;
+  inset: 2.5cqw;
+  border: calc(0.75px * var(--bb-cover-k, 1)) solid currentColor;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.bb-cover[data-layout='label'] .bb-cover__plate {
+  top: calc(73.5% - 31cqw);
+  right: auto;
+  bottom: auto;
+  left: 27.5cqw;
+  width: 48cqw;
+  height: 48cqw;
+  border-top: 0;
+}
+
+.bb-cover[data-layout='label'] .bb-cover__art,
+.bb-cover[data-layout='band'] .bb-cover__art,
+.bb-cover[data-layout='frame'] .bb-cover__art {
+  inset: 0;
+  height: 100%;
+}
+
+.bb-cover[data-layout='label'] .bb-cover__foot,
+.bb-cover[data-layout='frame'] .bb-cover__foot {
+  justify-content: center;
+}
+
+/* ---------- band: the drawing printed across the head, the title on plain cloth under it ---------- */
+
+/* The band is a solid of the art colour with the drawing printed over it in the cloth's own colours. */
+.bb-cover[data-layout='band'] .bb-cover__plate {
+  --bb-cover-ink-1: var(--cloth);
+  --bb-cover-ink-2: color-mix(in srgb, var(--cloth) 55%, var(--cloth-art));
+  inset: 0 0 53%;
+  border-top: 0;
+  background: var(--cloth-art);
+}
+
+.bb-cover[data-layout='band'] .bb-cover__head {
+  top: calc(47% + 8cqw);
+  bottom: 13cqw;
+}
+
+/* ---------- frame: a double rule round the board, the title centred, the drawing as a device ---------- */
+
+/* The frame is set on the board between the joint and the fore-edge, so it sits further in at the spine. */
+.bb-cover[data-layout='frame']::before {
+  content: '';
+  position: absolute;
+  inset: 6cqw 6cqw 6cqw 11cqw;
+  border: calc(1px * var(--bb-cover-k, 1)) solid var(--cloth-art);
+  outline: calc(0.5px * var(--bb-cover-k, 1)) solid var(--cloth-art);
+  outline-offset: calc(-1.6cqw - 1.5px * var(--bb-cover-k, 1));
+  pointer-events: none;
+}
+
+/* The title hangs from the head of the frame and may run down to just above the device. */
+.bb-cover[data-layout='frame'] .bb-cover__head {
+  top: 16cqw;
+  right: 14cqw;
+  bottom: calc(26.5% + 31.5cqw);
+  left: 19cqw;
+  align-items: center;
+  text-align: center;
+}
+
+.bb-cover[data-layout='frame'] .bb-cover__plate {
+  top: calc(73.5% - 27.5cqw);
+  right: auto;
+  bottom: auto;
+  left: 33.5cqw;
+  width: 38cqw;
+  height: 38cqw;
+  border-top: 0;
+}
+
+.bb-cover[data-layout='frame'] .bb-cover__foot {
+  right: 14cqw;
+  bottom: 11cqw;
+  left: 19cqw;
+}
+
+/* ---------- small covers: what cannot be read at 9 px is left off, never set smaller ---------- */
+
+@container bb-cover (width < 170px) {
+  .bb-cover__foot {
+    display: none;
+  }
+
+  .bb-cover__author {
+    font-size: max(9px, 5.6cqw);
+  }
+}
+
+/*
+ * A thumbnail is the jacket in miniature: cloth, layout and plate, with no type. At this size a title
+ * could only be cut short, and whatever shows a thumbnail names the link beside it.
+ */
+@container bb-cover (width < 120px) {
+  .bb-cover__title,
+  .bb-cover__author {
+    display: none;
+  }
+}
+
+/* ---------- forced colours: a plain board in the system's colours ---------- */
+
+@media (forced-colors: active) {
+  /* The system palette replaces cloth and ink; the board keeps an edge so it still reads as an object. */
+  .bb-cover[data-layout] {
+    forced-color-adjust: auto;
+    border: 1px solid CanvasText;
+  }
+
+  /* Weave and joint are shading only, and would come out as noise. */
+  .bb-cover::after {
+    display: none;
+  }
+
+  /*
+   * A pattern drawn in one system colour is a field of shapes with no meaning, so it is left off. The
+   * shape of a saved text stays: it says how long the text is and where its headings fall.
+   */
+  .bb-cover[data-plate='art'] .bb-cover__art {
+    display: none;
+  }
+
+  /* SVG ink is not given the system colour by itself. */
+  .bb-cover__ink--1,
+  .bb-cover__ink--2 {
+    color: CanvasText;
+    mix-blend-mode: normal;
+  }
+
+  .bb-cover[data-layout='label'] .bb-cover__head {
+    border: 1px solid CanvasText;
+  }
+
+  .bb-cover[data-layout='band'] .bb-cover__plate {
+    border-bottom: 1px solid CanvasText;
+  }
+}

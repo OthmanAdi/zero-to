@@ -1,0 +1,381 @@
+/* Reader dialog. Colour, type and spacing come from the shared tokens. */
+.bb-reader {
+  --bb-reader-bar: 3.5rem;
+  /* Width of the cover beside the text on a narrow screen, and how much of it the bar thumbnail shows. */
+  --bb-reader-cover-w: 5.5rem;
+  --bb-reader-thumb-scale: 0.3;
+  /* The one place the line length is set: the text column, the header and the narrow layout all follow it. */
+  --bb-reader-measure: 35rem;
+  position: fixed;
+  inset: 0;
+  z-index: var(--bb-z-reader);
+  color: var(--bb-ink);
+  font-family: var(--bb-font-serif);
+}
+
+.bb-reader[data-open='0'] {
+  pointer-events: none;
+}
+
+.bb-reader__window {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.bb-reader[data-open='0'] .bb-reader__sheet {
+  will-change: opacity;
+}
+
+.bb-reader__sheet {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bb-sheet);
+}
+
+.bb-reader__sheet:focus {
+  outline: none;
+}
+
+.bb-reader__sheet {
+  scroll-padding-bottom: var(--bb-s-5);
+}
+
+/*
+ * The sticky bar never covers what has focus: a control in the document keeps this distance from the top
+ * edge. The distance is a margin on those controls and not a padding on the sheet, because a padding also
+ * counts for the bar's own buttons. They sit inside that strip, so every Tab along the bar scrolled the
+ * text in an attempt to bring them out of it.
+ */
+.bb-reader__layout :is(a, button, summary, textarea, [tabindex]) {
+  scroll-margin-top: calc(var(--bb-reader-bar) + var(--bb-s-4));
+}
+
+/* Opened by a tap or a click: no ring on the first focus. A key press brings the rings back. */
+.bb-reader[data-pointer] :focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Bar: the button starts on the text axis and the readout ends on the layout's right edge. */
+.bb-reader__bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--bb-s-4);
+  min-height: var(--bb-reader-bar);
+  padding-inline: max(var(--bb-s-4), calc((100% - var(--bb-reader-frame)) / 2 + var(--bb-reader-edge)));
+  background: var(--bb-sheet);
+  border-bottom: var(--bb-hairline) solid var(--bb-rule);
+}
+
+.bb-reader__close {
+  flex: none;
+}
+
+/* The title appears here once the heading has scrolled away, with the thumbnail of the cover on narrow screens. */
+.bb-reader__bar-title {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--bb-s-3);
+  min-width: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--bb-dur-2) var(--bb-ease-out),
+    visibility 0s linear var(--bb-dur-2);
+}
+
+.bb-reader__bar[data-away] .bb-reader__bar-title,
+.bb-reader__bar[data-landing] .bb-reader__bar-title {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.bb-reader__bar-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-ui, var(--bb-text-body));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bb-reader__sizes {
+  display: flex;
+  flex: none;
+  gap: var(--bb-s-1);
+}
+
+.bb-reader__size {
+  min-width: 2.5rem;
+  padding-inline: var(--bb-s-2);
+}
+
+.bb-reader__size[aria-disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.bb-reader__size--down .bb-reader__size-glyph {
+  font-size: 0.8em;
+}
+
+.bb-reader__size--up .bb-reader__size-glyph {
+  font-size: 1.2em;
+}
+
+@media (pointer: coarse) {
+  .bb-reader__size {
+    min-height: 2.75rem;
+  }
+}
+
+/* On a phone the thumbnail stands for the title: there is no room left to print it. */
+@media (max-width: 32rem) {
+  .bb-reader__bar {
+    gap: var(--bb-s-2);
+  }
+
+  .bb-reader__bar-text {
+    display: none;
+  }
+}
+
+.bb-reader__readout {
+  flex: none;
+  margin-left: auto;
+  color: var(--bb-ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.bb-reader__line {
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--bb-rule);
+}
+
+.bb-reader__line-fill {
+  height: 100%;
+  background: var(--bb-accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+/* The thumbnail is the cover beside the text, scaled down, where the cover lands once that one has scrolled away. */
+.bb-reader__thumb {
+  display: none;
+  flex: none;
+  position: relative;
+  overflow: hidden;
+  width: calc(var(--bb-reader-cover-w) * var(--bb-reader-thumb-scale));
+  aspect-ratio: var(--bb-reader-cover-aspect, var(--bb-reader-cover-aspect-given, 0.62));
+  border-radius: var(--bb-r-1);
+}
+
+.bb-reader__bar[data-landing] .bb-reader__thumb {
+  display: block;
+}
+
+@media (max-width: 899.98px) {
+  .bb-reader__bar[data-away] .bb-reader__thumb {
+    display: block;
+  }
+}
+
+.bb-reader__thumb-face {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: var(--bb-reader-cover-w);
+  aspect-ratio: var(--bb-reader-cover-aspect, var(--bb-reader-cover-aspect-given, 0.62));
+  transform: scale(var(--bb-reader-thumb-scale));
+  transform-origin: 0 0;
+}
+
+.bb-reader__thumb-face > * {
+  width: 100%;
+  height: 100%;
+}
+
+.bb-reader__thumb[data-cover-hidden] {
+  visibility: hidden;
+}
+
+/* The header and the text arrive after the sheet is nearly opaque: a short rise, one after another. */
+.bb-reader__enter {
+  transition:
+    opacity var(--bb-dur-2) var(--bb-ease-out),
+    transform var(--bb-dur-2) var(--bb-ease-out);
+}
+
+.bb-reader[data-content='0'] .bb-reader__enter {
+  opacity: 0;
+  transform: translateY(0.5rem);
+}
+
+.bb-reader[data-content='1'] .bb-reader__enter {
+  transition-delay: calc(var(--bb-enter-index, 0) * 50ms);
+}
+
+.bb-reader[data-enter='instant'] .bb-reader__enter {
+  transition: none;
+}
+
+/*
+ * Layout. Below 900px the cover sits beside the title block and everything else runs under it, in one
+ * column that is centred with the bar's button on its left edge. From 900px the cover moves to a
+ * column of its own and stays in view.
+ */
+.bb-reader {
+  --bb-reader-edge: var(--bb-s-4);
+  --bb-reader-frame: calc(var(--bb-reader-measure) + 2 * var(--bb-s-4));
+}
+
+.bb-reader__layout {
+  display: grid;
+  grid-template-columns: var(--bb-reader-cover-w) minmax(0, 1fr);
+  /* Four rows of header text beside the cover; the last one soaks up any height the cover has left over. */
+  grid-template-rows: repeat(4, auto) 1fr;
+  column-gap: var(--bb-s-4);
+  align-content: start;
+  max-width: var(--bb-reader-frame);
+  margin: 0 auto;
+  padding: var(--bb-s-5) var(--bb-reader-edge) var(--bb-s-9);
+}
+
+/* The document's own parts become the grid's rows, so the cover can stand beside the first three. */
+.bb-reader__doc {
+  display: contents;
+}
+
+.bb-reader__cover {
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  align-self: start;
+}
+
+.bb-reader__saved,
+.bb-reader__title,
+.bb-reader__example,
+.bb-reader__byline {
+  grid-column: 2;
+}
+
+.bb-reader__note,
+.bb-reader__actions,
+.bb-reader__body {
+  grid-column: 1 / -1;
+}
+
+.bb-reader__layout--bare {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.bb-reader__layout--bare .bb-reader__cover {
+  display: none;
+}
+
+.bb-reader__layout--bare .bb-reader__saved,
+.bb-reader__layout--bare .bb-reader__title,
+.bb-reader__layout--bare .bb-reader__example,
+.bb-reader__layout--bare .bb-reader__byline {
+  grid-column: 1 / -1;
+}
+
+.bb-reader__cover-slot {
+  position: relative;
+  width: 100%;
+  /* The proportion given by the host, unless a look sets --bb-reader-cover-aspect. */
+  aspect-ratio: var(--bb-reader-cover-aspect, var(--bb-reader-cover-aspect-given, 0.62));
+  border-radius: var(--bb-r-1);
+  /* A host whose cover brings its own shadow sets --bb-reader-cover-shadow to none. */
+  box-shadow: var(--bb-reader-cover-shadow, 0 0.75rem 1.5rem -0.75rem var(--bb-rule-strong));
+}
+
+/* The cover brings its own layout (it may be a flex or grid box), so only size it here. */
+.bb-reader__cover-slot > * {
+  width: 100%;
+  height: 100%;
+}
+
+.bb-reader__cover-slot[data-cover-hidden] {
+  box-shadow: none;
+}
+
+/* A little more cover where there is room for it; the thumbnail in the bar keeps its size. */
+@media (min-width: 40rem) {
+  .bb-reader {
+    --bb-reader-cover-w: 7.5rem;
+    --bb-reader-thumb-scale: 0.22;
+  }
+
+  .bb-reader__layout {
+    padding-top: var(--bb-s-6);
+  }
+}
+
+@media (min-width: 900px) {
+  .bb-reader {
+    --bb-reader-edge: var(--bb-reader-pad-inline, var(--bb-s-6));
+    --bb-reader-frame: var(--bb-reader-max, 76rem);
+  }
+
+  /* Every measure of the desktop layout is a token with a default, so a look can place the cover exactly. */
+  .bb-reader__layout {
+    grid-template-columns: minmax(0, var(--bb-reader-text, 1fr)) var(--bb-reader-cover, 17.8125rem);
+    column-gap: var(--bb-reader-gap, var(--bb-s-8));
+    justify-content: var(--bb-reader-justify, normal);
+    align-items: start;
+    padding-top: var(--bb-reader-pad-top, var(--bb-s-7));
+  }
+
+  .bb-reader__doc {
+    display: block;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .bb-reader__layout--bare {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bb-reader__cover {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: var(--bb-reader-cover-top, calc(var(--bb-reader-bar) + var(--bb-s-6)));
+  }
+
+  /* On a short window the cover gives up height before it leaves the screen. */
+  .bb-reader__cover-slot {
+    max-height: calc(100dvh - var(--bb-reader-cover-top, 5.5rem) - 1rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-reader *,
+  .bb-reader *::before,
+  .bb-reader *::after {
+    transition-property: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Nothing travels: the sheet cross-fades over a scene that stays put, and the text is simply there. */
+  .bb-reader .bb-reader__sheet {
+    transition: opacity 120ms linear !important;
+  }
+
+  .bb-reader[data-content='0'] .bb-reader__enter {
+    opacity: 1;
+    transform: none;
+  }
+}

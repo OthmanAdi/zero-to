@@ -1,0 +1,323 @@
+/* The document: header, saved text, empty state and paste panel. */
+/* Document header */
+.bb-reader__doc {
+  min-width: 0;
+  max-width: var(--bb-reader-measure);
+}
+
+.bb-reader__saved {
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-small);
+}
+
+.bb-reader__saved + .bb-reader__title {
+  margin-top: var(--bb-s-2);
+}
+
+.bb-reader__title {
+  /* Beside the cover there are about 220px of line, so a phone sets the title a little smaller. */
+  font-size: min(var(--bb-text-heading), 1.5rem);
+  font-weight: 500;
+  line-height: var(--bb-leading-tight);
+  hyphens: auto;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.bb-reader__byline {
+  margin-top: var(--bb-s-3);
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-body);
+  font-style: italic;
+}
+
+.bb-reader__example {
+  margin-top: var(--bb-s-2);
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-small);
+}
+
+.bb-reader__note {
+  margin-top: var(--bb-s-4);
+  padding-left: var(--bb-s-4);
+  border-left: var(--bb-hairline) solid var(--bb-rule-strong);
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-body);
+  overflow-wrap: anywhere;
+}
+
+/* One row at every width: a long site name gives way before the second action would drop below the first. */
+.bb-reader__actions {
+  display: flex;
+  gap: var(--bb-s-3);
+  margin-top: var(--bb-s-4);
+  padding-bottom: var(--bb-s-4);
+  border-bottom: var(--bb-hairline) solid var(--bb-rule);
+}
+
+/* The shared control height, so these grow to the size of a finger on a touch screen like every other button. */
+.bb-reader__open,
+.bb-reader__edit,
+.bb-reader__save,
+.bb-reader__cancel {
+  min-height: var(--bb-control-h, 2.5rem);
+}
+
+.bb-reader__edit {
+  flex: none;
+}
+
+/* Shortened on the screen only: the whole name stays in the text of the link. */
+.bb-reader__open-host {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--bb-ink-faint);
+  text-overflow: ellipsis;
+  text-transform: none;
+}
+
+.bb-reader__open:hover .bb-reader__open-host {
+  color: inherit;
+}
+
+/* Reading copy */
+.bb-reader__body {
+  /* One line of body text. Paragraph and heading gaps are counted in lines, so the text keeps one rhythm at every size. */
+  --bb-line: calc(var(--bb-reader-size, var(--bb-text-read)) * var(--bb-leading-read));
+  margin-top: var(--bb-s-5);
+  font-size: var(--bb-reader-size, var(--bb-text-read));
+  line-height: var(--bb-leading-read);
+  /* Words break at their syllables in the language of the text, and a long address still cannot push the column wider. */
+  hyphens: auto;
+  hyphenate-limit-chars: 7 4 3;
+  overflow-wrap: break-word;
+}
+
+.bb-reader__body > * + * {
+  margin-top: calc(var(--bb-line) * 0.5);
+}
+
+.bb-reader__body p {
+  text-wrap: pretty;
+}
+
+.bb-reader__body h2,
+.bb-reader__body h3 {
+  font-family: var(--bb-font-serif);
+  line-height: var(--bb-leading-snug);
+  text-wrap: balance;
+}
+
+/* Two lines of air above a heading and half a line below it. */
+.bb-reader__body > h2 {
+  margin-top: calc(var(--bb-line) * 2);
+  font-size: 1.5em;
+}
+
+.bb-reader__body > h3 {
+  margin-top: calc(var(--bb-line) * 1.5);
+  font-size: 1.2em;
+}
+
+.bb-reader__body > :first-child {
+  margin-top: 0;
+}
+
+.bb-reader__body ul,
+.bb-reader__body ol {
+  padding-left: 1.4em;
+}
+
+.bb-reader__body li + li {
+  margin-top: 0.25em;
+}
+
+.bb-reader__body blockquote {
+  padding-left: var(--bb-s-4);
+  border-left: 2px solid var(--bb-rule-strong);
+  color: var(--bb-ink-soft);
+}
+
+.bb-reader__body code {
+  padding: 0.05em 0.3em;
+  border-radius: var(--bb-r-1);
+  background: color-mix(in srgb, var(--bb-ink) 6%, transparent);
+  font-family: var(--bb-font-mono);
+  font-size: 0.85em;
+}
+
+.bb-reader__body pre {
+  hyphens: manual;
+  padding: var(--bb-s-3) var(--bb-s-4);
+  overflow-x: auto;
+  border-radius: var(--bb-r-2);
+  background: color-mix(in srgb, var(--bb-ink) 6%, transparent);
+  line-height: 1.5;
+}
+
+.bb-reader__body pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.8em;
+  overflow-wrap: normal;
+}
+
+.bb-reader__body hr {
+  height: 0;
+  margin-block: var(--bb-line);
+  border: 0;
+  border-top: var(--bb-hairline) solid var(--bb-rule);
+}
+
+.bb-reader__body a {
+  text-decoration-color: var(--bb-accent);
+}
+
+.bb-reader__link-host {
+  color: var(--bb-ink-soft);
+  font-size: 0.75em;
+  overflow-wrap: anywhere;
+}
+
+/* A label that names one address while the link goes to another. */
+.bb-reader__link-host--differs {
+  color: var(--bb-ink);
+  font-weight: 600;
+  text-decoration: underline wavy var(--bb-danger);
+  text-underline-offset: 0.2em;
+}
+
+.bb-reader__body a:hover {
+  color: var(--bb-accent-strong);
+}
+
+/* Private notes: quiet until opened. */
+.bb-reader__notes {
+  grid-column: 1 / -1;
+  padding-block: var(--bb-s-3);
+  border-bottom: var(--bb-hairline) solid var(--bb-rule);
+  font-size: var(--bb-text-body);
+}
+
+.bb-reader__notes-summary {
+  display: list-item;
+  width: fit-content;
+  min-height: 1.5rem;
+  color: var(--bb-ink-soft);
+  cursor: pointer;
+}
+
+.bb-reader__notes[open] .bb-reader__notes-summary {
+  margin-bottom: var(--bb-s-3);
+}
+
+.bb-reader__notes-field {
+  width: 100%;
+  min-height: 6rem;
+  padding: var(--bb-s-3);
+  border: var(--bb-hairline) solid var(--bb-rule-strong);
+  border-radius: var(--bb-r-1);
+  background: var(--bb-paper-raised);
+  color: var(--bb-ink);
+  font: inherit;
+  line-height: var(--bb-leading-body);
+  resize: vertical;
+}
+
+.bb-reader__notes-count {
+  margin-top: var(--bb-s-1);
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-small);
+}
+
+.bb-reader__notes-count:empty {
+  display: none;
+}
+
+/* The closing block: the person decides whether the text counts as read. */
+.bb-reader__end {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--bb-s-3);
+  margin-top: var(--bb-s-7);
+  padding-top: var(--bb-s-5);
+  border-top: var(--bb-hairline) solid var(--bb-rule);
+}
+
+.bb-reader__done::before {
+  content: '';
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  margin-right: 0.55em;
+  border: 1.5px solid currentColor;
+  border-radius: var(--bb-r-1);
+  vertical-align: -0.1em;
+}
+
+.bb-reader__done[aria-pressed='true']::before {
+  background: currentColor;
+  box-shadow: inset 0 0 0 2px var(--bb-sheet);
+}
+
+/* Empty state and paste panel */
+.bb-reader__empty-title {
+  font-size: var(--bb-text-title);
+}
+
+.bb-reader__empty-body {
+  margin-top: var(--bb-s-3);
+  color: var(--bb-ink-soft);
+}
+
+.bb-reader__paste {
+  display: grid;
+  gap: var(--bb-s-2);
+  margin-top: var(--bb-s-5);
+  font-size: var(--bb-text-body);
+}
+
+.bb-reader__paste-label {
+  color: var(--bb-ink-soft);
+  font-size: var(--bb-text-small);
+}
+
+.bb-reader__paste-field {
+  width: 100%;
+  min-height: 10rem;
+  padding: var(--bb-s-3);
+  border: var(--bb-hairline) solid var(--bb-rule-strong);
+  border-radius: var(--bb-r-1);
+  background: var(--bb-paper-raised);
+  color: var(--bb-ink);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.bb-reader__paste-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--bb-s-3);
+}
+
+@media (min-width: 40rem) {
+  .bb-reader__title {
+    font-size: var(--bb-text-heading);
+  }
+
+  .bb-reader__note,
+  .bb-reader__actions {
+    margin-top: var(--bb-s-5);
+  }
+
+  .bb-reader__actions {
+    padding-bottom: var(--bb-s-5);
+  }
+
+  .bb-reader__body {
+    margin-top: var(--bb-s-6);
+  }
+}

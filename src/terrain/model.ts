@@ -39,7 +39,7 @@ import type { FrameTime, SceneEnvironment, ScenePart } from '../scene/contract';
 import { PALETTE, type SurfaceKind } from '../scene/palette';
 import { levelHeights, levelIndexAt, traceContours, type ContourLevel, type ContourPolygon } from './contours';
 import { generateHeightfield, type Heightfield, type TerrainSpec } from './heightfield';
-import { createCanvas, paintGrain, paintGround, paintRoute, routeBleed } from './paper';
+import { ROUTE_RAMP, createCanvas, paintGrain, paintGround, paintRoute, routeBleed } from './paper';
 import { assignSurfaces } from './surfaces';
 import { planTrail, trailPointAt, type Trail, type TrailSpec } from './trail';
 
@@ -105,6 +105,11 @@ const BOARD_HEIGHT = 0.07;
 const FLAT = 0.0009;
 const HOVER_LIFT = 0.025;
 const GROW_SECONDS = 1.25;
+/**
+ * The printed route, in scene units: the width of the line, the dot under a stop, and the width in screen pixels
+ * below which the line is not allowed to thin out when the model is small on the screen.
+ */
+export const ROUTE_LINE = { width: 0.03, stopRadius: 0.05, minPixels: 3 } as const;
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 const smooth = (edge0: number, edge1: number, value: number): number => {
@@ -123,6 +128,7 @@ varying vec2 vPrintUv;
 varying vec4 vCardInfo;
 varying vec3 vPaperPos;
 varying float vCardGlow;
+varying float vCardUp;
 `;
 
 /** Places a vertex by its card's row: where the card starts and how thick it is right now. */
@@ -138,6 +144,8 @@ vPrintUv = position.xz * uPrintScale + 0.5;
 vCardInfo = vec4(aWall, position.y, cardNow.z, uCard[cardRow + 1].z);
 vPaperPos = vec3(position.x, transformed.y, position.z);
 vCardGlow = cardNow.w;
+// How far the face looks up: 1 on the top of a card, about 0.7 on the bevel of its cut edge, 0 on the edge itself.
+vCardUp = normal.y;
 `;
 
 const CARD_FRAGMENT_HEAD = /* glsl */ `
@@ -150,10 +158,12 @@ uniform vec3 uWalked;
 uniform vec3 uInk;
 uniform vec3 uCore;
 uniform vec3 uSheet;
+uniform vec3 uRouteLine;
 varying vec2 vPrintUv;
 varying vec4 vCardInfo;
 varying vec3 vPaperPos;
 varying float vCardGlow;
+varying float vCardUp;
 `;
 
 const CARD_FRAGMENT_BODY = /* glsl */ `
@@ -185,12 +195,20 @@ const CARD_FRAGMENT_BODY = /* glsl */ `
   paper *= 0.86 + 0.28 * fibre;
 
   // The route. The canvas holds a distance ramp, so the edge stays sharp however close the camera comes.
-  float soft = clamp(fwidth(route.r) * 0.8, 0.02, 0.3);
-  float inked = smoothstep(0.5 - soft, 0.5 + soft, route.r);
+  // Seen from far away the line would thin out to nothing. There its edge is moved out along the ramp, so the line
+  // keeps a width that can be seen. uRouteLine: half the width of the line and the reach of the ramp, both in print
+  // coordinates, and the least half width in screen pixels.
+  float pixel = max(length(dFdx(vPrintUv)), length(dFdy(vPrintUv)));
+  float bold = clamp((uRouteLine.z * pixel - uRouteLine.x) / (2.0 * uRouteLine.y), 0.0, 0.3);
+  float edge = 0.5 - bold;
+  float soft = clamp(fwidth(route.r) * 0.8, 0.02, min(0.3, edge - 0.05));
+  // The line is printed from above. It lies on the faces and on the bevel of a cut edge and never runs down the
+  // edge itself: on steep ground it steps from card to card.
+  float printed = smoothstep(0.35, 0.6, vCardUp);
+  float inked = smoothstep(edge - soft, edge + soft, route.r) * printed;
   float walked = smoothstep(-0.004, 0.004, uProgress - route.b);
   vec3 ink = mix(uSignal, uWalked, walked) * (0.76 + 0.3 * fibre);
-  // The line is printed on the faces. Where it runs over a cut edge, the ink has soaked into the edge below it.
-  paper = mix(paper, ink, inked * mix(0.96, 0.86, wall));
+  paper = mix(paper, ink, inked * 0.96);
 
   diffuseColor.rgb = paper;
 }
@@ -208,6 +226,7 @@ interface CardUniforms {
   uInk: { value: Color };
   uCore: { value: Color };
   uSheet: { value: Color };
+  uRouteLine: { value: Vector3 };
 }
 
 function patchCardVertex(shader: WebGLProgramParametersWithUniforms, uniforms: CardUniforms, withVaryings: boolean): void {
@@ -450,9 +469,8 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
   const textureSize = Math.min(2048, Math.max(256, environment?.maxTexture ?? 2048));
   const unit = textureSize / (2 * half);
   const anisotropy = phone ? 2 : 8;
-  const lineWidth = 0.03;
-  const dotRadius = 0.025;
-  const stopRadius = 0.05;
+  const lineWidth = ROUTE_LINE.width;
+  const stopRadius = ROUTE_LINE.stopRadius;
 
   let grainTexture: Texture = plainTexture(128, 128, 128);
   const grain = createCanvas(phone ? 256 : 512);
@@ -469,7 +487,7 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
   let routeTexture: Texture = plainTexture(0, 0, 0);
   const route = createCanvas(textureSize);
   if (route) {
-    paintRoute(route.context, { size: textureSize, unit, half, trail, lineWidth, dotRadius, stopRadius });
+    paintRoute(route.context, { size: textureSize, unit, half, trail, lineWidth, stopRadius });
     routeTexture = numberTexture(route.canvas, false, anisotropy);
   }
   keep(grainTexture);
@@ -488,6 +506,7 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
     uInk: { value: new Color(PALETTE.ink) },
     uCore: { value: coreColor },
     uSheet: { value: topColors[0]?.clone() ?? new Color(PALETTE.paper) },
+    uRouteLine: { value: new Vector3((lineWidth / 2) / (2 * half), (lineWidth * ROUTE_RAMP) / (2 * half), ROUTE_LINE.minPixels / 2) },
   };
 
   // The cards: one mesh, one material. It stays a standard material, so lamps and shadow maps keep working.
@@ -735,7 +754,7 @@ export function createTerrainModel(options: TerrainModelOptions): TerrainPart {
   };
   settle();
 
-  const walkedBias = routeBleed({ lineWidth, dotRadius, stopRadius }) / Math.max(0.2, trail.length * half);
+  const walkedBias = routeBleed({ lineWidth }) / Math.max(0.2, trail.length * half);
 
   const part: TerrainPart = {
     object: root,

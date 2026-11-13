@@ -2,7 +2,7 @@ import type { Random } from '../core/random';
 import { range } from '../core/random';
 import type { SurfaceKind } from '../scene/palette';
 import { levelIndexAt, type ContourLevel, type Ring } from './contours';
-import { markTrail, type Trail } from './trail';
+import { markTrail, type Trail, type TrailMark } from './trail';
 
 /**
  * Everything that is printed or pressed into the paper of the terrain model, drawn on 2D canvases. The canvases are
@@ -327,23 +327,35 @@ export interface RoutePrint {
   readonly trail: Trail;
   /** Width of the printed line in scene units. */
   readonly lineWidth: number;
-  /** Radius of the dots in scene units. */
-  readonly dotRadius: number;
   /** Radius of the large dot printed under each stop, in scene units. */
   readonly stopRadius: number;
 }
 
+/**
+ * The printed route is one even dashed line. The lengths are in scene units and measure the centre line: a dash is
+ * drawn with round ends, so on paper it is one line width longer and the gap one line width shorter.
+ */
+export const ROUTE_DASH = { dash: 0.1, gap: 0.062 } as const;
+
+/** How far the distance ramp reaches to either side of the edge of the line, as a share of the line's width. */
+export const ROUTE_RAMP = 0.42;
+
+/** The dashes of the printed route. `half` is scene units per footprint unit. */
+export function routeMarks(trail: Trail, half: number): TrailMark[] {
+  return markTrail(trail, { dash: ROUTE_DASH.dash / half, gap: ROUTE_DASH.gap / half, dotEvery: 0 });
+}
+
 /** How far, in scene units, the along-the-trail channel reaches past the centre of the line. */
-export function routeBleed(print: Pick<RoutePrint, 'lineWidth' | 'dotRadius' | 'stopRadius'>): number {
-  return Math.max(print.dotRadius, print.lineWidth / 2) + print.lineWidth * 0.42 + 0.008;
+export function routeBleed(print: Pick<RoutePrint, 'lineWidth'>): number {
+  return print.lineWidth / 2 + print.lineWidth * ROUTE_RAMP + 0.008;
 }
 
 /**
- * Paints the route canvas: dashes, dots and stop rings as a distance field in red, and the position along the trail
- * in blue.
+ * Paints the route canvas: dashes and stop dots as a distance field in red, and the position along the trail in
+ * blue.
  */
 export function paintRoute(context: CanvasRenderingContext2D, print: RoutePrint): void {
-  const { size, unit, half, trail, lineWidth, dotRadius, stopRadius } = print;
+  const { size, unit, half, trail, lineWidth, stopRadius } = print;
   const px: ToPixel = (value) => (value * 0.5 + 0.5) * size;
   context.globalCompositeOperation = 'source-over';
   context.fillStyle = '#000000';
@@ -382,8 +394,8 @@ export function paintRoute(context: CanvasRenderingContext2D, print: RoutePrint)
   }
 
   // Red: nested strokes from wide and dark to narrow and bright build a ramp that is 0.5 on the true edge.
-  const marks = markTrail(trail, { dash: 0.12 / half, gap: 0.042 / half, dotEvery: 3 });
-  const spread = lineWidth * 0.42 * unit;
+  const marks = routeMarks(trail, half);
+  const spread = lineWidth * ROUTE_RAMP * unit;
   const steps = 10;
   for (let step = 1; step <= steps; step += 1) {
     const value = step / steps;
@@ -397,25 +409,12 @@ export function paintRoute(context: CanvasRenderingContext2D, print: RoutePrint)
       context.lineWidth = lineReach * 2;
       context.beginPath();
       for (const mark of marks) {
-        if (mark.kind !== 'dash') continue;
         mark.points.forEach((p, i) => {
           if (i === 0) context.moveTo(px(p.x), px(p.z));
           else context.lineTo(px(p.x), px(p.z));
         });
       }
       context.stroke();
-    }
-
-    const dotReach = dotRadius * unit + grow;
-    if (dotReach > 0.3) {
-      context.beginPath();
-      for (const mark of marks) {
-        const p = mark.points[0];
-        if (mark.kind !== 'dot' || !p) continue;
-        context.moveTo(px(p.x) + dotReach, px(p.z));
-        context.arc(px(p.x), px(p.z), dotReach, 0, Math.PI * 2);
-      }
-      context.fill();
     }
 
     // A larger dot under every stop, the largest under the summit.

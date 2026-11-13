@@ -1,8 +1,8 @@
-import { InstancedMesh, Matrix4, Mesh, Raycaster, Vector3 } from 'three';
+import { InstancedMesh, Matrix4, Mesh, Raycaster, Vector3, type MeshStandardMaterial, type WebGLProgramParametersWithUniforms, type WebGLRenderer } from 'three';
 import { describe, expect, it } from 'vitest';
 import type { SceneEnvironment } from '../scene/contract';
 import { levelIndexAt } from './contours';
-import { MAX_CARDS, createTerrainModel, terrainMaterials, type TerrainPart } from './model';
+import { MAX_CARDS, ROUTE_LINE, createTerrainModel, terrainMaterials, type TerrainPart } from './model';
 
 const phone: SceneEnvironment = { envMap: null, maxTexture: 1024, phone: true };
 
@@ -246,6 +246,53 @@ describe('createTerrainModel', () => {
     });
     expect(bare.object.getObjectByName('terrain-trees')).toBeUndefined();
     bare.dispose();
+  });
+
+  it('prints the route on the faces of the cards and not down their cut edges', () => {
+    const part = build();
+    const cards = part.object.getObjectByName('terrain-cards') as Mesh;
+    // The faces look up, the cut edges look sideways and their bevels half up: the shader tells them apart by that.
+    const normal = cards.geometry.getAttribute('normal');
+    const wall = cards.geometry.getAttribute('aWall');
+    let faces = 0;
+    let edges = 0;
+    let bevels = 0;
+    for (let i = 0; i < normal.count; i += 1) {
+      const up = normal.getY(i);
+      if (wall.getX(i) < 0.5) {
+        expect(up).toBeGreaterThan(0.99);
+        faces += 1;
+      } else if (Math.abs(up) < 0.05) {
+        edges += 1;
+      } else if (up > 0.6 && up < 0.8) {
+        bevels += 1;
+      }
+    }
+    expect(faces).toBeGreaterThan(0);
+    expect(edges).toBeGreaterThan(0);
+    expect(bevels).toBeGreaterThan(0);
+
+    const shader = {
+      uniforms: {},
+      vertexShader: '#include <common>\n#include <begin_vertex>',
+      fragmentShader: '#include <common>\n#include <color_fragment>',
+    } as unknown as WebGLProgramParametersWithUniforms;
+    (cards.material as MeshStandardMaterial).onBeforeCompile(shader, null as unknown as WebGLRenderer);
+    expect(shader.vertexShader).toContain('vCardUp = normal.y;');
+    // The ink is held back by how far a face looks up: none at 0 (a cut edge), all of it from 0.6 (bevel and face).
+    expect(shader.fragmentShader).toContain('float printed = smoothstep(0.35, 0.6, vCardUp);');
+    expect(shader.fragmentShader).toMatch(/float inked = [^;]*\* printed;/);
+    expect(shader.fragmentShader).toMatch(/paper = mix\(paper, ink, inked \* [0-9.]+\);/);
+
+    // The numbers the shader keeps the line readable with: half its width and the reach of its ramp in print
+    // coordinates, and the least half width in pixels.
+    const line = (shader.uniforms as unknown as { uRouteLine: { value: Vector3 } }).uRouteLine.value;
+    const print = (shader.uniforms as unknown as { uPrintScale: { value: number } }).uPrintScale.value;
+    expect(line.x).toBeCloseTo((ROUTE_LINE.width / 2) * print, 12);
+    expect(line.y).toBeGreaterThan(0);
+    expect(line.y).toBeLessThan(line.x);
+    expect(line.z).toBe(ROUTE_LINE.minPixels / 2);
+    part.dispose();
   });
 
   it('leaves its parent and frees everything on dispose', () => {

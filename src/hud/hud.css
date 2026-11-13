@@ -1,0 +1,2371 @@
+/*
+ * The overlay: everything the visitor reads and touches on top of the scene.
+ *
+ * Three materials, each with one meaning:
+ *   - type on the room (ivory on the night table) for what describes the scene: headline, side card, labels;
+ *   - paper for what is read closely and written on: the floating note, the profile strip, the panels;
+ *   - the night shelf, which belongs to the resource shelf and is only placed here.
+ *
+ * `signal` means the route, the pin and "you are here", and nothing else. Tier colours appear on the tier chip,
+ * the profile bands and the ratings, and nowhere else.
+ *
+ * Positions follow the overlay layout at 1440 by 900 and 390 by 844. Every selector starts at `.zh-`.
+ */
+
+.zh-hud {
+  --zh-pad: 46px;
+  --zh-shelf-w: 380px;
+  --zh-shelf-h: 196px;
+  --zh-shelf-bottom: 40px;
+  --zh-ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --zh-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --zh-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --zh-rule: rgb(238 240 242 / 0.16);
+
+  /* Where the lit sheet is, until the scene says otherwise: clear of the shelf on a window that is not wide. */
+  --zh-stage-x: min(50vw, calc(100vw - var(--zh-pad) - var(--zh-shelf-w) - 50px - 15.3vw));
+
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--zt-text);
+  font-family: var(--zt-font-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.zh-hud *,
+.zh-hud *::before,
+.zh-hud *::after {
+  box-sizing: border-box;
+}
+
+.zh-hud [hidden] {
+  display: none !important;
+}
+
+.zh-hud > * {
+  pointer-events: auto;
+}
+
+.zh-hud :where(p, h1, h2, h3, dl, dd, ul) {
+  margin: 0;
+  padding: 0;
+}
+
+.zh-hud :where(button) {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.zh-sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A part that does not belong to the mode fades and leaves the keyboard's path. */
+.zh-hud > [data-off] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 300ms ease,
+    visibility 0s linear 300ms;
+}
+
+.zh-hero,
+.zh-controls,
+.zh-side,
+.zh-note,
+.zh-profile-host {
+  transition:
+    opacity 300ms ease,
+    visibility 0s linear 0s;
+}
+
+/* The one dot that marks a line as belonging to the route. */
+.zh-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--zt-signal);
+}
+
+/* ---- Skip link ------------------------------------------------------------------------------------------- */
+
+.zh-skip {
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  z-index: 5;
+  padding: 10px 16px;
+  border-radius: 4px;
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  font: 600 15px/1.2 var(--zt-font-text);
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.zh-skip:focus-visible {
+  transform: none;
+  outline-color: var(--zt-ink);
+  box-shadow: var(--zt-focus-halo);
+}
+
+/* ---- Header ---------------------------------------------------------------------------------------------- */
+
+.zh-header {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0 var(--zh-pad) 0 calc(var(--zh-pad) + 2px);
+  pointer-events: none;
+}
+
+.zh-header > * {
+  pointer-events: auto;
+}
+
+/* Over a lit panel the top of the window gets a little night back, so the header stays readable. */
+.zh-hud[data-mode='walk'] .zh-header::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 132px;
+  background: linear-gradient(180deg, rgb(5 7 11 / 0.62), rgb(5 7 11 / 0));
+  pointer-events: none;
+  z-index: -1;
+}
+
+.zh-hud[data-mode='list'] .zh-header {
+  padding-bottom: 14px;
+  background: linear-gradient(180deg, var(--zt-night) 70%, rgb(11 15 23 / 0));
+}
+
+.zh-brand {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  margin: 28px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--zt-text);
+}
+
+.zh-nav-slot {
+  flex: 1 1 auto;
+  min-width: 0;
+  align-self: stretch;
+  position: relative;
+  min-height: 56px;
+  pointer-events: none;
+}
+
+.zh-nav-slot > * {
+  pointer-events: auto;
+}
+
+.zh-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 23px;
+}
+
+.zh-tool {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--zh-rule);
+  border-radius: 50%;
+  background: rgb(13 18 27 / 0.72);
+  color: var(--zt-text-soft);
+  transition:
+    color 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    transform 160ms ease;
+}
+
+.zh-tool:active {
+  transform: scale(0.96);
+}
+
+.zh-tool[aria-pressed='true'] {
+  border-color: var(--zt-lamp);
+  color: var(--zt-lamp);
+}
+
+.zh-tool-glyph {
+  font: 500 15px/1 var(--zt-font-label);
+}
+
+.zh-icon {
+  display: block;
+}
+
+.zh-tool-count {
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  font: 500 10.5px/18px var(--zt-font-label);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* The start chip: a paper tag with one corner folded over. */
+.zh-start {
+  flex: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 164px;
+  height: 38px;
+  margin: 23px 0 0 6px;
+  padding: 0 17px 0 12px;
+  border: 0;
+  background: var(--zt-paper);
+  color: var(--zt-ink);
+  font: 500 10.5px/1 var(--zt-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 0 100%);
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.35));
+  transition: transform 300ms var(--zh-ease-spring);
+}
+
+.zh-start::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  background: linear-gradient(225deg, transparent 50%, var(--zt-paper-shade) 50%);
+}
+
+.zh-start-arrow {
+  font-family: var(--zt-font-text);
+  font-size: 13px;
+  letter-spacing: 0;
+  color: var(--zt-signal-deep);
+  transition: transform 300ms var(--zh-ease-spring);
+}
+
+.zh-start:focus-visible {
+  outline-offset: 3px;
+  clip-path: none;
+}
+
+@media (hover: hover) {
+  .zh-tool:hover {
+    color: var(--zt-text);
+    border-color: rgb(238 240 242 / 0.4);
+    background: rgb(20 27 39 / 0.9);
+  }
+  .zh-start:hover {
+    transform: translateY(-1px);
+  }
+  .zh-start:hover .zh-start-arrow {
+    transform: translateX(3px);
+  }
+}
+
+/* ---- Hero copy ------------------------------------------------------------------------------------------- */
+
+.zh-hero {
+  position: absolute;
+  left: var(--zh-pad);
+  top: clamp(112px, 21.1vh, 190px);
+  width: min(430px, 42vw);
+  pointer-events: none;
+}
+
+.zh-hero > * {
+  pointer-events: auto;
+}
+
+/* A soft shade behind the copy, not a box. */
+.zh-hero::before,
+.zh-side::before {
+  content: '';
+  position: absolute;
+  inset: -60px -90px -70px -120px;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgb(5 7 11 / 0.6), rgb(5 7 11 / 0));
+  pointer-events: none;
+}
+
+.zh-headline {
+  --zh-fit: 1;
+  max-width: 430px;
+  font-size: calc(var(--zt-size-headline) * var(--zh-fit));
+  /* Descenders of the last line stay inside the box, so the lede keeps its distance. */
+  padding-bottom: 0.08em;
+  overflow-wrap: break-word;
+}
+
+.zh-headline.is-clamped,
+.zh-card-title.is-clamped,
+.zh-note-title.is-clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.zh-word,
+.zh-letter {
+  display: inline-block;
+  white-space: pre;
+  will-change: transform;
+}
+
+.zh-lede {
+  max-width: 330px;
+  margin-top: 24px;
+  color: var(--zt-text-soft);
+}
+
+.zh-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  color: var(--zt-text-faint);
+}
+
+/* ---- Table controls: arrows and the enter button ---------------------------------------------------------- */
+
+.zh-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.zh-controls > * {
+  pointer-events: auto;
+}
+
+.zh-arrow {
+  position: absolute;
+  left: var(--zh-prev-x, calc(var(--zh-stage-x) - 15.3vw));
+  top: var(--zh-prev-y, 78.2vh);
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  padding: 0;
+  border: 1px solid var(--zh-rule);
+  border-radius: 50%;
+  background: rgb(11 15 23 / 0.8);
+  box-shadow:
+    inset 0 1px 0 rgb(255 233 201 / 0.07),
+    0 10px 22px -10px rgb(0 0 0 / 0.9);
+  color: var(--zt-text);
+  transition:
+    border-color 300ms ease,
+    background-color 300ms ease;
+}
+
+.zh-arrow[data-dir='next'] {
+  left: var(--zh-next-x, calc(var(--zh-stage-x) + 15.3vw));
+  top: var(--zh-next-y, 78.2vh);
+}
+
+/* The arrow is a strip of paper: the upper half lies flat, the lower half is folded back along the crease. */
+.zh-crease {
+  position: relative;
+  display: block;
+  width: 28px;
+  height: 18.7px;
+  transition: transform 500ms var(--zh-ease-spring);
+}
+
+.zh-arrow[data-dir='previous'] .zh-crease {
+  transform: scaleX(-1);
+}
+
+.zh-crease-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+}
+
+.zh-crease-half svg {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 200%;
+}
+
+.zh-crease-half.is-flat {
+  top: 0;
+  /* The crease itself: a hair of light where the paper bends. */
+  box-shadow: 0 0.5px 0 rgb(255 255 255 / 0.3);
+}
+
+.zh-crease-half.is-flat svg {
+  top: 0;
+}
+
+.zh-crease-half.is-fold {
+  top: 50%;
+  color: color-mix(in srgb, var(--zt-text) 50%, #4c5566);
+  transform-origin: 50% 0;
+  transform: perspective(40px) rotateX(-44deg);
+  transition:
+    transform 500ms var(--zh-ease-spring),
+    color 300ms ease;
+}
+
+.zh-crease-half.is-fold svg {
+  bottom: 0;
+}
+
+.zh-arrow:focus-visible .zh-crease-half.is-fold {
+  color: color-mix(in srgb, var(--zt-text) 86%, #4c5566);
+  transform: perspective(40px) rotateX(-6deg);
+}
+
+.zh-arrow.is-pressed .zh-crease-half.is-fold,
+.zh-arrow:active .zh-crease-half.is-fold {
+  transform: perspective(40px) rotateX(-78deg);
+  transition-duration: 140ms;
+}
+
+@media (hover: hover) {
+  .zh-arrow:hover {
+    border-color: rgb(238 240 242 / 0.36);
+    background: rgb(20 27 39 / 0.92);
+  }
+  .zh-arrow:hover .zh-crease {
+    transform: translateX(2px);
+  }
+  .zh-arrow[data-dir='previous']:hover .zh-crease {
+    transform: scaleX(-1) translateX(2px);
+  }
+  .zh-arrow:hover:not(.is-pressed):not(:active) .zh-crease-half.is-fold {
+    color: color-mix(in srgb, var(--zt-text) 86%, #4c5566);
+    transform: perspective(40px) rotateX(-6deg);
+  }
+}
+
+/* The enter button: the head of the red pin, with the two lines that say where it leads. */
+.zh-enter {
+  position: absolute;
+  left: var(--zh-enter-x, calc(var(--zh-stage-x) - 5.8vw));
+  top: var(--zh-enter-y, 57.8vh);
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 50px;
+  margin: -25px 0 0 -25px;
+  padding: 0 14px 0 0;
+  border: 0;
+  border-radius: 25px;
+  background: none;
+  text-align: start;
+}
+
+.zh-enter-ball {
+  position: relative;
+  flex: none;
+  width: 50px;
+  height: 50px;
+}
+
+.zh-enter-head {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 34%),
+    radial-gradient(circle at 50% 50%, var(--zt-signal) 55%, var(--zt-signal-deep) 100%);
+  box-shadow:
+    0 6px 12px -4px rgb(0 0 0 / 0.7),
+    inset 0 -3px 6px rgb(0 0 0 / 0.22);
+  transition: transform 500ms var(--zh-ease-spring);
+}
+
+.zh-enter-ring {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid var(--zt-signal);
+  border-radius: 50%;
+  opacity: 0;
+  animation: zh-ring 2.6s linear infinite;
+}
+
+.zh-enter-ring.is-late {
+  animation-delay: 1.3s;
+}
+
+@keyframes zh-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  70%,
+  100% {
+    transform: scale(1.62);
+    opacity: 0;
+  }
+}
+
+.zh-enter-label {
+  display: grid;
+  gap: 5px;
+}
+
+.zh-enter-title {
+  color: var(--zt-text);
+  white-space: nowrap;
+  text-shadow: 0 1px 10px rgb(5 7 11 / 0.9);
+}
+
+.zh-enter-sub {
+  color: var(--zt-text-soft);
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-shadow: 0 1px 10px rgb(5 7 11 / 0.9);
+}
+
+.zh-enter:focus-visible {
+  outline-offset: 4px;
+}
+
+@media (hover: hover) {
+  .zh-enter:hover .zh-enter-head {
+    transform: scale(1.08);
+  }
+  .zh-enter:hover .zh-enter-ring {
+    animation-duration: 1.3s;
+  }
+}
+
+/* ---- The counter ------------------------------------------------------------------------------------------ */
+
+/* Which roadmap is in the light: plain label text to the left of the arrows. */
+.zh-counter {
+  position: absolute;
+  left: var(--zh-prev-x, calc(var(--zh-stage-x) - 15.3vw));
+  top: var(--zh-prev-y, 78.2vh);
+  margin: 0;
+  transform: translate(calc(-100% - 44px), -50%);
+  color: var(--zt-text-faint);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.zh-counter-now {
+  color: var(--zt-text);
+}
+
+/* ---- Side card -------------------------------------------------------------------------------------------- */
+
+.zh-side {
+  position: absolute;
+  right: var(--zh-pad);
+  top: clamp(132px, 27.8vh, 250px);
+  bottom: calc(var(--zh-shelf-bottom) + var(--zh-shelf-h) + 26px);
+  width: min(360px, 27vw);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.zh-side::before {
+  inset: -50px -70px -40px -90px;
+}
+
+.zh-line {
+  flex: none;
+  max-width: 100%;
+}
+
+.zh-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.zh-chip {
+  --zh-tier: var(--zt-tier-bronze);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 25px;
+  padding: 0 12px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--zh-tier) 55%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--zh-tier) 16%, transparent);
+  color: color-mix(in srgb, var(--zh-tier) 70%, var(--zt-text));
+  white-space: nowrap;
+}
+
+.zh-side[data-tier='silver'] .zh-chip {
+  --zh-tier: var(--zt-tier-silver);
+}
+.zh-side[data-tier='gold'] .zh-chip {
+  --zh-tier: var(--zt-tier-gold);
+}
+.zh-side[data-tier='diamond'] .zh-chip {
+  --zh-tier: var(--zt-tier-diamond);
+}
+
+.zh-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--zh-tier);
+}
+
+.zh-chip-example {
+  color: var(--zt-text-faint);
+}
+
+.zh-card-meta {
+  margin-top: 14px;
+  color: var(--zt-text-faint);
+}
+
+.zh-card-title {
+  --zh-fit: 1;
+  margin-top: 8px;
+  color: var(--zt-text);
+  font-size: calc(var(--zt-size-title) * var(--zh-fit));
+  overflow-wrap: break-word;
+}
+
+.zh-card-goal {
+  margin-top: 8px;
+  color: var(--zt-text-soft);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.zh-card-hours {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.zh-card-number {
+  color: var(--zt-text);
+  min-width: 1.1em;
+}
+
+.zh-card-unit {
+  color: var(--zt-text-faint);
+}
+
+.zh-card-readout {
+  display: grid;
+  gap: 3px;
+  min-height: 15px;
+  margin-top: 8px;
+}
+
+.zh-card-readline {
+  color: var(--zt-text-soft);
+}
+
+.zh-card-readtitle {
+  color: var(--zt-text);
+  font-size: 13px;
+}
+
+.zh-card-readtitle:empty,
+.zh-card-readline:empty {
+  display: none;
+}
+
+.zh-card-pin {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--zt-text);
+}
+
+.zh-card-summary {
+  margin-top: 14px;
+  color: var(--zt-text-soft);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.zh-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 12px;
+  color: var(--zt-text-faint);
+}
+
+.zh-link {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid rgb(238 240 242 / 0.4);
+  background: none;
+  color: var(--zt-text);
+  font: 500 var(--zt-size-label) / 1.3 var(--zt-font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* When the column is low the card drops what the outline also says, the least needed first. */
+.zh-side[data-drop] .zh-card-summary,
+.zh-side:is([data-drop='2'], [data-drop='3']) .zh-card-goal,
+.zh-side[data-drop='3'] .zh-card-foot {
+  display: none;
+}
+
+/* Lines arrive one after another when another roadmap comes into the light. */
+.zh-side.is-arriving .zh-line {
+  animation: zh-line-in 600ms var(--zh-ease-out) var(--zh-delay, 200ms) both;
+}
+
+@keyframes zh-line-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Shelf ------------------------------------------------------------------------------------------------ */
+
+/* Only a place. No transform here: the shelf's phone sheet is fixed to the window. */
+.zh-shelf {
+  position: absolute;
+  right: var(--zh-pad);
+  bottom: var(--zh-shelf-bottom);
+}
+
+/* ---- The floating note ------------------------------------------------------------------------------------ */
+
+.zh-note {
+  --zh-note-w: min(340px, 29vw);
+  position: absolute;
+  left: 40px;
+  top: 82px;
+  width: var(--zh-note-w);
+  transition:
+    transform 1400ms var(--zh-ease-in-out),
+    opacity 300ms ease,
+    visibility 0s linear 0s;
+}
+
+.zh-note[data-side='right'] {
+  transform: translate3d(calc(100vw - 80px - var(--zh-note-w)), 0, 0);
+}
+
+.zh-note-float {
+  will-change: transform;
+}
+
+.zh-note-paper {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 250px);
+  padding: 24px 20px 14px;
+  transform: rotate(-1.2deg);
+  transform-origin: 50% 0;
+  transition: transform 900ms cubic-bezier(0.2, 1.2, 0.35, 1);
+}
+
+/* On the right the shelf stands below the note, so the note ends above it. */
+.zh-note[data-side='right'] .zh-note-paper {
+  max-height: calc(100vh - 82px - var(--zh-shelf-bottom) - var(--zh-shelf-h) - 30px);
+}
+
+/* A note that is being read is held straight. */
+.zh-note:hover .zh-note-paper,
+.zh-note:focus-within .zh-note-paper {
+  transform: rotate(0deg);
+}
+
+.zh-note-paper::before {
+  filter: url(#zt-paper-edge) drop-shadow(0 1px 0.5px rgb(5 7 11 / 0.3)) drop-shadow(0 26px 22px rgb(5 7 11 / 0.55));
+}
+
+.zh-note-grip {
+  display: none;
+}
+
+.zh-note-head {
+  flex: none;
+  display: grid;
+  gap: 12px;
+}
+
+/* The ribbon: where on the route this is, in hours. It wraps round the edge of the paper. */
+.zh-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  min-height: 30px;
+  margin-left: -28px;
+}
+
+.zh-ribbon-hour {
+  flex: none;
+  padding: 6px 20px 7px 14px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--zt-signal) 55%, var(--zt-signal-deep)), var(--zt-signal-deep));
+  color: var(--zt-paper-hi);
+  font: 500 15px/1 var(--zt-font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 50%, calc(100% - 11px) 100%, 0 100%);
+  transform: rotate(-1.5deg);
+  filter: drop-shadow(0 2px 2px rgb(5 7 11 / 0.25));
+}
+
+.zh-ribbon-kick {
+  min-width: 0;
+  color: var(--zt-ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zh-note-steps {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  margin: 0 -6px 0 auto;
+}
+
+.zh-note-step {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--zt-ink-soft);
+  font: 400 16px/1 var(--zt-font-text);
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.zh-note-step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .zh-note-step:not(:disabled):hover {
+    background: rgb(31 42 61 / 0.08);
+    color: var(--zt-ink);
+  }
+}
+
+.zh-note-mask {
+  overflow: hidden;
+  /* Room for descenders inside the mask. */
+  padding-bottom: 3px;
+  margin-bottom: -3px;
+}
+
+.zh-note-title {
+  --zh-fit: 1;
+  color: var(--zt-ink);
+  font-size: calc(clamp(22px, 1.9vw, 26px) * var(--zh-fit));
+  overflow-wrap: break-word;
+}
+
+.zh-minimap {
+  flex: none;
+  position: relative;
+  margin-top: 14px;
+  border: 1px solid rgb(31 42 61 / 0.16);
+  border-radius: 2px;
+  background: var(--zt-card);
+  overflow: hidden;
+}
+
+.zh-minimap-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 560 / 300;
+}
+
+.zh-minimap-stage {
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  color: var(--zt-ink-soft);
+  font-size: 8.5px;
+}
+
+.zh-minimap-dots {
+  position: absolute;
+  inset: 0;
+}
+
+.zh-minimap-dot {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+@media (hover: hover) {
+  .zh-minimap-dot:hover {
+    background: rgb(31 42 61 / 0.12);
+  }
+}
+
+/* Tabs: three index tabs along one rule. */
+.zh-tabs {
+  flex: none;
+  display: flex;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid rgb(31 42 61 / 0.2);
+}
+
+.zh-tab {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--zt-ink-soft);
+  font: 500 10.5px/1.2 var(--zt-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 160ms ease;
+}
+
+.zh-tab::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 2px;
+  background: var(--zt-ink);
+  transform: scaleX(0);
+  transition: transform 260ms var(--zh-ease-out);
+}
+
+.zh-tab[aria-selected='true'] {
+  color: var(--zt-ink);
+}
+
+.zh-tab[aria-selected='true']::after {
+  transform: scaleX(1);
+}
+
+@media (hover: hover) {
+  .zh-tab:hover {
+    color: var(--zt-ink);
+  }
+}
+
+.zh-note-body {
+  flex: 1 1 auto;
+  min-height: 72px;
+  margin: 0 -20px;
+  padding: 16px 20px 26px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(31 42 61 / 0.28) transparent;
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent);
+}
+
+.zh-note-body:focus-visible {
+  outline-offset: -2px;
+}
+
+.zh-note-empty {
+  color: var(--zt-ink-soft);
+}
+
+.zh-note[data-empty] .zh-ribbon,
+.zh-note[data-empty] .zh-minimap {
+  display: none;
+}
+
+.zh-note-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 42px;
+  padding-top: 8px;
+  border-top: 1px dashed rgb(31 42 61 / 0.3);
+}
+
+.zh-note-data {
+  display: flex;
+  gap: 16px;
+  min-width: 0;
+}
+
+.zh-note-datum {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.zh-note-datum dt {
+  color: var(--zt-ink-soft);
+  font-size: 8.5px;
+  white-space: nowrap;
+}
+
+.zh-note-datum dd {
+  color: var(--zt-ink);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+/*
+ * The learning card inside the note, in its compact form. The frame already is the paper and already shows the
+ * title, so the card keeps only its working parts, one at a time.
+ */
+.zh-note .zl-card,
+.zh-panel .zl-card {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.zh-note .zl-head > .zl-kicker,
+.zh-note .zl-head > .zl-title,
+.zh-panel .zl-head > .zl-title {
+  display: none;
+}
+
+.zh-note .zl-head {
+  margin: 0;
+}
+
+.zh-note .zl-status:empty {
+  display: none;
+}
+
+.zh-note[data-kind='waypoint'] .zl-part {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.zh-note[data-kind='waypoint'] .zl-part-head {
+  display: none;
+}
+
+.zh-note[data-kind='waypoint'][data-tab='note'] .zl-part:not([data-part='note']),
+.zh-note[data-kind='waypoint'][data-tab='do'] .zl-part:not([data-part='do']),
+.zh-note[data-kind='waypoint'][data-tab='take'] .zl-part:not([data-part='take']) {
+  display: none;
+}
+
+.zh-note[data-kind='waypoint'] .zl-head:has(> .zl-status:not(:empty)) {
+  margin-bottom: 12px;
+}
+
+@media (min-width: 761px) {
+  /* The data row below already gives the time. */
+  .zh-note[data-kind='waypoint'] .zl-head > .zl-meta {
+    display: none;
+  }
+}
+
+/* Swap: the old lines leave upwards, the new ones rise out of their masks one after another. */
+.zh-note.is-out .zh-note-title {
+  transform: translate3d(0, -112%, 0);
+  transition: transform 400ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+
+.zh-note.is-out .zh-row,
+.zh-note.is-out .zh-ribbon {
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.zh-note.is-in .zh-note-title {
+  animation: zh-title-in 1200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.zh-note.is-in .zh-ribbon {
+  animation: zh-row-in 850ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
+}
+
+.zh-note.is-in .zh-row {
+  animation: zh-row-in 850ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.zh-note.is-in .zh-minimap {
+  animation-delay: 200ms;
+}
+.zh-note.is-in .zh-tabs {
+  animation-delay: 280ms;
+}
+.zh-note.is-in .zh-note-body {
+  animation-delay: 360ms;
+}
+.zh-note.is-in .zh-note-foot {
+  animation-delay: 440ms;
+}
+
+@keyframes zh-title-in {
+  from {
+    transform: translate3d(0, 112%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes zh-row-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Profile strip ---------------------------------------------------------------------------------------- */
+
+/* A little night behind the bottom row, so the readout stays readable should a lit panel come under it. */
+.zh-hud[data-mode='walk']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 190px;
+  z-index: -1;
+  background: linear-gradient(0deg, rgb(5 7 11 / 0.82) 42%, rgb(5 7 11 / 0));
+  pointer-events: none;
+}
+
+.zh-profile-host {
+  position: absolute;
+  left: 40px;
+  right: calc(var(--zh-pad) + var(--zh-shelf-w) + 20px);
+  bottom: 28px;
+}
+
+.zh-profile {
+  display: grid;
+  gap: 9px;
+}
+
+.zh-profile-readout {
+  display: flex;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 24px;
+  padding: 0 4px;
+  color: var(--zt-text-soft);
+  white-space: nowrap;
+}
+
+.zh-profile-now {
+  color: var(--zt-text);
+}
+
+.zh-profile-arrival {
+  margin-left: auto;
+  color: var(--zt-text-soft);
+}
+
+.zh-profile-offer {
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgb(238 240 242 / 0.3);
+  border-radius: 999px;
+  background: rgb(13 18 27 / 0.7);
+  color: var(--zt-text);
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.zh-profile-strip {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  height: 84px;
+  padding: 9px 20px 9px 0;
+}
+
+.zh-profile-strip::before {
+  filter: url(#zt-paper-edge) drop-shadow(0 1px 0.5px rgb(5 7 11 / 0.3)) drop-shadow(0 14px 16px rgb(5 7 11 / 0.5));
+}
+
+.zh-profile:has(.zh-profile-seek:focus-visible) .zh-profile-strip {
+  outline: 2px solid var(--zt-lamp);
+  outline-offset: 3px;
+}
+
+.zh-profile-legend {
+  position: relative;
+}
+
+.zh-profile-tier {
+  position: absolute;
+  right: 10px;
+  transform: translateY(-50%);
+  color: var(--zt-ink-soft);
+  font: 500 8px/1 var(--zt-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.zh-profile-tier.is-above {
+  opacity: 0.5;
+}
+
+.zh-profile-plot {
+  position: relative;
+  min-width: 0;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.zh-profile-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.zh-profile-band {
+  fill: var(--zt-tier-bronze);
+  fill-opacity: 0.13;
+}
+.zh-profile-band[data-tier='silver'] {
+  fill: var(--zt-tier-silver);
+  fill-opacity: 0.2;
+}
+.zh-profile-band[data-tier='gold'] {
+  fill: var(--zt-tier-gold);
+  fill-opacity: 0.16;
+}
+.zh-profile-band[data-tier='diamond'] {
+  fill: var(--zt-tier-diamond);
+  fill-opacity: 0.26;
+}
+.zh-profile-band.is-above {
+  fill-opacity: 0.05;
+}
+
+.zh-profile-rule {
+  stroke: rgb(31 42 61 / 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+  vector-effect: non-scaling-stroke;
+}
+
+/* The ground under the line: paper in shade. A finished step takes the colour of its rating. */
+.zh-profile-wash path {
+  fill: var(--zt-paper-shade);
+  fill-opacity: 0.8;
+}
+
+.zh-profile-done path {
+  fill: var(--zt-ink-soft);
+  fill-opacity: 0.45;
+}
+.zh-profile-done path.is-rated {
+  fill-opacity: 0.95;
+}
+.zh-profile-done path.is-rated[data-tier='bronze'] {
+  fill: var(--zt-tier-bronze);
+}
+.zh-profile-done path.is-rated[data-tier='silver'] {
+  fill: var(--zt-tier-silver);
+}
+.zh-profile-done path.is-rated[data-tier='gold'] {
+  fill: var(--zt-tier-gold);
+}
+.zh-profile-done path.is-rated[data-tier='diamond'] {
+  fill: var(--zt-tier-diamond);
+}
+
+.zh-profile-line {
+  fill: none;
+  stroke: var(--zt-signal);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.zh-profile-line.is-ahead {
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+  stroke-opacity: 0.75;
+}
+
+.zh-profile-line.is-walked {
+  stroke-width: 2.4;
+}
+
+.zh-profile-marks {
+  position: absolute;
+  inset: 0;
+}
+
+.zh-mark {
+  position: absolute;
+  display: block;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+/* A step: a small dot on the line, with a hit area the height of the strip. */
+.zh-mark-step,
+.zh-mark-camp {
+  width: 22px;
+  height: 36px;
+  margin: -18px 0 0 -11px;
+  border-radius: 6px;
+}
+
+.zh-mark-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border: 1.5px solid var(--zt-ink);
+  border-radius: 50%;
+  background: var(--zt-paper-hi);
+  transition: transform 300ms var(--zh-ease-spring);
+}
+
+.zh-mark-step.is-side .zh-mark-dot {
+  border-style: dotted;
+}
+
+.zh-mark-step.is-done .zh-mark-dot {
+  background: var(--zt-ink);
+}
+
+/* A due review: the cairn carries a ring in the colour of the route. */
+.zh-mark-step.is-due .zh-mark-dot {
+  box-shadow:
+    0 0 0 2.5px var(--zt-paper),
+    0 0 0 4px var(--zt-signal);
+}
+
+/* A camp: a small tent on the line. The summit flies the flag. */
+.zh-mark-tent {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 9px;
+  margin: -9px 0 0 -5.5px;
+  background: var(--zt-ink);
+  clip-path: polygon(50% 0, 100% 100%, 62% 100%, 50% 58%, 38% 100%, 0 100%);
+  transition: transform 300ms var(--zh-ease-spring);
+}
+
+.zh-mark-camp.is-summit .zh-mark-tent {
+  width: 10px;
+  height: 14px;
+  margin: -14px 0 0 -1px;
+  background: var(--zt-signal);
+  clip-path: polygon(0 0, 1.5px 0, 1.5px 1px, 100% 4px, 1.5px 7.5px, 1.5px 100%, 0 100%);
+}
+
+@media (hover: hover) {
+  .zh-mark-step:hover .zh-mark-dot,
+  .zh-mark-camp:hover .zh-mark-tent {
+    transform: scale(1.5);
+  }
+}
+
+/* You are here: the red pin standing on the line. */
+.zh-mark-pin {
+  position: absolute;
+  left: -0.75px;
+  bottom: 0;
+  width: 1.5px;
+  height: 15px;
+  background: linear-gradient(180deg, var(--zt-steel), #5d6670);
+}
+
+.zh-mark-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 9px;
+  height: 9px;
+  margin-left: -4.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #ff9a85, var(--zt-signal) 55%, var(--zt-signal-deep));
+  box-shadow: 0 2px 3px rgb(5 7 11 / 0.35);
+}
+
+/* Where the plan puts the learner today: pale, and never an alarm. */
+.zh-mark-pace-tick {
+  position: absolute;
+  left: -5.5px;
+  top: -5.5px;
+  width: 11px;
+  height: 11px;
+  border: 1.5px dashed var(--zt-ink-soft);
+  border-radius: 50%;
+  background: rgb(251 248 241 / 0.7);
+}
+
+.zh-mark-flag {
+  position: absolute;
+  left: -0.5px;
+  bottom: 0;
+  width: 9px;
+  height: 14px;
+  background: var(--zt-ink-soft);
+  clip-path: polygon(0 0, 1.5px 0, 1.5px 1px, 100% 4px, 1.5px 7.5px, 1.5px 100%, 0 100%);
+}
+
+/* The walker is the reading cursor: a hairline through the plot and an ink dot on the line. */
+.zh-mark-walker,
+.zh-profile-cursor {
+  transition:
+    left 120ms linear,
+    top 120ms linear;
+  pointer-events: none;
+}
+
+.zh-profile-cursor {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  margin-left: -0.5px;
+  background: rgb(31 42 61 / 0.34);
+}
+
+.zh-mark-walker-dot {
+  position: absolute;
+  left: -4.5px;
+  top: -4.5px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--zt-paper-hi);
+  border-radius: 50%;
+  background: var(--zt-ink);
+  box-shadow: 0 0 0 1px rgb(31 42 61 / 0.5);
+}
+
+/* ---- Panels ----------------------------------------------------------------------------------------------- */
+
+.zh-panel {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 48px));
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background:
+    radial-gradient(130% 60% at 28% 0%, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0) 62%),
+    var(--zt-paper);
+  color: var(--zt-ink);
+  box-shadow:
+    0 2px 5px rgb(0 0 0 / 0.32),
+    0 40px 60px -30px rgb(0 0 0 / 0.85);
+  font-family: var(--zt-font-text);
+  overflow: hidden;
+}
+
+.zh-panel[open] {
+  display: flex;
+  flex-direction: column;
+  animation: zh-panel-in 300ms var(--zh-ease-out) both;
+}
+
+.zh-panel::backdrop {
+  background: rgb(5 7 11 / 0.62);
+}
+
+.zh-panel-drawer {
+  width: min(460px, 100vw);
+  height: 100dvh;
+  max-height: none;
+  margin: 0 0 0 auto;
+  border-radius: 0;
+}
+
+.zh-panel-drawer[open] {
+  animation-name: zh-drawer-in;
+  animation-duration: 380ms;
+}
+
+@keyframes zh-panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes zh-drawer-in {
+  from {
+    transform: translate3d(40px, 0, 0);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.zh-panel-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 16px 12px 24px;
+  border-bottom: 1px solid rgb(31 42 61 / 0.14);
+}
+
+.zh-panel-title {
+  margin: 0;
+  font-size: 22px;
+  color: var(--zt-ink);
+}
+
+.zh-panel-close {
+  width: 44px;
+  height: 44px;
+  border-color: rgb(31 42 61 / 0.22);
+  background: none;
+  color: var(--zt-ink);
+}
+
+@media (hover: hover) {
+  .zh-panel-close:hover {
+    background: rgb(31 42 61 / 0.07);
+    border-color: rgb(31 42 61 / 0.4);
+    color: var(--zt-ink);
+  }
+}
+
+.zh-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 18px 24px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zh-panel-body :where(p, dl, ul, table) {
+  margin: 0;
+}
+
+.zh-panel .zt-label {
+  color: var(--zt-ink-soft);
+}
+
+.zh-panel-road {
+  font-size: 22px;
+}
+
+.zh-panel-note {
+  padding-left: 12px;
+  border-left: 2px solid rgb(31 42 61 / 0.22);
+  color: var(--zt-ink-soft);
+}
+
+.zh-panel-status:empty {
+  display: none;
+}
+
+.zh-panel-error {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgb(31 42 61 / 0.3);
+  border-left: 3px solid var(--zt-ink);
+  border-radius: 2px 6px 6px 2px;
+  background: var(--zt-paper-hi);
+}
+
+.zh-issues {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.zh-field-block {
+  display: grid;
+  gap: 6px;
+}
+
+.zh-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zh-field {
+  flex: 1 1 200px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1.5px solid rgb(31 42 61 / 0.5);
+  border-radius: 6px;
+  background: var(--zt-paper-hi);
+  color: var(--zt-ink);
+}
+
+.zh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 1.5px solid var(--zt-ink);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--zt-ink);
+  font: 600 15px/1.25 var(--zt-font-text);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    transform 120ms ease;
+}
+
+.zh-btn:active {
+  transform: scale(0.97);
+}
+
+.zh-btn-strong {
+  background: var(--zt-ink);
+  color: var(--zt-paper-hi);
+}
+
+.zh-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .zh-btn:not(:disabled):not(.zh-btn-strong):hover {
+    background: rgb(31 42 61 / 0.06);
+  }
+  .zh-btn-strong:not(:disabled):hover {
+    background: #2c3a52;
+  }
+}
+
+.zh-drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 14px;
+  border: 1.5px dashed rgb(31 42 61 / 0.4);
+  border-radius: 6px;
+  color: var(--zt-ink-soft);
+}
+
+.zh-drop.is-over {
+  border-color: var(--zt-ink);
+  background: rgb(31 42 61 / 0.05);
+}
+
+.zh-drop:has(input:focus-visible) label {
+  outline: 2px solid var(--zt-ink);
+  outline-offset: 2px;
+  box-shadow: var(--zt-focus-halo);
+}
+
+.zh-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 12px 16px;
+  padding: 14px 0;
+  border-block: 1px dashed rgb(31 42 61 / 0.3);
+}
+
+.zh-fact {
+  display: grid;
+  gap: 2px;
+}
+
+.zh-fact dd {
+  margin: 0;
+  font-size: 15px;
+  color: var(--zt-ink);
+}
+
+.zh-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.zh-keys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px 28px;
+}
+
+.zh-keys {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.zh-keys caption {
+  padding-bottom: 8px;
+  text-align: start;
+}
+
+.zh-keys th,
+.zh-keys td {
+  padding: 7px 0;
+  border-top: 1px dotted rgb(31 42 61 / 0.3);
+  text-align: start;
+  vertical-align: baseline;
+  font-weight: 400;
+}
+
+.zh-keys th {
+  width: 46%;
+  padding-right: 12px;
+  white-space: nowrap;
+}
+
+.zh-kbd {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 6px;
+  border: 1px solid rgb(31 42 61 / 0.4);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--zt-paper-hi);
+  font: 500 11.5px/1.4 var(--zt-font-label);
+  text-align: center;
+}
+
+/* ---- The entrance of the table ----------------------------------------------------------------------------- */
+
+.zh-hud[data-intro='wait'] :is(.zh-headline, .zh-lede, .zh-hint, .zh-arrow, .zh-counter, .zh-enter, .zh-side, .zh-header, .zh-shelf) {
+  opacity: 0;
+}
+
+.zh-hud[data-intro='play'] .zh-header {
+  animation: zh-fade 700ms ease 150ms both;
+}
+.zh-hud[data-intro='play'] .zh-headline {
+  animation: zh-fade 1ms linear 1200ms both;
+}
+.zh-hud[data-intro='play'] .zh-lede {
+  animation: zh-row-in 900ms var(--zh-ease-out) 1700ms both;
+}
+.zh-hud[data-intro='play'] .zh-hint {
+  animation: zh-row-in 900ms var(--zh-ease-out) 2200ms both;
+}
+.zh-hud[data-intro='play'] .zh-arrow,
+.zh-hud[data-intro='play'] .zh-counter {
+  animation: zh-fade 700ms ease 2400ms both;
+}
+/* The shelf comes last of the furniture, once the mountain it belongs to stands. Opacity only: no transform. */
+.zh-hud[data-intro='play'] .zh-shelf {
+  animation: zh-fade 900ms ease 2800ms both;
+}
+.zh-hud[data-intro='play'] .zh-side .zh-line {
+  animation: zh-line-in 600ms var(--zh-ease-out) calc(1850ms + var(--zh-delay, 200ms)) both;
+}
+.zh-hud[data-intro='play'] .zh-enter {
+  animation: zh-fade 1ms linear 2600ms both;
+}
+
+@keyframes zh-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ---- A window that is not wide ----------------------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .zh-hero {
+    width: min(400px, 40vw);
+  }
+  .zh-tools {
+    gap: 4px;
+  }
+  /* The lit sheet sits beside the copy here, so the hint gives its line to the enter button. */
+  .zh-hint {
+    display: none;
+  }
+  .zh-enter {
+    top: var(--zh-enter-y, 61vh);
+  }
+  /* The narrower note keeps time and practice. The ribbon already says the hour. */
+  .zh-note-datum:nth-child(3) {
+    display: none;
+  }
+}
+
+/* A low window: the note gives up its mini map before its working parts. */
+@media (max-height: 860px) and (min-width: 761px) {
+  .zh-note[data-side='right'] .zh-minimap {
+    display: none;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 761px) {
+  .zh-minimap {
+    display: none;
+  }
+}
+
+@media (max-height: 780px) and (min-width: 761px) {
+  .zh-lede {
+    margin-top: 18px;
+  }
+  .zh-hint {
+    margin-top: 20px;
+  }
+}
+
+/* ---- Phone -------------------------------------------------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .zh-hud {
+    --zh-pad: 16px;
+    --zh-shelf-bottom: 16px;
+    --zh-stage-x: 50vw;
+  }
+
+  .zh-header {
+    gap: 8px;
+    padding: 0 12px 0 16px;
+  }
+
+  .zh-brand {
+    margin-top: 16px;
+  }
+
+  .zh-tools {
+    margin-top: 13px;
+    gap: 2px;
+  }
+
+  .zh-tool {
+    width: 44px;
+    height: 44px;
+    border-color: transparent;
+    background: none;
+  }
+
+  .zh-start {
+    min-width: 0;
+    height: 36px;
+    margin-top: 15px;
+    padding: 0 16px 0 12px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+  }
+
+  .zh-start-arrow {
+    display: none;
+  }
+
+  /* On the table a phone keeps the brand and the start chip. The list and a file are one tap away below. */
+  .zh-hud[data-mode='table'] .zh-tools :is([data-tool='help'], [data-tool='open']) {
+    display: none;
+  }
+
+  .zh-hero {
+    left: 16px;
+    top: 104px;
+    width: calc(100vw - 32px);
+  }
+
+  .zh-headline {
+    max-width: none;
+  }
+
+  .zh-lede {
+    max-width: 320px;
+    margin-top: 14px;
+    font-size: 15px;
+  }
+
+  .zh-hint {
+    display: none;
+  }
+
+  /* The counter and the arrows share one line at bottom 76. */
+  .zh-counter {
+    left: 16px;
+    top: auto;
+    bottom: 76px;
+    height: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    transform: none;
+  }
+
+  .zh-arrow,
+  .zh-arrow[data-dir='next'] {
+    left: auto;
+    top: auto;
+    right: 16px;
+    bottom: 76px;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+  }
+
+  .zh-arrow[data-dir='previous'] {
+    right: 68px;
+  }
+
+  .zh-crease {
+    width: 22px;
+    height: 14.7px;
+  }
+
+  /* On a phone the button lies on the lit sheet itself, so it carries its own piece of night. */
+  .zh-enter {
+    left: 50%;
+    top: auto;
+    bottom: 132px;
+    margin: 0;
+    padding-right: 18px;
+    gap: 8px;
+    transform: translateX(-50%);
+    background: rgb(11 15 23 / 0.8);
+    box-shadow:
+      inset 0 0 0 1px var(--zh-rule),
+      0 10px 22px -10px rgb(0 0 0 / 0.9);
+  }
+
+  .zh-enter-ball {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* The side card is a strip of two lines beside the shelf button. */
+  .zh-side {
+    left: 16px;
+    right: 84px;
+    top: auto;
+    bottom: 16px;
+    width: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'chip meta meta'
+      'title title hours';
+    align-items: baseline;
+    gap: 4px 10px;
+  }
+
+  .zh-side::before {
+    inset: -30px -100px -30px -30px;
+  }
+
+  .zh-side > :is(.zh-card-goal, .zh-card-readout, .zh-card-pin, .zh-card-summary, .zh-card-foot) {
+    display: none;
+  }
+
+  .zh-chip-row {
+    grid-area: chip;
+  }
+
+  .zh-chip {
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 9.5px;
+  }
+
+  .zh-chip-example {
+    display: none;
+  }
+
+  .zh-card-meta {
+    grid-area: meta;
+    margin: 0;
+    font-size: 9.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .zh-card-title {
+    grid-area: title;
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .zh-card-hours {
+    grid-area: hours;
+    margin: 0;
+    gap: 5px;
+  }
+
+  .zh-card-number {
+    font-size: 22px;
+  }
+
+  .zh-card-unit {
+    font-size: 9px;
+  }
+
+  .zh-card-unit-note {
+    display: none;
+  }
+
+  /* The note is a bottom sheet: a peek of kicker and title that pulls up to seven tenths of the height. */
+  .zh-note,
+  .zh-note[data-side='right'] {
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    height: 70dvh;
+    transform: translate3d(0, max(0px, calc(100% - 96px + var(--zh-drag, 0px))), 0);
+    transition:
+      transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 300ms ease;
+    z-index: 2;
+  }
+
+  .zh-note[data-expanded] {
+    transform: translate3d(0, max(0px, var(--zh-drag, 0px)), 0);
+  }
+
+  .zh-note.is-dragging {
+    transition: none;
+  }
+
+  .zh-note-float {
+    height: 100%;
+  }
+
+  .zh-note-paper,
+  .zh-note[data-side='right'] .zh-note-paper {
+    height: 100%;
+    max-height: none;
+    padding: 0 16px 0;
+    transform: none;
+    transition: none;
+  }
+
+  .zh-note-paper::before {
+    border-radius: 14px 14px 0 0;
+    filter: drop-shadow(0 -8px 18px rgb(5 7 11 / 0.55));
+  }
+
+  .zh-note .zt-tape {
+    display: none;
+  }
+
+  .zh-note-grip {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--zt-ink-soft);
+    touch-action: none;
+  }
+
+  .zh-note-grip-bar {
+    width: 38px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgb(31 42 61 / 0.3);
+  }
+
+  .zh-note-grip .zh-icon {
+    display: none;
+  }
+
+  .zh-note-head {
+    gap: 6px;
+    touch-action: none;
+  }
+
+  .zh-ribbon {
+    margin-left: -16px;
+  }
+
+  .zh-ribbon-hour {
+    padding: 5px 18px 6px 16px;
+    font-size: 14px;
+  }
+
+  .zh-note-title {
+    font-size: 20px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .zh-note[data-expanded] .zh-note-title {
+    white-space: normal;
+  }
+
+  /* The mini map and the data row are for wide windows. */
+  .zh-minimap,
+  .zh-note-foot {
+    display: none !important;
+  }
+
+  .zh-tabs {
+    margin-top: 10px;
+  }
+
+  .zh-tab {
+    min-height: 44px;
+  }
+
+  .zh-note-body {
+    margin: 0 -16px;
+    padding: 16px 16px 40px;
+  }
+
+  /* The profile is pinned above the peek, 56 high. */
+  .zh-profile-host {
+    left: 10px;
+    right: 10px;
+    bottom: 104px;
+  }
+
+  .zh-hud[data-mode='list'] .zh-profile-host {
+    bottom: 12px;
+    right: 78px;
+  }
+
+  .zh-profile {
+    gap: 6px;
+  }
+
+  .zh-profile-readout {
+    min-height: 18px;
+    padding-right: 68px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+  }
+
+  .zh-profile-arrival {
+    display: none;
+  }
+
+  .zh-profile-strip {
+    grid-template-columns: 8px minmax(0, 1fr);
+    height: 56px;
+    padding: 7px 12px 7px 0;
+  }
+
+  .zh-profile-legend {
+    visibility: hidden;
+  }
+
+  .zh-mark-step,
+  .zh-mark-camp {
+    width: 18px;
+    height: 42px;
+    margin: -21px 0 0 -9px;
+  }
+
+  /* In the walk the shelf button stands above the profile, clear of the note's peek. */
+  .zh-hud[data-mode='walk'] .zh-shelf {
+    bottom: 196px;
+    right: 12px;
+  }
+
+  .zh-hud[data-mode='walk']::after {
+    height: 300px;
+  }
+
+  .zh-panel-body {
+    padding: 16px 16px 22px;
+  }
+
+  .zh-panel-head {
+    padding: 14px 10px 10px 16px;
+  }
+}
+
+@media (max-width: 380px) {
+  .zh-start {
+    padding: 0 12px 0 10px;
+    letter-spacing: 0.06em;
+  }
+  .zh-brand .zt-wordmark {
+    font-size: 16px !important;
+  }
+}
+
+/* The narrowest phones keep the mark and let the wordmark go. */
+@media (max-width: 350px) {
+  .zh-brand .zt-wordmark {
+    display: none;
+  }
+}
+
+/* ---- Touch --------------------------------------------------------------------------------------------------- */
+
+@media (pointer: coarse) {
+  .zh-mark-step,
+  .zh-mark-camp {
+    height: 44px;
+    margin-top: -22px;
+  }
+  .zh-minimap-dot {
+    width: 44px;
+    height: 44px;
+    margin: -22px 0 0 -22px;
+  }
+  .zh-note-step {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* ---- Reduced motion ------------------------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .zh-hud *,
+  .zh-hud *::before,
+  .zh-hud *::after,
+  .zh-panel,
+  .zh-panel * {
+    animation-duration: 0.01s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01s !important;
+    transition-delay: 0s !important;
+  }
+  .zh-note-paper {
+    transform: none;
+  }
+  .zh-enter-ring {
+    display: none;
+  }
+}
+
+.zh-hud[data-motion='reduced'] *,
+.zh-hud[data-motion='reduced'] *::before,
+.zh-hud[data-motion='reduced'] *::after {
+  animation-duration: 0.01s !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01s !important;
+  transition-delay: 0s !important;
+}
+
+.zh-hud[data-motion='reduced'] .zh-note-paper {
+  transform: none;
+}
+
+.zh-hud[data-motion='reduced'] .zh-enter-ring {
+  display: none;
+}
+
+@media (forced-colors: active) {
+  .zh-enter-head,
+  .zh-ribbon-hour {
+    forced-color-adjust: none;
+  }
+}

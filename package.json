@@ -1,6 +1,6 @@
 {
   "name": "zero-to",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Type /zero-to <topic> in a coding agent and get a learning roadmap you can walk: a 3D trail map with stages, checkpoints, verified resources and saved progress.",
   "license": "Apache-2.0",

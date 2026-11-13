@@ -1,11 +1,24 @@
 {
   "name": "zero-to",
   "displayName": "zero-to",
+  "version": "0.1.0",
   "description": "Turn any topic into a researched learning roadmap with checked sources, opened as a 3D trail map in the browser.",
-  "author": { "name": "OthmanAdi", "url": "https://github.com/OthmanAdi" },
+  "author": {
+    "name": "OthmanAdi",
+    "url": "https://github.com/OthmanAdi"
+  },
   "homepage": "https://othmanadi.github.io/zero-to/",
   "repository": "https://github.com/OthmanAdi/zero-to",
   "license": "Apache-2.0",
-  "keywords": ["learning-roadmap", "study-plan", "curriculum", "education", "agent-skills"],
-  "skills": ["./.agents/skills/"]
+  "keywords": [
+    "learning-roadmap",
+    "study-plan",
+    "curriculum",
+    "education",
+    "agent-skills"
+  ],
+  "skills": [
+    "./.agents/skills/"
+  ],
+  "icon": "./public/icon-512.png"
 }

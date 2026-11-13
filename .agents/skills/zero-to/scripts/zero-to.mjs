@@ -3546,7 +3546,7 @@ var init_catalogue = __esmMin((() => {
 * The zero-to command-line tool: validate, check-links, build, link, student and catalogue.
 * `run` takes the arguments and an Io object and resolves to the exit code; it never calls process.exit.
 */
-var VERSION = "0.0.0";
+var VERSION = "0.1.0";
 var DEFAULT_SHARE_BASE = "https://othmanadi.github.io/zero-to/";
 var RECEIPT_FORMAT = "zero-to/links-1";
 var HELP = `zero-to ${VERSION}: check, build and share zero-to roadmap files.

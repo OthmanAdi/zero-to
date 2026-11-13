@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: props, signposts, stations</title>
+    <style>
+      html {
+        background: #05070b;
+      }
+      body {
+        margin: 0;
+        background: var(--zt-night, #0b0f17);
+        color: var(--zt-text, #eef0f2);
+        font: 14px/1.45 var(--zt-font-text, system-ui, sans-serif);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      #stage {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        display: block;
+        touch-action: manipulation;
+      }
+      nav {
+        position: fixed;
+        z-index: 3;
+        left: 16px;
+        top: 12px;
+        right: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      nav a,
+      .controls a.pick,
+      .controls button {
+        font: 500 10.5px/1 var(--zt-font-label, ui-monospace, monospace);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--zt-text-soft);
+        background: rgb(238 240 242 / 0.06);
+        border: 1px solid rgb(238 240 242 / 0.12);
+        border-radius: 3px;
+        padding: 8px 10px;
+        min-height: 30px;
+        box-sizing: border-box;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      nav a[aria-current='page'] {
+        color: var(--zt-night);
+        background: var(--zt-paper);
+        border-color: var(--zt-paper);
+      }
+      nav a:focus-visible,
+      .controls button:focus-visible {
+        outline: 2px solid var(--zt-lamp);
+        outline-offset: 2px;
+      }
+      .controls {
+        position: fixed;
+        z-index: 3;
+        left: 16px;
+        right: 16px;
+        bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .controls button[aria-pressed='true'] {
+        color: var(--zt-night);
+        background: var(--zt-lamp);
+        border-color: var(--zt-lamp);
+      }
+      .controls p {
+        margin: 0 0 0 8px;
+        color: var(--zt-text-faint);
+        font: 400 12px/1.3 var(--zt-font-label, ui-monospace, monospace);
+      }
+      .label {
+        position: fixed;
+        z-index: 2;
+        transform: translate(-50%, 0);
+        white-space: nowrap;
+        pointer-events: none;
+        color: var(--zt-ink);
+        background: rgb(251 248 241 / 0.82);
+        border-radius: 2px;
+        padding: 2px 5px;
+        font: 500 10px/1.2 var(--zt-font-label, ui-monospace, monospace);
+        letter-spacing: 0.04em;
+      }
+      .label.dim {
+        color: var(--zt-text-soft);
+        background: rgb(11 15 23 / 0.6);
+      }
+      body.flat {
+        overflow: auto;
+        background: var(--zt-paper, #f3ece0);
+      }
+      body.flat #stage {
+        display: none;
+      }
+      body.flat nav a {
+        color: var(--zt-ink);
+        border-color: rgb(31 42 61 / 0.25);
+      }
+      #art {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        gap: 18px 22px;
+        padding: 64px 24px 40px;
+      }
+      #art figure {
+        margin: 0;
+        display: grid;
+        justify-items: center;
+        gap: 4px;
+      }
+      #art canvas {
+        display: block;
+        filter: drop-shadow(0 2px 2px rgb(31 42 61 / 0.28));
+      }
+      #art figcaption {
+        color: var(--zt-ink-soft);
+        font: 500 10px/1.2 var(--zt-font-label, ui-monospace, monospace);
+        letter-spacing: 0.04em;
+      }
+      body.still nav,
+      body.still .controls,
+      body.bare .label {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <nav id="nav" aria-label="Sections"></nav>
+    <div id="labels"></div>
+    <div class="controls" id="controls"></div>
+    <script type="module" src="./props.ts"></script>
+  </body>
+</html>

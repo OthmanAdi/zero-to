@@ -19,7 +19,10 @@ export interface StopSpec {
   readonly id: StopId;
   /** The fragment a link to the stop uses. */
   readonly anchor: string;
-  /** Empty space before the stop, in window heights. The thread crosses it. */
+  /**
+   * Empty space before the stop, in window heights. The thread crosses it. A third of a window at most: with
+   * the padding of the two boxes round it, the next stop's heading is in view before the last cards have left.
+   */
   readonly gap: number;
   /** How long the stop stays pinned, in window heights. 0 for a stop that is read and used, not played. */
   readonly hold: number;
@@ -34,13 +37,13 @@ export interface StopSpec {
 
 export const STOPS: readonly StopSpec[] = [
   { id: 'what', anchor: 'what-it-is', gap: 0.26, hold: 1.4, steps: 4, leg: 'curve', exit: 0.62 },
-  { id: 'how', anchor: 'how-it-works', gap: 0.3, hold: 1.4, steps: 4, leg: 'straight', exit: 0.34 },
-  { id: 'trail', anchor: 'on-the-trail', gap: 0.45, hold: 1.9, steps: 7, leg: 'switchbacks', exit: 0.74 },
-  { id: 'class', anchor: 'for-a-class', gap: 0.35, hold: 1.2, steps: 4, leg: 'arc', exit: 0.48 },
-  { id: 'map', anchor: 'the-map', gap: 0.4, hold: 1.1, steps: 1, leg: 'meander', exit: 0.28 },
-  { id: 'install', anchor: 'install', gap: 0.35, hold: 0, steps: 1, leg: 'sweep', exit: 0.68 },
-  { id: 'questions', anchor: 'questions', gap: 0.35, hold: 0, steps: 1, leg: 'curve', exit: 0.5 },
-  { id: 'start', anchor: 'start', gap: 0.4, hold: 0, steps: 1, leg: 'drop', exit: 0.5, centred: true },
+  { id: 'how', anchor: 'how-it-works', gap: 0.24, hold: 1.4, steps: 4, leg: 'straight', exit: 0.72 },
+  { id: 'trail', anchor: 'on-the-trail', gap: 0.32, hold: 1.9, steps: 7, leg: 'switchbacks', exit: 0.74 },
+  { id: 'class', anchor: 'for-a-class', gap: 0.26, hold: 1.2, steps: 4, leg: 'arc', exit: 0.48 },
+  { id: 'map', anchor: 'the-map', gap: 0.3, hold: 1.1, steps: 1, leg: 'meander', exit: 0.56 },
+  { id: 'install', anchor: 'install', gap: 0.26, hold: 0, steps: 1, leg: 'sweep', exit: 0.68 },
+  { id: 'questions', anchor: 'questions', gap: 0.26, hold: 0, steps: 1, leg: 'curve', exit: 0.5 },
+  { id: 'start', anchor: 'start', gap: 0.32, hold: 0, steps: 1, leg: 'drop', exit: 0.5, centred: true },
 ];
 
 /** The first gap is shorter on a phone, where the hero is shorter too. */

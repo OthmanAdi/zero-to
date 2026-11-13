@@ -39,13 +39,13 @@ export const DE: Readonly<Record<keyof typeof EN, StringValue>> = {
   howLede: 'Der Skill ist eine Methode, der dein Agent folgt, mit einem kleinen Kommandozeilenwerkzeug daneben. Ein Lauf hat vier Schritte.',
   how1: 'Das Interview',
   how1Body:
-    'Der Agent liest zuerst deinen Prompt und fragt nur, was noch offen ist: für wen die Roadmap ist, wo du anfängst, was am Ziel gelten soll, deine Stunden pro Woche, dein Budget und die Sprachen der Quellen. Höchstens drei Runden, für Lehrkräfte vier. Schreibst du `--defaults`, fragt er nichts und nennt die Vorgaben, die er genommen hat.',
+    'Der Agent liest zuerst deinen Prompt und fragt nur, was noch offen ist: für wen die Roadmap ist, wo du anfängst, was am Ziel gelten soll, deine Stunden pro Woche, dein Budget und die Sprachen der Quellen. Er fragt höchstens drei Runden, für Lehrkräfte vier. Schreibst du `--defaults`, fragt er nichts und nennt die Vorgaben, die er genommen hat.',
   how2: 'Recherche mit geprüften Links',
   how2Body:
     'Jede Quelle wird im Lauf abgerufen und ihre Seite gelesen. Ein Link gilt nur dann als geprüft, wenn er geantwortet hat, wenn er ist, was der Eintrag nennt, und wenn der Grund für seine Aufnahme auf der Seite steht. Ein toter Link wird nie geschrieben. Eine Quelle hinter einer Anmeldung oder Bezahlschranke wird so markiert. Eine, die ein automatischer Client nicht öffnen konnte, als nicht geöffnet.',
   how3: 'Die Roadmap-Datei',
   how3Body:
-    'Eine JSON-Datei mit zwei bis acht Etappen. Eine Etappe hat bis zu neun Schritte, einen Kontrollpunkt und meist ein Projekt. Ein Schritt hat eine Notiz, eine Frage, die du vor dem Öffnen der Quelle beantwortest, eine praktische Aufgabe mit geschätzten Minuten und eine Hauptquelle. Etwa 70 Prozent der Zeit sind Praxis.',
+    'Die Roadmap ist eine JSON-Datei mit zwei bis acht Etappen. Eine Etappe hat bis zu neun Schritte, einen Kontrollpunkt und meist ein Projekt. Ein Schritt hat eine Notiz, eine Frage, die du vor dem Öffnen der Quelle beantwortest, eine praktische Aufgabe mit geschätzten Minuten und eine Hauptquelle. Etwa 70 Prozent der Zeit sind Praxis.',
   how4: 'Die Wanderkarte',
   how4Body:
     'Der Build-Befehl schreibt die Roadmap in eine HTML-Datei, die offline funktioniert. Etappen werden Wegstrecken, Schritte werden Wegpunkte und Kontrollpunkte werden Wegweiser. Ein Link zum Teilen trägt die ganze Roadmap in der Adresse, also liegt nichts auf einem Server.',
@@ -77,7 +77,7 @@ export const DE: Readonly<Record<keyof typeof EN, StringValue>> = {
   keepNotebookBody: 'Hefte unterwegs Quellen, Kernpunkte und eigene Zeilen an. Exportiere das Notizbuch als Markdown oder drucke es.',
   keepCairns: 'Steinmännchen zur Wiederholung',
   keepCairnsBody: 'Ein erledigter Schritt mit Checks kommt nach 2, 7, 21 und 60 Tagen zur Wiederholung zurück. Ein fälliges Steinmännchen trägt auf der Route einen roten Ring.',
-  trailRule: 'Keine Punkte, keine Serien und kein Tadel. Minuten sind Schätzungen und als Schätzungen beschriftet.',
+  trailRule: 'Es gibt keine Punkte, keine Serien und keinen Tadel. Minuten sind Schätzungen und als Schätzungen beschriftet.',
 
   // 04
   classTag: 'Für eine Klasse',
@@ -174,7 +174,7 @@ export const DE: Readonly<Record<keyof typeof EN, StringValue>> = {
   installTested: 'ausgeführt am {date}',
   installOr: 'oder als Plugin',
   installThen: 'Dann tippe',
-  installThenBody: 'Drei Arten zu fragen: ein Thema, ein Thema mit Ausgangspunkt und eine Klasse.',
+  installThenBody: 'Du kannst auf drei Arten fragen: mit einem Thema, mit einem Thema und einem Ausgangspunkt oder für eine Klasse.',
   copy: 'Kopieren',
   copied: 'Kopiert',
   copyOf: 'Befehl kopieren: {command}',
@@ -185,7 +185,7 @@ export const DE: Readonly<Record<keyof typeof EN, StringValue>> = {
   // 07
   questionsTag: 'Fragen',
   questionsTitle: 'Fragen vor dem *Aufbruch*.',
-  questionsLede: 'Kurze Antworten. Die langen stehen in der Dokumentation des Skills.',
+  questionsLede: 'Diese Antworten sind kurz. Die langen stehen in der Dokumentation des Skills.',
   q1: 'Welche Themen gehen?',
   a1: 'Jedes Thema. Der Skill hat keine Themenliste: Er recherchiert, was du nennst, ob Framework, Naturwissenschaft, Handwerk, Fremdsprache oder Schulfach. Nichts auf der Website setzt Programmieren voraus.',
   q2: 'Ist das eine KI-Roadmap?',
@@ -199,7 +199,7 @@ export const DE: Readonly<Record<keyof typeof EN, StringValue>> = {
   q6: 'Braucht es WebGL?',
   a6: 'Die 3D-Karte ja. Ohne WebGL öffnet sich dieselbe Roadmap als Liste mit allen Lernfunktionen.',
   q7: 'Was kostet es?',
-  a7: 'Der Skill und die Website sind Open Source unter Apache-2.0. Die Modellnutzung deines Agenten trägst du selbst. Jede Quelle ist als kostenlos oder kostenpflichtig markiert, und das Standardbudget des Interviews ist „nur kostenlos“.',
+  a7: 'Der Skill und die Website sind Open Source unter Apache-2.0. Die Modellnutzung deines Agenten bezahlst du selbst. Jede Quelle ist als kostenlos oder kostenpflichtig markiert, und das Standardbudget des Interviews ist „nur kostenlos“.',
   q8: 'Welche Sprachen?',
   a8: 'Die Oberfläche gibt es auf Englisch und Deutsch. Eine Roadmap wird in der Sprache deines Prompts geschrieben, und du wählst, in welchen Sprachen ihre Quellen sein dürfen.',
 

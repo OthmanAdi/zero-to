@@ -212,6 +212,38 @@ describe('the page', () => {
     expect(host.children).toHaveLength(0);
   });
 
+  it('puts a band of night behind the header and shows it only while the sections are under it', () => {
+    fakeLayout();
+    const host = document.createElement('div');
+    document.body.append(host);
+    const { root, sections } = mount({ navHost: host });
+    const band = host.querySelector('.zs-band');
+    expect(root.querySelector('.zs-band')).toBeNull();
+    expect(band?.getAttribute('aria-hidden')).toBe('true');
+    // The band comes before the tabs in the header, so the tabs lie on it.
+    expect(band?.nextElementSibling?.matches('nav.zs-nav')).toBe(true);
+    // The table: the top of the sections is at the bottom of the window, or anywhere below its top.
+    sections.update(0);
+    expect(band?.classList.contains('is-on')).toBe(false);
+    sections.update(sections.progressAt(-40));
+    expect(band?.classList.contains('is-on')).toBe(false);
+    // The top of the sections has passed the top of the window: what scrolls now scrolls under the header.
+    sections.update(sections.progressAt(40));
+    expect(band?.classList.contains('is-on')).toBe(true);
+    sections.update(1);
+    expect(band?.classList.contains('is-on')).toBe(true);
+    // Back up at the table the band goes.
+    sections.update(sections.progressAt(-200));
+    expect(band?.classList.contains('is-on')).toBe(false);
+  });
+
+  it('lays the band over the stops and under the tabs when it has no header to stand in', () => {
+    const { root } = mount();
+    const band = root.querySelector(':scope > .zs-band');
+    expect(band).not.toBeNull();
+    expect(band?.nextElementSibling?.matches('nav.zs-nav')).toBe(true);
+  });
+
   it('marks every install path untested until it is given the day it was run', () => {
     const { root } = mount();
     const states = [...root.querySelectorAll('.zs-agent .zs-state')].map((node) => node.textContent);

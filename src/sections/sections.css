@@ -104,7 +104,7 @@
   grid-template-columns: minmax(0, min(470px, 33vw)) minmax(0, 1fr);
   column-gap: clamp(36px, 5vw, 84px);
   align-items: start;
-  padding: clamp(108px, 15vh, 150px) var(--zs-pad-r) calc(var(--zs-band) + 88px) var(--zs-pad-l);
+  padding: clamp(108px, 15vh, 150px) var(--zs-pad-r) calc(var(--zs-band) + 56px) var(--zs-pad-l);
 }
 
 .zs-stop[data-pin] > .zs-box {
@@ -370,6 +370,33 @@
 
 .zs-walker [fill='none'] {
   stroke: currentColor;
+}
+
+/* ---- The band behind the header ------------------------------------------------------------------------- */
+
+/*
+ * The room's night across the top of the window, fading out along its lower edge. It stands behind the mark,
+ * the index tabs and the tools, so nothing that scrolls under them reads through. It is shown only while the
+ * sections are under the header, and never over the table.
+ */
+div.zs-band {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 112px;
+  background: linear-gradient(180deg, var(--zt-night) 60%, rgb(11 15 23 / 0.86) 70%, rgb(11 15 23 / 0.5) 82%, rgb(11 15 23 / 0.16) 92%, rgb(11 15 23 / 0));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-out;
+}
+
+div.zs-band.is-on {
+  opacity: 1;
+}
+
+/* Without a header to stand in, the band lies over the stops and under the tabs. */
+.zs-root > .zs-band {
+  z-index: 15;
 }
 
 /* ---- Index tabs ----------------------------------------------------------------------------------------- */
@@ -1888,7 +1915,7 @@ a.zs-age-title:hover {
     grid-template-rows: none;
     row-gap: 30px;
     padding-top: 84px;
-    padding-bottom: calc(var(--zs-band) + 76px);
+    padding-bottom: calc(var(--zs-band) + 44px);
   }
 
   .zs-copy,
@@ -1914,6 +1941,10 @@ a.zs-age-title:hover {
     width: 31px;
     height: 46px;
     margin: -44px 0 0 -15px;
+  }
+
+  div.zs-band {
+    height: 92px;
   }
 
   .zs-nav-fixed {
@@ -2062,6 +2093,7 @@ a.zs-age-title:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .zs-band,
   .zs-root *,
   .zs-root *::before,
   .zs-root *::after {
@@ -2073,6 +2105,7 @@ a.zs-age-title:hover {
 
 @media print {
   .zs-nav,
+  .zs-band,
   .zs-thread,
   .zs-walker,
   .zs-gap {

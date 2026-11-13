@@ -24,7 +24,7 @@ import {
   type ThreadPiece,
 } from './model';
 import './sections.css';
-import { MAP_THEMES, buildStops, navKey, type InstallPath, type PageState, type StopContext, type StopView } from './stops';
+import { MAP_THEMES, buildStops, camel, navKey, type InstallPath, type PageState, type StopContext, type StopView } from './stops';
 import { hasSectionWords, loadSectionWords, say, type SectionKey } from './strings';
 import { createPiece, createWalker, type ThreadPieceView } from './thread';
 import { DEFAULT_TICKET } from './ticket';
@@ -178,6 +178,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
   const applied: string[] = [];
   const manual: (number | null)[] = [];
   const walker = createWalker();
+  // The night behind the header. It stands with the index tabs, and it is shown once the sections are under them.
+  const band = h('div', { class: 'zs-band', 'aria-hidden': 'true' });
 
   const s = (key: SectionKey, vars?: StringVars) => say(key, vars, lang);
 
@@ -201,11 +203,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       .then(({ mapPrint }) => {
         if (destroyed || printWanted !== key) return;
         target.group.innerHTML = mapPrint({ shape: map.shape, trail: map.trail, theme: map.theme, seed: seedOf() });
-        target.caption.textContent = s('mapPrint', {
-          shape: s(`shape${map.shape.replace(/(^|-)([a-z])/g, (_w, _d: string, c: string) => c.toUpperCase())}` as SectionKey),
-          trail: s(`trail${map.trail.replace(/(^|-)([a-z])/g, (_w, _d: string, c: string) => c.toUpperCase())}` as SectionKey),
-          seed: seedOf(),
-        });
+        target.caption.textContent = s('mapPrint', { shape: s(`shape${camel(map.shape)}` as SectionKey), trail: s(`trail${camel(map.trail)}` as SectionKey), seed: seedOf() });
         printShown = key;
       })
       .catch(() => {
@@ -306,8 +304,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     nav = buildNav();
     const parts: Node[] = [];
     stops.forEach((stop, index) => parts.push(gaps[index] as HTMLElement, stop.section));
-    root.replaceChildren(...(options.navHost ? [] : [nav]), ...parts, buildFooter());
-    options.navHost?.append(nav);
+    root.replaceChildren(...(options.navHost ? [] : [band, nav]), ...parts, buildFooter());
+    options.navHost?.append(band, nav);
     root.lang = lang;
 
     for (const stop of stops) if (stop.print) stop.print.group.innerHTML = PLAIN_PRINT;
@@ -456,6 +454,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     const y = localScroll(progress, layout.height, viewport);
     const still = reduced();
 
+    // From the moment the top of the sections passes the top of the window, something scrolls under the header.
+    band.classList.toggle('is-on', y > 0);
     stops.forEach((stop, index) => apply(stop, index, stopState(spans[index] as StopSpan, stop.spec.steps, viewport, y), still));
 
     const now = currentStop(spans, viewport, y);
@@ -595,6 +595,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       media?.removeEventListener?.('change', remeasure);
       for (const stop of stops) stop.dispose?.();
       nav?.remove();
+      band.remove();
       root.replaceChildren();
       root.classList.remove('zs-root', 'zs-live', 'zs-narrow', 'zs-still');
       root.style.removeProperty('--zs-vh');

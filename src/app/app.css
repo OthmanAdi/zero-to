@@ -88,8 +88,8 @@ html[data-zt-view='walk'] :is(#zt-sections, .zt-hero-space) {
   display: none;
 }
 
-/* The index tabs belong to the table. */
-html:is([data-zt-view='walk'], [data-zt-view='list']) .zs-nav {
+/* The index tabs belong to the table, and so does the band of night the sections put behind the header. */
+html:is([data-zt-view='walk'], [data-zt-view='list']) :is(.zs-nav, .zs-band) {
   display: none;
 }
 
@@ -130,17 +130,6 @@ html[data-zt-phase='leave'] .zh-hud::after {
   opacity: 0;
 }
 
-/*
- * On a narrow window the sections are not pinned and their text scrolls up under the header. There the header
- * gets a little night behind it, as it has in the list view.
- */
-@media (max-width: 899px) {
-  html.zt-away[data-zt-view='table'] .zh-hud > .zh-header {
-    padding-bottom: 16px;
-    background: linear-gradient(180deg, var(--zt-night, #0b0f17) 68%, rgb(11 15 23 / 0));
-  }
-}
-
 /* The intro plays again after a walk: the side card waits for its moment, as it did the first time. */
 html[data-zt-intro='again'] .zh-hud > .zh-side {
   opacity: 0 !important;
@@ -172,6 +161,11 @@ html[data-zt-view='list'] .zh-hud > [data-off] {
 
 html.zt-app:not(.map-view) #zero-to-outline {
   padding: 96px 0 250px;
+}
+
+/* Opening the list view moves the focus to its heading, so reading starts there. A heading is not a control and takes no ring. */
+#zero-to-outline h1[tabindex='-1']:focus {
+  outline: none;
 }
 
 @media (max-width: 760px) {

@@ -61,6 +61,16 @@ describe('stops', () => {
     expect(STOPS.filter((stop) => stop.centred).map((stop) => stop.id)).toEqual(['start']);
   });
 
+  it('keeps the way between two stops short and sends the thread out across the page', () => {
+    for (const stop of STOPS) {
+      expect(stop.gap).toBeGreaterThan(0.1);
+      expect(stop.gap).toBeLessThanOrEqual(1 / 3);
+    }
+    // A leg starts where the stop before it lets the thread out and ends in the gutter. No leg of a stop that
+    // is read from the left starts in the left part of the window, where it would leave the rest of it empty.
+    for (const stop of STOPS.filter((entry) => !entry.centred)) expect(stop.exit).toBeGreaterThanOrEqual(0.45);
+  });
+
   it('activates the stops in order as the page is scrolled, and never goes back', () => {
     for (const pinned of [true, false]) {
       const { spans, height } = page(VIEWPORT, pinned);

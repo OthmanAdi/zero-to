@@ -97,7 +97,8 @@ export interface StopView {
 
 type Say = (key: SectionKey, vars?: StringVars) => string;
 
-const camel = (id: string): string => id.replace(/(^|-)([a-z])/g, (_whole, _dash: string, letter: string) => letter.toUpperCase());
+/** `twin-peaks` as `TwinPeaks`: the part of a string key that names an option. */
+export const camel = (id: string): string => id.replace(/(^|-)([a-z])/g, (_whole, _dash: string, letter: string) => letter.toUpperCase());
 
 const art = (drawing: Drawing, className = ''): SVGSVGElement => svg(drawing.viewBox, drawing.body, className);
 

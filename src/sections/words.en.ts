@@ -42,13 +42,13 @@ export const EN = {
   howLede: 'The skill is a method your agent follows, with a small command-line tool beside it. One run has four steps.',
   how1: 'The interview',
   how1Body:
-    'The agent reads your prompt first and asks only what is still open: who the roadmap is for, where you start, what should be true when you arrive, your hours a week, your budget and the languages of the sources. Three rounds at most, four for a teacher. Write `--defaults` and it asks nothing and lists the defaults it took.',
+    'The agent reads your prompt first and asks only what is still open: who the roadmap is for, where you start, what should be true when you arrive, your hours a week, your budget and the languages of the sources. It asks three rounds at most, four for a teacher. Write `--defaults` and it asks nothing and lists the defaults it took.',
   how2: 'Research with checked links',
   how2Body:
     'Every source is fetched during the run and its page is read. A link counts as verified only when it answered, it is what the entry says it is and the reason for listing it is on the page. A dead link is never written. A source behind a login is marked gated. One that an automated client could not open is marked unverified.',
   how3: 'The roadmap file',
   how3Body:
-    'One JSON file with two to eight stages. A stage has up to nine steps, a checkpoint and usually a project. A step has a note, a question to answer before you open the source, a hands-on task with estimated minutes and one main source. About 70 percent of the time is hands-on.',
+    'The roadmap is one JSON file with two to eight stages. A stage has up to nine steps, a checkpoint and usually a project. A step has a note, a question to answer before you open the source, a hands-on task with estimated minutes and one main source. About 70 percent of the time is hands-on.',
   how4: 'The trail map',
   how4Body:
     'The build command writes the roadmap into one HTML file that works offline. Stages become stretches of trail, steps become waypoints and checkpoints become signposts. A share link carries the whole roadmap in its address, so nothing is stored on a server.',
@@ -69,7 +69,7 @@ export const EN = {
   carryCheckpointsBody:
     'A stage ends at a signpost. Its arms name what you should be able to show, test or explain. Tick them, answer the checks and rate each task from "saw it" to "could explain it".',
   carryProjects: 'Camps',
-  carryProjectsBody: 'At the end of most stages is a camp with a project. It has three rungs: guided, changed and your own.',
+  carryProjectsBody: 'A camp with a project stands at the end of most stages. It has three rungs: guided, changed and your own.',
   carrySources: 'Checked sources',
   carrySourcesBody: 'The shelf holds the sources for the step you stand on. Each one says why it is on the list, what it costs and the day it was opened.',
   carryPace: 'Pace',
@@ -80,7 +80,7 @@ export const EN = {
   keepNotebookBody: 'Pin sources, key points and your own lines as you go. Export the notebook as Markdown or print it.',
   keepCairns: 'Review cairns',
   keepCairnsBody: 'A finished step with checks comes back for review after 2, 7, 21 and 60 days. A cairn that is due carries a red ring on the route.',
-  trailRule: 'No points, no streaks and no scolding. Minutes are estimates and are labelled as estimates.',
+  trailRule: 'There are no points, no streaks and no scolding. Minutes are estimates and are labelled as estimates.',
 
   // 04
   classTag: 'For a class',
@@ -177,7 +177,7 @@ export const EN = {
   installTested: 'run on {date}',
   installOr: 'or, as a plugin',
   installThen: 'Then type',
-  installThenBody: 'Three ways to ask: a topic, a topic with a starting point, and a class.',
+  installThenBody: 'You can ask in three ways: with a topic, with a topic and a starting point, or for a class.',
   copy: 'Copy',
   copied: 'Copied',
   copyOf: 'Copy the command: {command}',
@@ -188,7 +188,7 @@ export const EN = {
   // 07
   questionsTag: 'Questions',
   questionsTitle: 'Questions before you *set off*.',
-  questionsLede: 'Short answers. The skill\'s own documentation has the long ones.',
+  questionsLede: 'These answers are short. The skill\'s own documentation has the long ones.',
   q1: 'Which topics work?',
   a1: 'Any topic. The skill has no topic list: it researches what you name, whether that is a framework, a science topic, a craft, a spoken language or a school subject. Nothing on the site assumes programming.',
   q2: 'Is this an AI roadmap?',
@@ -202,7 +202,7 @@ export const EN = {
   q6: 'Does it need WebGL?',
   a6: 'The 3D map does. Without WebGL the same roadmap opens as a list with every learning control.',
   q7: 'What does it cost?',
-  a7: 'The skill and the site are open source under Apache-2.0. Your agent\'s model usage is your own. Every source is marked free or paid, and the default budget of the interview is free only.',
+  a7: 'The skill and the site are open source under Apache-2.0. You pay for your agent\'s model usage yourself. Every source is marked free or paid, and the default budget of the interview is free only.',
   q8: 'Which languages?',
   a8: 'The interface is in English or German. A roadmap is written in the language of your prompt, and you choose the languages its sources may be in.',
 

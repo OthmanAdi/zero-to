@@ -3,7 +3,7 @@ import type { UiLang } from '../i18n';
 import { createWordmark } from '../look/brand';
 import { AUDIENCES, HOURS, TOPIC_MAX, ticketCommand, ticketReady, type Audience, type TicketChoice } from './command';
 import { copyText, h, svg } from './dom';
-import { say } from './strings';
+import { say, type SectionKey } from './strings';
 
 /**
  * The start ticket: a form that punches a topic, an audience and hours a week, and a stub that prints the
@@ -53,6 +53,7 @@ function profileBars(seed: string): string {
 
 export function createTicket(options: TicketOptions): TicketView {
   const { lang, state, idPrefix } = options;
+  const s = (key: SectionKey): string => say(key, undefined, lang);
   const id = (name: string) => `${idPrefix}ticket-${name}`;
   const choice = (): TicketChoice => ({ topic: state.topic, audience: state.audience, hours: state.hours, defaults: state.defaults });
 
@@ -62,7 +63,7 @@ export function createTicket(options: TicketOptions): TicketView {
     type: 'text',
     name: 'topic',
     maxlength: TOPIC_MAX,
-    placeholder: say('ticketTopicHint', undefined, lang),
+    placeholder: s('ticketTopicHint'),
     autocomplete: 'off',
     autocapitalize: 'off',
     spellcheck: 'false',
@@ -77,17 +78,17 @@ export function createTicket(options: TicketOptions): TicketView {
   };
 
   const audienceLabel: Readonly<Record<Audience, string>> = {
-    self: say('ticketSelf', undefined, lang),
-    student: say('ticketStudent', undefined, lang),
-    class: say('ticketClass', undefined, lang),
+    self: s('ticketSelf'),
+    student: s('ticketStudent'),
+    class: s('ticketClass'),
   };
   const audiences = AUDIENCES.map((value) => radio('for', value, audienceLabel[value], state.audience === value));
-  const hours = HOURS.map((value) => radio('hours', String(value), value >= 20 ? say('ticketHoursMore', undefined, lang) : String(value), state.hours === value));
-  const hoursNote = h('p', { class: 'zs-ticket-note zt-small' }, say('ticketHoursClass', undefined, lang));
+  const hours = HOURS.map((value) => radio('hours', String(value), value >= 20 ? s('ticketHoursMore') : String(value), state.hours === value));
+  const hoursNote = h('p', { class: 'zs-ticket-note zt-small' }, s('ticketHoursClass'));
   const hoursSet = h(
     'fieldset',
     { class: 'zs-row' },
-    h('legend', { class: 'zt-label' }, say('ticketHours', undefined, lang)),
+    h('legend', { class: 'zt-label' }, s('ticketHours')),
     h('div', { class: 'zs-punches' }, ...hours.map((item) => item.label)),
     hoursNote,
   );
@@ -97,7 +98,7 @@ export function createTicket(options: TicketOptions): TicketView {
 
   const command = h('code', { class: 'zs-command', id: id('command') });
   const bars = svg('0 0 192 40', '', 'zs-bars');
-  const tearLabel = h('span', {}, say('stubTear', undefined, lang));
+  const tearLabel = h('span', {}, s('stubTear'));
   const tear = h(
     'button',
     { type: 'button', class: 'zs-tear', 'aria-describedby': id('command') },
@@ -113,7 +114,7 @@ export function createTicket(options: TicketOptions): TicketView {
   const stub = h(
     'div',
     { class: 'zs-stub' },
-    h('p', { class: 'zt-label zs-stub-title' }, say('stubTitle', undefined, lang)),
+    h('p', { class: 'zt-label zs-stub-title' }, s('stubTitle')),
     command,
     bars,
     tear,
@@ -131,21 +132,21 @@ export function createTicket(options: TicketOptions): TicketView {
         mark.classList.add('zs-ticket-mark');
         return mark;
       })(),
-      h('span', {}, say('ticketName', undefined, lang)),
-      h('span', { class: 'zs-ticket-no' }, say('ticketNo', undefined, lang)),
+      h('span', {}, s('ticketName')),
+      h('span', { class: 'zs-ticket-no' }, s('ticketNo')),
     ),
-    h('div', { class: 'zs-row' }, h('label', { class: 'zt-label', for: id('topic') }, say('ticketTopic', undefined, lang)), topic),
+    h('div', { class: 'zs-row' }, h('label', { class: 'zt-label', for: id('topic') }, s('ticketTopic')), topic),
     h(
       'fieldset',
       { class: 'zs-row' },
-      h('legend', { class: 'zt-label' }, say('ticketFor', undefined, lang)),
+      h('legend', { class: 'zt-label' }, s('ticketFor')),
       h('div', { class: 'zs-punches' }, ...audiences.map((item) => item.label)),
     ),
     hoursSet,
-    h('label', { class: 'zs-punch zs-punch-check' }, defaults, h('span', { class: 'zs-punch-face' }, say('ticketDefaults', undefined, lang))),
+    h('label', { class: 'zs-punch zs-punch-check' }, defaults, h('span', { class: 'zs-punch-face' }, s('ticketDefaults'))),
   );
 
-  const form = h('form', { class: 'zs-ticket zt-on-paper', novalidate: true, 'aria-label': say('ticketName', undefined, lang) }, main, stub);
+  const form = h('form', { class: 'zs-ticket zt-on-paper', novalidate: true, 'aria-label': s('ticketName') }, main, stub);
   const slot = h('div', { class: 'zs-slot', 'aria-hidden': 'true' });
   const element = h('div', { class: 'zs-ticket-wrap' }, slot, h('div', { class: 'zs-ticket-rise' }, form));
 
@@ -163,7 +164,7 @@ export function createTicket(options: TicketOptions): TicketView {
     if (!torn) return;
     torn = false;
     stub.classList.remove('is-torn');
-    tearLabel.textContent = say('stubTear', undefined, lang);
+    tearLabel.textContent = s('stubTear');
     status.textContent = '';
   };
 
@@ -180,17 +181,17 @@ export function createTicket(options: TicketOptions): TicketView {
   });
   tear.addEventListener('click', () => {
     if (!ticketReady(choice())) {
-      status.textContent = say('stubEmpty', undefined, lang);
+      status.textContent = s('stubEmpty');
       topic.focus();
       return;
     }
     const line = ticketCommand(choice(), lang);
     void copyText(line).then((done) => {
-      status.textContent = say(done ? 'stubCopied' : 'stubFailed', undefined, lang);
+      status.textContent = s(done ? 'stubCopied' : 'stubFailed');
       if (!done) return;
       torn = true;
       stub.classList.add('is-torn');
-      tearLabel.textContent = say('stubAgain', undefined, lang);
+      tearLabel.textContent = s('stubAgain');
       options.onCopy?.(line);
     });
   });

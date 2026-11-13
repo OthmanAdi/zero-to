@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>zero-to dev: landing sections</title>
+    <style>
+      html {
+        background: #05070b;
+      }
+      body {
+        margin: 0;
+        background: var(--zt-night, #0b0f17);
+        color: var(--zt-text, #eef0f2);
+        font: 16px/1.5 var(--zt-font-text, system-ui, sans-serif);
+        -webkit-font-smoothing: antialiased;
+      }
+      /* A stand-in for the page header: the mark, the slot the index tabs hang in and the start chip. */
+      .dev-header {
+        position: fixed;
+        z-index: 30;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 0;
+      }
+      .dev-brand {
+        position: absolute;
+        top: 28px;
+        left: 48px;
+        color: var(--zt-text);
+        text-decoration: none;
+      }
+      .dev-nav {
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+      .dev-chip {
+        position: absolute;
+        top: 23px;
+        right: 46px;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 164px;
+        height: 38px;
+        padding: 0 16px;
+        box-sizing: border-box;
+        border-radius: 2px;
+        background: var(--zt-paper);
+        color: var(--zt-ink);
+        font: 500 10.5px/1 var(--zt-font-label, ui-monospace, monospace);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: background-color 0.2s ease-out, color 0.2s ease-out;
+      }
+      .dev-chip::before {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--zt-signal);
+      }
+      .dev-chip.is-current {
+        background: var(--zt-signal-deep);
+        color: var(--zt-paper-hi);
+      }
+      .dev-chip.is-current::before {
+        background: var(--zt-paper-hi);
+      }
+      /* A stand-in for the hero. The real one is the turntable. */
+      .dev-hero {
+        position: relative;
+        box-sizing: border-box;
+        height: 100vh;
+        padding: 190px 46px 0;
+        background:
+          radial-gradient(ellipse 60% 55% at 68% 62%, rgb(255 217 160 / 0.1), transparent 70%),
+          radial-gradient(ellipse 90% 80% at 60% 60%, var(--zt-night-soft), var(--zt-night) 72%);
+      }
+      .dev-hero h1 {
+        max-width: 430px;
+      }
+      .dev-hero p {
+        max-width: 330px;
+        margin: 24px 0 0;
+        color: var(--zt-text-soft);
+      }
+      .dev-hero small {
+        position: absolute;
+        right: 46px;
+        bottom: 40px;
+        color: var(--zt-text-faint);
+        font: 400 12px/1.4 var(--zt-font-label, ui-monospace, monospace);
+      }
+      @media (max-width: 899px) {
+        .dev-brand {
+          top: 16px;
+          left: 16px;
+        }
+        .dev-chip {
+          top: 12px;
+          right: 12px;
+          min-width: 0;
+        }
+        .dev-hero {
+          padding: 104px 16px 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="dev-header">
+      <a class="dev-brand" id="brand" href="#top" aria-label="zero-to, back to the top"></a>
+      <div class="dev-nav" id="nav-slot"></div>
+      <a class="dev-chip" id="chip" href="#start">Start</a>
+    </header>
+    <div class="dev-hero" id="top">
+      <h1 class="zt-headline">Any topic, from zero to the <em>summit</em>.</h1>
+      <p class="zt-body">A stand-in for the hero. The sections start one screen further down.</p>
+      <small>dev/sections.html</small>
+    </div>
+    <main id="sections"></main>
+    <script type="module" src="./sections.ts"></script>
+  </body>
+</html>

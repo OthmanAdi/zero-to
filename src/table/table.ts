@@ -15,6 +15,9 @@ import { createTableSheet, type TableSheet } from './sheet';
 import { deriveSheet, paperHalf, stageOfCard, stageStartShare, tracePrint, type SheetData, type SheetSpec } from './sheet-data';
 import { DIM_FLOOR, TURN, createTurntable, sheetScale, shortestSteps, slotPose, type PickBy, type Turntable } from './turntable';
 
+/** When the sheets of the table come out of the dark in the intro: see `INTRO.reveal`. */
+export type IntroReveal = 'lamp' | 'turn';
+
 /** The moments of the intro, in seconds from its start. */
 export const INTRO = {
   /** The lamp comes on with an overshoot. */
@@ -24,10 +27,12 @@ export const INTRO = {
   /** The table is held at its turned-away angle until here, then turns in. */
   hold: 0.5,
   /**
-   * The sheets come out of the dark as the table turns in, between these shares of the turn. Until then only the
-   * wood takes the lamp, and the roadmap that happens to lie under it first is not read.
+   * How the sheets come out of the dark. `lamp`: with the lamp, so every sheet is seen as it passes under it while
+   * the table turns in, and the hero is lit as soon as the lamp is on. `turn`: only as the table arrives, between
+   * the shares `from` and `to` of its turn, so the roadmap that happens to lie under the lamp first is never read
+   * and the hero stays dark about two seconds longer. `TableOptions.reveal` picks the other one for a single table.
    */
-  reveal: { from: 0.6, to: 0.95 },
+  reveal: { with: 'lamp' as IntroReveal, from: 0.6, to: 0.95 },
   /** The compass rises by `rise` and its glow comes up. */
   compass: { from: 0.35, to: 1.8, rise: 0.5 },
   /** The lit sheet may grow its mountain from here. */
@@ -68,6 +73,8 @@ export interface TableOptions {
   readonly selected?: number;
   /** Play the intro. Default true. Reduced motion never plays it. */
   readonly intro?: boolean;
+  /** How the sheets come out of the dark in the intro. Default `INTRO.reveal.with`. */
+  readonly reveal?: IntroReveal;
   /** Let the table turn by itself. Only for the gallery; default false. */
   readonly autoTurn?: boolean;
   /** Interface language of the cover print and the readout. */
@@ -216,6 +223,7 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
   const pixelRatio = options.pixelRatio ?? (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1);
   const maxModels = Math.max(2, options.maxModels ?? (environment.phone ? 2 : 3));
   const touch = options.touch ?? false;
+  const reveal: IntroReveal = options.reveal ?? INTRO.reveal.with;
   const watch = options.watch === undefined ? (typeof document === 'undefined' ? null : document) : options.watch;
 
   // Everything that takes light from the room's environment map, with the strength it was made with. In the
@@ -800,9 +808,14 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       if (may !== standing) setStanding(may);
       if (standing >= 0) stoodFor += dt;
 
-      // Sheets. In the intro they lie in the dark while the lamp comes on and come out of it as the table turns
-      // in, so the roadmap that happens to lie under the lamp first is never read.
+      // The lamp of the intro: it comes on with an overshoot, from nothing.
+      const on = intro === null ? 1 : easeOutBack(seg(intro, INTRO.lamp.from, INTRO.lamp.to), INTRO.lamp.overshoot) * seg(intro, 0, 0.12);
+
+      // Sheets. In the intro they come out of the dark with the lamp and are seen passing under it while the
+      // table turns in. Revealed by the turn instead, they lie in the dark until the table arrives, so the
+      // roadmap that happens to lie under the lamp first is never read.
       if (intro === null) revealed = 1;
+      else if (reveal === 'lamp') revealed = Math.max(revealed, clamp01(on));
       else if (!introHeld) revealed = Math.max(revealed, smooth(seg(1 - Math.abs(turntable.phi - turntable.target) / Math.abs(TURN.introFrom), INTRO.reveal.from, INTRO.reveal.to)));
       const others = sheets.length - 1;
       for (const sheet of sheets) {
@@ -905,7 +918,6 @@ export function createTable(environment: SceneEnvironment, options: TableOptions
       const rakeTarget = litModel && standing === selected ? litModel.mountain.grow : 0;
       rake = reduced ? rakeTarget : rake + (rakeTarget - rake) * damp(5, dt);
       lampFocus.set(0, thickest + 0.3, TURN.radius + FIELD_OFFSET * scale);
-      const on = intro === null ? 1 : easeOutBack(seg(intro, INTRO.lamp.from, INTRO.lamp.to), INTRO.lamp.overshoot) * seg(intro, 0, 0.12);
       const room = clamp01(on);
       const compassRoom = room * (intro === null ? 1 : smooth(seg(intro, INTRO.compass.from, INTRO.compass.to)));
       if (room !== roomLight) {

@@ -158,11 +158,12 @@ describe('createTable', { timeout: 60_000 }, () => {
     expect((brass as MeshStandardMaterial | null)?.envMapIntensity).toBe(0);
     expect(light(cover)).toBeLessThan(0.01);
 
-    // The lamp is on before the table turns in; the sheets still lie in the dark, the compass is only rising.
+    // The lamp is on before the table turns in, and the sheets have come out of the dark with it. The compass is
+    // only rising.
     run(part, INTRO.hold - 0.1);
     expect(part.roomLight).toBe(1);
     expect(wood.envMapIntensity).toBeCloseTo(own.wood);
-    expect(light(cover)).toBeLessThan(0.01);
+    expect(light(cover)).toBeGreaterThan(0.1);
     expect((brass as MeshStandardMaterial | null)?.envMapIntensity ?? 0).toBeLessThan(own.brass * 0.1);
 
     // Once the intro is over everything has its own light again.
@@ -174,14 +175,40 @@ describe('createTable', { timeout: 60_000 }, () => {
     expect(light(cover)).toBeGreaterThan(0.1);
   });
 
-  it('brings the sheets out of the dark only as the table turns in, so the lit roadmap is the first one read', () => {
+  /** The light a sheet keeps right now, read off its cover: printed covers are tinted grey, plain ones are the board. */
+  const keptOf = (part: TablePart, index: number): number => {
+    const material = ((part.object.getObjectByName(`sheet-${index}-map`) as Mesh).material as MeshStandardMaterial[])[0] as MeshStandardMaterial;
+    if (material.map) return material.color.r;
+    return material.color.r / new Color(THEME.cover[part.sheetData(index)?.tier ?? 'gold']).r;
+  };
+
+  it('shows the sheets with the lamp, so each one is seen as it passes under it on the way in', () => {
+    expect(INTRO.reveal.with).toBe('lamp');
     const part = make({ sheets: sheets(5) });
-    /** The light a sheet keeps right now, read off its cover: printed covers are tinted grey, plain ones are the board. */
-    const kept = (index: number): number => {
-      const material = ((part.object.getObjectByName(`sheet-${index}-map`) as Mesh).material as MeshStandardMaterial[])[0] as MeshStandardMaterial;
-      if (material.map) return material.color.r;
-      return material.color.r / new Color(THEME.cover[part.sheetData(index)?.tier ?? 'gold']).r;
-    };
+    run(part, FRAME);
+    for (let index = 0; index < 5; index += 1) expect(keptOf(part, index)).toBeLessThan(0.01);
+    // The lamp is on while the table is still held turned away: whatever lies under it is coming out of the dark.
+    run(part, INTRO.hold - 0.1 - FRAME);
+    const under = [0, 1, 2, 3, 4].reduce((best, index) => (Math.abs(((((part.phi - index * 72) % 360) + 540) % 360) - 180) < Math.abs(((((part.phi - best * 72) % 360) + 540) % 360) - 180) ? index : best), 0);
+    expect(under).not.toBe(0);
+    expect(keptOf(part, under)).toBeGreaterThan(0.3);
+    // On the way in a sheet that passes under the lamp is in its light.
+    let passing = 0;
+    for (let frame = 0; frame < INTRO.grow / FRAME && Math.abs(part.phi) > 25; frame += 1) {
+      run(part, FRAME);
+      for (let index = 1; index < 5; index += 1) {
+        const angle = ((((part.phi - index * 72) % 360) + 540) % 360) - 180;
+        if (Math.abs(angle) < 20) passing = Math.max(passing, keptOf(part, index));
+      }
+    }
+    expect(passing).toBeGreaterThan(0.6);
+    run(part, INTRO.end);
+    expect(keptOf(part, 0)).toBeCloseTo(1, 2);
+  });
+
+  it('can bring the sheets out of the dark only as the table turns in, so the lit roadmap is the first one read', () => {
+    const part = make({ sheets: sheets(5), reveal: 'turn' });
+    const kept = (index: number): number => keptOf(part, index);
     run(part, FRAME);
     for (let index = 0; index < 5; index += 1) expect(kept(index)).toBeLessThan(0.01);
     // Every other sheet that passes under the lamp on the way in stays dark while it passes.

@@ -9,6 +9,7 @@ export {
   HOVER,
   INTRO,
   createTable,
+  type IntroReveal,
   type ScreenPoint,
   type TableAnchor,
   type TableEnter,

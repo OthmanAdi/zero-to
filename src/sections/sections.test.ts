@@ -381,6 +381,54 @@ describe('the page', () => {
     expect(sections.threadDone).toBeLessThan(done);
   });
 
+  it('leaves the place of a station to the host while its stop is pinned, with the state of the stop', () => {
+    fakeLayout();
+    const { root, sections } = mount();
+    expect(sections.staged()).toEqual([]);
+    expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
+    // A stop without a place for a station is never staged, whatever the host names.
+    sections.stage(['what', 'trail', 'install', 'how']);
+    const staged = sections.staged();
+    expect(staged.map((stop) => stop.id)).toEqual(['what', 'trail']);
+    expect([...root.querySelectorAll<HTMLElement>('[data-staged]')].map((node) => node.dataset.stop)).toEqual(['what', 'trail']);
+    for (const stop of staged) {
+      expect(stop.box.classList.contains('zs-box')).toBe(true);
+      expect(stop.box.contains(stop.slot)).toBe(true);
+      expect(stop.slot.matches('.zs-theatre, .zs-orbit')).toBe(true);
+    }
+    // Above the stops nothing has formed and nothing is in front. Through the page each staged stop forms,
+    // brings its things forward one after another and is done.
+    sections.update(0);
+    expect(sections.staged().map((stop) => [stop.state.phase, stop.state.form, stop.front])).toEqual([
+      ['ahead', 0, -1],
+      ['ahead', 0, -1],
+    ]);
+    const fronts = new Set<number>();
+    let formed = 0;
+    for (let step = 0; step <= 600; step += 1) {
+      sections.update(step / 600);
+      const what = sections.staged()[0];
+      if (!what) throw new Error('the first stop is no longer staged');
+      expect(what.state.form).toBeGreaterThanOrEqual(formed);
+      formed = what.state.form;
+      fronts.add(what.front);
+    }
+    expect(formed).toBe(1);
+    expect([...fronts].sort((a, b) => a - b)).toEqual([-1, 0, 1, 2, 3]);
+    // The host gives the places back.
+    sections.stage([]);
+    expect(sections.staged()).toEqual([]);
+    expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
+  });
+
+  it('stages nothing with reduced motion: every stop keeps its flat drawing', () => {
+    const { root, sections } = mount({ reduced: () => true });
+    sections.stage(['what', 'trail']);
+    sections.update(0.3);
+    expect(sections.staged()).toEqual([]);
+    expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
+  });
+
   it('turns a scroll position into the progress it is given back', () => {
     fakeLayout();
     const { sections } = mount();

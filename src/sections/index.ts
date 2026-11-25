@@ -11,7 +11,7 @@
  * This file is what a page fetches, so it exports what a page uses and no more. The numbers of the thread and
  * the lists of the stops are imported from `model.ts`, `stops.ts` and `command.ts` by whoever needs them.
  */
-export { DEFAULT_LINKS, mountSections, type GalleryExample, type SectionLinks, type Sections, type SectionsOptions } from './mount';
+export { DEFAULT_LINKS, mountSections, type GalleryExample, type SectionLinks, type Sections, type SectionsOptions, type StagedStop } from './mount';
 export { STOPS, type StopId, type StopSpec } from './model';
 export { loadSectionWords, say as saySections, type SectionKey } from './strings';
 export type { BriefAction, BriefOptions } from './brief';

@@ -566,6 +566,14 @@ div.zs-band.is-on {
 
 /* ---- 01 What it is: the paper theatre with four peaks --------------------------------------------------- */
 
+/*
+ * A staged stop: the host draws the station in 3D where the flat drawing stood. The drawing keeps its box, so
+ * nothing beside it moves, and is not shown.
+ */
+.zs-stop[data-staged] :is(.zs-theatre, .zs-orbit) > * {
+  visibility: hidden;
+}
+
 .zs-theatre {
   perspective: 1500px;
   perspective-origin: 50% 12%;

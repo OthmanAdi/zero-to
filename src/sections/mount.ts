@@ -95,8 +95,29 @@ export interface SectionsOptions extends BriefOptions {
   onCopy?(command: string): void;
 }
 
+/** A stop whose station the host draws itself, in 3D, where the flat drawing stood. */
+export interface StagedStop {
+  readonly id: StopId;
+  /** The stop's box: one window tall, and pinned while the stop holds. */
+  readonly box: HTMLElement;
+  /** The place of the station's picture inside the box. Its flat drawing is hidden while the stop is staged. */
+  readonly slot: HTMLElement;
+  /** How far the station has formed and how far through its hold the stop is, at the last update. */
+  readonly state: StopState;
+  /** The thing in front: the step of the hold, or one a pointer or the keyboard brought forward. -1 for none. */
+  readonly front: number;
+}
+
 export interface Sections {
   readonly root: HTMLElement;
+  /**
+   * Names the stops whose stations the host draws itself. A named stop is staged while it is pinned (a wide
+   * window, motion wanted, a box that fits the window) and has a place for a station: its flat drawing is
+   * hidden and the place is left to the host. At any other time the stop keeps its flat drawing.
+   */
+  stage(ids: readonly StopId[]): void;
+  /** The stops that are staged now, with their state at the last update. */
+  staged(): readonly StagedStop[];
   /**
    * Shows the sections at a scroll progress: 0 when the top of the root reaches the bottom of the window, 1
    * when the bottom of the root does. `progressAt` turns a scroll position into this number.
@@ -192,6 +213,15 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
   let pinKey = '';
   const applied: string[] = [];
   const manual: (number | null)[] = [];
+  /** The stops the host wants to draw itself, and each stop's state at the last update. */
+  let wanted: readonly StopId[] = [];
+  const states: (StopState | undefined)[] = [];
+  const REST: StopState = { form: 0, hold: 0, step: -1, phase: 'ahead' };
+  /** The place of a station's picture in a stop: the flat drawing of the peaks or of the ring. */
+  const slotOf = (stop: StopView): HTMLElement | null => stop.station.querySelector<HTMLElement>('.zs-theatre, .zs-orbit');
+  const markStaged = (): void => {
+    for (const stop of stops) stop.section.toggleAttribute('data-staged', wanted.includes(stop.spec.id) && stop.section.hasAttribute('data-pin') && slotOf(stop) !== null);
+  };
   const walker = createWalker();
   // The night behind the header. It stands with the index tabs, and it is shown once the sections are under them.
   const band = h('div', { class: 'zs-band', ...HIDDEN });
@@ -382,6 +412,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       });
     });
     for (const stop of stops) for (const element of stop.ups) if (!element.matches('.zs-cut, .zs-orb-card')) element.classList.add('zs-rise');
+    states.length = 0;
     layout = null;
     pinKey = '';
     headPiece = -1;
@@ -426,6 +457,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
         if (!stop.section.hasAttribute('data-pin')) stop.station.style.removeProperty('zoom');
       }
     }
+
+    markStaged();
 
     const rootBox = root.getBoundingClientRect();
     const scrollY = window.scrollY || 0;
@@ -509,7 +542,11 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
 
     // From the moment the top of the sections passes the top of the window, something scrolls under the header.
     band.classList.toggle('is-on', y > 0);
-    stops.forEach((stop, index) => apply(stop, index, stopState(spans[index] as StopSpan, stop.spec.steps, viewport, y), still));
+    stops.forEach((stop, index) => {
+      const shown = stopState(spans[index] as StopSpan, stop.spec.steps, viewport, y);
+      states[index] = shown;
+      apply(stop, index, shown, still);
+    });
 
     const now = currentStop(spans, viewport, y);
     if (now !== current) {
@@ -677,6 +714,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       band.remove();
       root.replaceChildren();
       root.classList.remove('zs-root', 'zs-live', 'zs-narrow', 'zs-still');
+      wanted = [];
       root.style.removeProperty('--zs-vh');
     },
     progressAt(scrollY) {
@@ -687,6 +725,20 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     go,
     setTopic(topic) {
       stops.find((stop) => stop.ticket)?.ticket?.setTopic(topic);
+    },
+    stage(ids) {
+      wanted = [...ids];
+      markStaged();
+    },
+    staged() {
+      const out: StagedStop[] = [];
+      stops.forEach((stop, index) => {
+        const slot = stop.section.hasAttribute('data-staged') ? slotOf(stop) : null;
+        if (!slot) return;
+        const state = states[index] ?? REST;
+        out.push({ id: stop.spec.id, box: stop.box, slot, state, front: manual[index] ?? state.step });
+      });
+      return out;
     },
     setRoadmap(next) {
       roadmap = next;

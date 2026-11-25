@@ -105,6 +105,13 @@ export const camel = (id: string): string => id.replace(/(^|-)([a-z])/g, (_whole
 export const art = (drawing: Drawing, className = ''): SVGSVGElement => svg(drawing.viewBox, drawing.body, className);
 
 /**
+ * Where a card stands among its own, as `02 / 04`. The page shows it only while the card floats beside a station
+ * drawn in 3D, where one card is seen at a time.
+ */
+export const counter = (index: number, count: number): HTMLElement =>
+  h('span', { class: 'zs-count zt-data', ...HIDDEN }, `${String(index + 1).padStart(2, '0')} / ${String(count).padStart(2, '0')}`);
+
+/**
  * The frame every stop has: the numbered tag, the headline, the copy beside the station and what follows it.
  * `title` is a key of the words, or the headline's own nodes when it is not one of them.
  */
@@ -159,12 +166,13 @@ export function peakTheatre(): { readonly theatre: HTMLElement; readonly peaks: 
 
 function buildWhat(ctx: StopContext, s: Say): StopView {
   const { theatre, peaks } = peakTheatre();
-  const cards = TIERS.map((tier) => {
+  const cards = TIERS.map((tier, index) => {
     const key = `tier${camel(tier)}` as SectionKey;
     const card = h(
       'li',
       { class: 'zs-tier zs-card zt-on-paper', 'data-tier': tier },
       h('span', { class: 'zs-blaze', ...HIDDEN }),
+      counter(index, TIERS.length),
       h('h4', { class: 'zs-card-title' }, s(key)),
       h('p', { class: 'zt-small' }, s(`${key}Body` as SectionKey)),
     );
@@ -238,6 +246,7 @@ export const carryItem = (key: CarryKey, title: string, text: string, level: 'h3
  */
 export function ringStop<K extends string>(ctx: StopContext, s: Say<K | 'stopOf'>, tagKey: K, titleKey: K, copy: Child[], rows: HTMLElement[], kept: HTMLElement[], after: Child[]): StopView {
   const orbCards = RING_KEYS.map((key) => h('span', { class: 'zs-orb-card' }, h('span', { class: 'zs-orb-face' }, art(CARRY_ART[key]))));
+  rows.forEach((row, index) => row.append(counter(index, rows.length)));
   const orbit = h('div', { class: 'zs-orbit', ...HIDDEN }, h('span', { class: 'zs-orb-compass' }, art(COMPASS)), ...orbCards);
   const view = shell(ctx, 'trail', s, tagKey, titleKey, copy, [orbit, h('ul', { class: 'zs-carry zs-sheet zt-on-paper' }, ...rows)], after);
   view.ups.push(...orbCards, ...rows);

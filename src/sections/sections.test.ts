@@ -421,6 +421,15 @@ describe('the page', () => {
     expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
   });
 
+  it('numbers the cards that float beside a station, out of the reading order', () => {
+    const { root } = mount();
+    const counts = (selector: string) => [...root.querySelectorAll<HTMLElement>(selector)].map((node) => [node.textContent, node.getAttribute('aria-hidden')]);
+    expect(counts('#what-it-is .zs-tiers .zs-count')).toEqual(['01 / 04', '02 / 04', '03 / 04', '04 / 04'].map((text) => [text, 'true']));
+    expect(counts('#on-the-trail .zs-carry .zs-count')).toEqual(['01 / 05', '02 / 05', '03 / 05', '04 / 05', '05 / 05'].map((text) => [text, 'true']));
+    // The things a learner keeps are not on the ring and have no number.
+    expect(root.querySelectorAll('#on-the-trail .zs-keep .zs-count')).toHaveLength(0);
+  });
+
   it('holds a staged stop longer than its flat drawing, and gives the hold back with the place', () => {
     fakeLayout();
     const { root, sections } = mount();

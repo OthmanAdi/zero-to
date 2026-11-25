@@ -574,6 +574,156 @@ div.zs-band.is-on {
   visibility: hidden;
 }
 
+/* The place of a card among its own, `02 / 04`, is shown only on the card that floats beside a station. */
+.zs-count {
+  display: none;
+}
+
+/*
+ * The room of a staged station on a wide window. The picture is drawn across the whole box, and its camera is
+ * fitted into the station's place: x 33 to 80 % and y 8 to 98 % of the window for the peaks, x 34 to 78 % and
+ * y 9 to 98 % for the ring. The copy keeps its column, and a scrim on that side takes the sheet under the text
+ * back into the night: the night at the edge, 0.92 of it at 22 vw, none at 46 vw. The cards leave the flow and
+ * float on the right, one at a time: the card of the thing in front.
+ */
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-station {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-station::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 46vw;
+  background: linear-gradient(90deg, var(--zt-night) 0, rgb(11 15 23 / 0.92) 22vw, rgb(11 15 23 / 0) 100%);
+}
+
+.zs-stop[data-staged] > .zs-box > .zs-thread {
+  z-index: 1;
+}
+
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] :is(.zs-theatre, .zs-orbit) {
+  position: absolute;
+  top: 8%;
+  left: 33%;
+  width: 47%;
+  height: 90%;
+  margin: 0;
+}
+
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-orbit {
+  top: 9%;
+  left: 34%;
+  width: 44%;
+  height: 89%;
+}
+
+/*
+ * The floating card: as wide as 22 vw and never more than 320 px, max(28 px, 3 vw) from the right edge. The card
+ * of a peak is centred at 48 % of the window's height, the card of the ring stands at max(110 px, 20 vh).
+ */
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] :is(.zs-tiers, .zs-carry) {
+  position: absolute;
+  right: max(28px, 3vw);
+  width: min(320px, 22vw);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  pointer-events: auto;
+}
+
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-tiers {
+  top: 48%;
+  transform: translateY(-50%);
+}
+
+.zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-carry {
+  top: max(110px, 20vh);
+  padding: 6px 8px;
+}
+
+.zs-stop[data-staged] :is(.zs-tiers > .zs-tier, .zs-carry > .zs-carry-item) {
+  grid-area: 1 / 1;
+  position: relative;
+}
+
+.zs-stop[data-staged] .zs-count {
+  display: block;
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  color: var(--zt-ink-soft);
+}
+
+.zs-stop[data-staged] .zs-tier {
+  padding: 20px 22px 22px;
+}
+
+.zs-stop[data-staged] .zs-tier .zs-card-title {
+  font-size: 26px;
+}
+
+/*
+ * A card arrives when its thing comes to the front and goes when it leaves. A card of a peak is paper: it hinges
+ * up from 80 degrees on its foot in 1 s with an overshoot. A row of the ring fades in 0.45 s while it rises 12 px
+ * from 0.98 of its size in 0.7 s. A card that leaves fades out in 0.45 s and is then hidden.
+ */
+.zs-stop[data-staged] :is(.zs-tiers > .zs-tier, .zs-carry > .zs-carry-item):not(.is-on) {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  transition:
+    opacity 0.45s ease,
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s linear 0.45s;
+}
+
+.zs-stop[data-staged] :is(.zs-tiers > .zs-tier, .zs-carry > .zs-carry-item).is-on {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  filter: none;
+  transition:
+    opacity 0.45s ease,
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+    visibility 0s;
+}
+
+.zs-stop[data-staged] .zs-tier:not(.is-on) {
+  transform: perspective(800px) rotateX(80deg);
+  transform-origin: 50% 100%;
+}
+
+.zs-stop[data-staged] .zs-tier.is-on {
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.3s ease,
+    transform 1s cubic-bezier(0.2, 1.45, 0.35, 1),
+    visibility 0s;
+}
+
+/* The sheet a row of the ring is written on is there only while one of its rows is. */
+.zs-stop[data-staged] .zs-carry {
+  transition:
+    opacity 0.45s ease,
+    visibility 0s;
+}
+
+.zs-stop[data-staged] .zs-carry:not(:has(.is-on)) {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 0.45s ease,
+    visibility 0s linear 0.45s;
+}
+
 /*
  * The picture of a staged station fills its box from edge to edge. The top and the foot of the box take it back
  * into the night, so the cloth under the lamp never ends on a line while the box comes up or leaves.

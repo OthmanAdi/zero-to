@@ -127,6 +127,43 @@ export function landingHandover(u: number): number {
 }
 
 // ---------------------------------------------------------------------------------------------------------
+// Scrolling away from the table.
+
+/**
+ * The hero leaves like the page it is. Its picture and its interface move up with the scroll, a pixel for a
+ * pixel, and the sections follow underneath. All three numbers are shares of the window's height.
+ */
+export const LEAVE = {
+  /** The pointer acts on the table, and a roadmap can be entered, until the page has moved this far. */
+  near: 0.1,
+  /** The table's interface is out of sight from here and is taken off the keyboard's path. */
+  gone: 0.92,
+  /** The table is no longer drawn from here: the sections cover its screen. */
+  covered: 1.3,
+} as const;
+
+/** How far the hero's picture is moved up, in pixels, for a scroll position and a window height. */
+export function heroLift(scrollY: number, viewport: number): number {
+  if (!(scrollY > 0) || !(viewport > 0)) return 0;
+  return Math.min(scrollY, viewport * LEAVE.covered);
+}
+
+/** True while the pointer still acts on the table and a roadmap can be entered. */
+export function isNear(scrollY: number, viewport: number): boolean {
+  return !(scrollY > viewport * LEAVE.near);
+}
+
+/** True once the table's interface has left the window. */
+export function isGone(scrollY: number, viewport: number): boolean {
+  return scrollY > viewport * LEAVE.gone;
+}
+
+/** True once the sections cover the table's screen. */
+export function isCovered(scrollY: number, viewport: number): boolean {
+  return scrollY > viewport * LEAVE.covered;
+}
+
+// ---------------------------------------------------------------------------------------------------------
 // The walk's stretch of the scroll.
 
 /** Progress smoothing: one critically damped spring, 95 percent there in about 0.6 s. */

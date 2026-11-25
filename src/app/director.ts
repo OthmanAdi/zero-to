@@ -45,8 +45,12 @@ import {
   finaleOpacity,
   foldAt,
   guardOpacity,
+  heroLift,
   hxAt,
+  isCovered,
   isFinale,
+  isGone,
+  isNear,
   landingHandover,
   landingShare,
   mixPose,
@@ -945,14 +949,14 @@ export async function boot(): Promise<void> {
     if (machine.mode !== 'table' && machine.mode !== 'return' && machine.mode !== 'boot') return;
     const y = window.scrollY;
     const viewport = window.innerHeight;
-    const nowAway = y > viewport * 0.1;
+    const nowAway = !isNear(y, viewport);
     if (nowAway !== away) {
       away = nowAway;
       html.classList.toggle('zt-away', away);
     }
     sections?.update(sections.progressAt(y));
     // Once the sections cover the table, the table is not drawn.
-    const nowCovered = y > viewport * 1.3;
+    const nowCovered = isCovered(y, viewport);
     if (nowCovered !== covered) {
       covered = nowCovered;
       if (!fixed && stage) {
@@ -1075,9 +1079,26 @@ export async function boot(): Promise<void> {
   // -------------------------------------------------------------------------------------------------------
   // One frame of the table.
 
+  /**
+   * The hero leaves like the page it is: its picture is moved up by the scroll, and the table's interface follows
+   * by the same number of pixels (`--zt-hero-lift`). The canvas itself stays where it is.
+   */
+  let lifted = 0;
+  const setLift = (lift: number, width: number, height: number): void => {
+    if (!camera) return;
+    const pixels = Math.round(lift);
+    if (pixels > 0) camera.setViewOffset(width, height, 0, pixels, width, height);
+    else if (camera.view?.enabled) camera.clearViewOffset();
+    if (pixels === lifted) return;
+    lifted = pixels;
+    html.style.setProperty('--zt-hero-lift', `${pixels}px`);
+    html.classList.toggle('zt-gone', isGone(pixels, height));
+  };
+
   const tickTable = (frame: FrameTime, live: boolean): void => {
     if (!stage || !table || !camera) return;
     const { width, height } = sizeOf();
+    setLift(live && machine.mode === 'table' ? heroLift(window.scrollY, height) : 0, width, height);
     const usePointer = live && pointer.has && !away;
     if (usePointer) {
       ndc.set((pointer.x / width) * 2 - 1, 1 - (pointer.y / height) * 2);
@@ -1116,9 +1137,11 @@ export async function boot(): Promise<void> {
         adopt(table.selected);
         wantWalk();
       }
+      // Where the controls stand in the hero as it lies at the top of the page: the overlay moves them up with
+      // everything else of the table's interface, so the lift of the picture is taken out again here.
       const at = (name: 'enter' | 'arrowPrevious' | 'arrowNext'): { x: number; y: number } => {
         const point = (table as TablePart).anchor(name, scratch).project(camera);
-        return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height };
+        return { x: ((point.x + 1) / 2) * width, y: ((1 - point.y) / 2) * height + lifted };
       };
       hud.setAnchors({ enter: at('enter'), previous: at('arrowPrevious'), next: at('arrowNext') });
     }
@@ -2233,6 +2256,11 @@ export async function boot(): Promise<void> {
     watchFill(raw.dt);
     if (started) queue.run();
     stepScroll(dt);
+    // Only the table at rest is moved by the scroll. Every other shot has the whole window.
+    if (machine.mode !== 'table' && machine.mode !== 'boot' && lifted !== 0) {
+      const size = sizeOf();
+      setLift(0, size.width, size.height);
+    }
     switch (machine.mode) {
       case 'table':
       case 'boot':

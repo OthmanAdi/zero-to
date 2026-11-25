@@ -115,8 +115,18 @@ html.zt-app .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf, .zh-heade
     visibility 0s;
 }
 
-/* The sections have come up: the table's own interface steps back. The header stays. */
-html.zt-away .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf),
+/*
+ * The hero leaves like the page it is. The scene's picture is moved up by the scroll, and the table's interface
+ * follows by the same number of pixels: as margins, so nothing that is fixed to the window inside it (the shelf's
+ * sheet on a phone) loses its place.
+ */
+html[data-zt-view='table'] .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf) {
+  margin-top: calc(-1 * var(--zt-hero-lift, 0px));
+  margin-bottom: var(--zt-hero-lift, 0px);
+}
+
+/* The table's interface has left the window: it steps off the keyboard's path. The header stays. */
+html.zt-gone .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf),
 /* The dive: everything goes before the camera falls. */
 html[data-zt-phase='dive'] .zh-hud > :is(.zh-hero, .zh-controls, .zh-side, .zh-shelf, .zh-header),
 /* The landing: nothing until the walker stands. */

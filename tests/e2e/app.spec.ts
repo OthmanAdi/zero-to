@@ -1043,6 +1043,40 @@ test.describe('the gallery root', () => {
     await page.screenshot({ path: receipt(testInfo, 'gallery-root') });
   });
 
+  test('scrolled a little, the hero has moved up with the page: picture, copy, card and controls by the same pixels', async ({ page }, testInfo) => {
+    await open(page, testInfo, 't=6&motion=reduced');
+    await settle(page, 600);
+    const measure = (): Promise<{ lift: string; gone: boolean; tops: Record<string, number> }> =>
+      page.evaluate(() => {
+        const top = (selector: string): number => document.querySelector(selector)?.getBoundingClientRect().top ?? Number.NaN;
+        const zt = (window as unknown as { __zt: { info(): { compass: { x: number; y: number; r: number } | null } } }).__zt;
+        return {
+          lift: getComputedStyle(document.documentElement).getPropertyValue('--zt-hero-lift').trim(),
+          gone: document.documentElement.classList.contains('zt-gone'),
+          tops: { headline: top('.zh-headline'), side: top('.zh-side'), enter: top('.zh-enter'), compass: zt.info().compass?.y ?? Number.NaN },
+        };
+      });
+    const rest = await measure();
+    expect(['', '0px']).toContain(rest.lift);
+    await page.evaluate(() => window.scrollTo(0, 240));
+    await settle(page, 600);
+    const moved = await measure();
+    expect(moved.lift).toBe('240px');
+    expect(moved.gone).toBe(false);
+    for (const [name, before] of Object.entries(rest.tops)) expect(Math.abs(before - (moved.tops[name] as number) - 240), name).toBeLessThan(2);
+    await page.screenshot({ path: receipt(testInfo, 'hero-lifted') });
+    // Out of the window, the table's interface is off the keyboard's path. Back at the top it is where it was.
+    await page.evaluate(() => window.scrollTo(0, Math.round(window.innerHeight * 1.05)));
+    await settle(page, 600);
+    expect((await measure()).gone).toBe(true);
+    await expect(page.locator('.zh-enter')).toBeHidden();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await settle(page, 600);
+    const back = await measure();
+    expect(back.lift).toBe('0px');
+    for (const [name, before] of Object.entries(rest.tops)) expect(Math.abs(before - (back.tops[name] as number)), name).toBeLessThan(2);
+  });
+
   test('on a phone at rest the compass clears the whole hero copy, the lede included', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone', 'the phone layout');
     for (const query of ['still&t=6&motion=reduced', `still&t=6&motion=reduced&road=music-theory-for-a-class`]) {

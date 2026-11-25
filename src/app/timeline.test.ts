@@ -4,6 +4,7 @@ import type { CameraPose } from '../paper/motion';
 import {
   DIVE,
   FINALE,
+  LEAVE,
   RETURN,
   RETURN_SECONDS,
   RISE,
@@ -17,9 +18,13 @@ import {
   finaleOpacity,
   foldAt,
   guardOpacity,
+  heroLift,
   hxAt,
   interfaceOpacity,
+  isCovered,
   isFinale,
+  isGone,
+  isNear,
   landingHandover,
   landingShare,
   mixPose,
@@ -303,5 +308,30 @@ describe('rising out of the map', () => {
     expect(wheelPixels(-120, 0, 900)).toBe(-120);
     expect(wheelPixels(-3, 1, 900)).toBe(-3 * RISE.line);
     expect(wheelPixels(1, 2, 900)).toBeCloseTo(900 * RISE.page, 9);
+  });
+});
+
+describe('scrolling away from the table', () => {
+  it('moves the hero up with the page, a pixel for a pixel, until the sections cover it', () => {
+    expect(heroLift(0, 900)).toBe(0);
+    expect(heroLift(-40, 900)).toBe(0);
+    expect(heroLift(1, 900)).toBe(1);
+    expect(heroLift(450, 900)).toBe(450);
+    expect(heroLift(900 * LEAVE.covered, 900)).toBeCloseTo(900 * LEAVE.covered);
+    expect(heroLift(5000, 900)).toBeCloseTo(900 * LEAVE.covered);
+    expect(heroLift(300, 0)).toBe(0);
+    expect(heroLift(Number.NaN, 900)).toBe(0);
+  });
+
+  it('keeps the pointer on the table for the first tenth of a window, and the interface until it is out of sight', () => {
+    expect(isNear(0, 900)).toBe(true);
+    expect(isNear(90, 900)).toBe(true);
+    expect(isNear(91, 900)).toBe(false);
+    expect(isGone(800, 900)).toBe(false);
+    expect(isGone(900 * LEAVE.gone + 1, 900)).toBe(true);
+    expect(isCovered(900, 900)).toBe(false);
+    expect(isCovered(900 * LEAVE.covered + 1, 900)).toBe(true);
+    expect(LEAVE.near).toBeLessThan(LEAVE.gone);
+    expect(LEAVE.gone).toBeLessThan(LEAVE.covered);
   });
 });

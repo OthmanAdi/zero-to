@@ -6,7 +6,9 @@ import {
   boxLeg,
   currentStop,
   decorate,
+  GO_STEEP,
   goDuration,
+  goEase,
   holdRange,
   indexAt,
   isUp,
@@ -169,6 +171,18 @@ describe('scroll', () => {
     expect(goDuration(4000)).toBeCloseTo(1.8, 6);
     expect(goDuration(-4000)).toBeCloseTo(1.8, 6);
     expect(goDuration(90_000)).toBe(3.2);
+  });
+
+  it('leaves at once on a jump and arrives softly', () => {
+    expect(goEase(0)).toBe(0);
+    expect(goEase(1)).toBe(1);
+    expect(goEase(-1)).toBe(0);
+    expect(goEase(2)).toBe(1);
+    // Half of the way is done within a tenth of the time, and the last hundredth takes the last third.
+    expect(goEase(0.1)).toBeCloseTo(0.5, 2);
+    expect(goEase(2 / 3)).toBeGreaterThan(0.99);
+    expect(GO_STEEP).toBeGreaterThan(0);
+    for (let step = 1; step <= 100; step += 1) expect(goEase(step / 100)).toBeGreaterThan(goEase((step - 1) / 100));
   });
 });
 

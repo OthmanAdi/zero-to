@@ -94,6 +94,20 @@ export function goDuration(distance: number): number {
   return Math.min(3.2, 0.8 + Math.abs(distance) / 4000);
 }
 
+/**
+ * How steeply a jump to another stop starts. The share of the way that is done after the share `t` of the time
+ * is `1 - 2^(-GO_STEEP * t)`, scaled to end on 1. At 10 the page is half way after 7 percent of the time and
+ * within a hundredth of its goal after two thirds: it leaves at once and arrives softly. A smaller number makes
+ * the jump more even, and 0 would be a steady scroll.
+ */
+export const GO_STEEP = 10;
+
+/** The share of a jump's way that is done after the share `t` of its time. */
+export function goEase(t: number): number {
+  const x = clamp01(t);
+  return (1 - 2 ** (-GO_STEEP * x)) / (1 - 2 ** -GO_STEEP);
+}
+
 // ---------------------------------------------------------------------------------------------------------
 // Stops.
 

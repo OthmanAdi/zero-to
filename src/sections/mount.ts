@@ -11,6 +11,7 @@ import {
   boxLeg,
   currentStop,
   goDuration,
+  goEase,
   isUp,
   legPoints,
   linkAge,
@@ -567,8 +568,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     const began = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - began) / (seconds * 1000));
-      const eased = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
-      window.scrollTo(0, start + (top - start) * eased);
+      window.scrollTo(0, start + (top - start) * goEase(t));
       if (t < 1) scrollFrame = requestAnimationFrame(step);
     };
     scrollFrame = requestAnimationFrame(step);

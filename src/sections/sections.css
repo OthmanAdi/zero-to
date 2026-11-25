@@ -587,6 +587,9 @@ div.zs-band.is-on {
  * float on the right, one at a time: the card of the thing in front.
  */
 .zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-station {
+  /* Out of the grid, so the whole box and not a grid area is what it fills. */
+  grid-area: auto;
+  place-self: stretch;
   position: absolute;
   inset: 0;
   z-index: 0;

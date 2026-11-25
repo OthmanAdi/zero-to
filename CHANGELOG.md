@@ -10,11 +10,12 @@ All notable changes to zero-to are listed here. The format follows [Keep a Chang
 - The lamp lights the sheets while the table turns in, half a second after first light. Before, they stayed dark for two seconds.
 - Light falls off on the sheets away from the lamp.
 - A jump to a stop from the tabs starts at once and arrives softly.
-- On a wide window the first stop and the trail stop show their paper stations in 3D, under a lamp and with shadows, where the flat drawings stood. With reduced motion, on a phone and in a roadmap's own brief the drawings stay.
+- On a wide window the first stop and the trail stop show their paper stations in 3D, under a lamp and with shadows, where the flat drawings stood. With reduced motion and in a roadmap's own brief the drawings stay.
 - A thin line leads from the card in front of a 3D station to the peak or card it belongs to.
 - On a wide window a station drawn in 3D takes the room beside the text, about two thirds of the window's width and nearly its full height. Its cards leave the row under it and float on the right one at a time: the card of the thing in front, with its place among them (`02 / 04`).
 - The first stop's camera frames one peak at a time and pans to the next as you scroll. The sheet comes up bare and each peak stands when the camera reaches it.
 - The walker crosses a held station in 3D, slowly past the peak in view and quicker between two, while the paper walker on the thread waits. On the trail stop he stands at the start of the route while the ring turns.
+- On a phone the two stations are drawn in 3D as well. The text comes first, then the station holds under it for 2.2 and 3 windows of scroll, with the card of the thing in front at its foot. A phone lower than 480 pixels keeps the drawings.
 - A stop whose station is drawn in 3D holds longer: 2.8 windows of scroll for the first stop and 4.44 for the trail stop, where they held 1.4 and 1.9.
 
 ## [0.1.0] - 2026-11-13

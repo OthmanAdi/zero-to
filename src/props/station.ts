@@ -1,4 +1,4 @@
-import { Group, Vector3 } from 'three';
+import { Box3, Group, Vector3 } from 'three';
 import { createCompass, type CompassPart } from '../compass';
 import { createRandom } from '../core/random';
 import { THEME, withAlpha } from '../look/theme';
@@ -513,6 +513,8 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
   const compass = createCompass({ environment, seed: `station/${seed}` });
   compass.object.position.y = STATION.thickness;
   object.add(compass.object);
+  object.updateWorldMatrix(true, true);
+  const compassTop = new Box3().setFromObject(compass.object).max.y;
   const ring = new Group();
   ring.position.y = STATION.thickness + STATION.orbit.height;
   object.add(ring);
@@ -595,14 +597,15 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
       object.updateWorldMatrix(true, true);
       return cards.map((card) => card.holder.localToWorld(scratch.set(0, CARD.height / DESIGN / 2 + STATION.anchorLift, 0)).clone());
     },
-    // The ring as one thing: as wide as its circle with a card in front, as high as that card's top.
+    // The ring as one thing: as wide as its circle with a card in front, as high as that card's top or the
+    // compass over it, whichever stands higher.
     spots: [
       {
         x: 0,
         z: 0,
         width: 2 * (STATION.orbit.radius + (CARD.width / DESIGN / 2) * STATION.orbit.front),
         depth: 2 * (STATION.orbit.radius + (CARD.width / DESIGN / 2) * STATION.orbit.front),
-        height: STATION.thickness + STATION.orbit.height + (CARD.height / DESIGN / 2) * STATION.orbit.front,
+        height: Math.max(STATION.thickness + STATION.orbit.height + (CARD.height / DESIGN / 2) * STATION.orbit.front, compassTop),
       },
     ],
     route,

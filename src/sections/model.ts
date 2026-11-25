@@ -127,6 +127,11 @@ export interface StopSpan {
   readonly box: number;
   /** Pixels it stays pinned. 0 when it is not pinned. */
   readonly hold: number;
+  /**
+   * How far below the top of its section the pinned part starts. 0, the default, pins the box whole. On a phone a
+   * staged stop's copy is read first and its station pins under it: then this is the height above the station.
+   */
+  readonly pin?: number;
 }
 
 export type StopPhase = 'ahead' | 'forming' | 'active' | 'done';
@@ -143,15 +148,17 @@ export interface StopState {
 
 /** The scroll range in which a stop plays its hold. A stop that is not pinned plays it while it crosses the window. */
 export function holdRange(span: StopSpan, viewport: number): readonly [from: number, to: number] {
-  if (span.hold > 0) return [span.top, span.top + span.hold];
+  const pinAt = span.top + (span.pin ?? 0);
+  if (span.hold > 0) return [pinAt, pinAt + span.hold];
   const from = span.top - viewport * 0.4;
   return [from, Math.max(from + viewport * 0.3, span.top + span.box - viewport * 0.7)];
 }
 
 export function stopState(span: StopSpan, steps: number, viewport: number, y: number): StopState {
   const pinned = span.hold > 0;
+  const pinAt = span.top + (span.pin ?? 0);
   const form = pinned
-    ? seg(y, span.top - viewport * FLOW.formFrom, span.top - viewport * FLOW.formTo)
+    ? seg(y, pinAt - viewport * FLOW.formFrom, pinAt - viewport * FLOW.formTo)
     : seg(y, span.top - viewport * FLOW.flowFormFrom, span.top - viewport * FLOW.flowFormTo);
   const [from, to] = holdRange(span, viewport);
   const hold = seg(y, from, to);

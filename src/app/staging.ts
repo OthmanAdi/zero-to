@@ -26,9 +26,10 @@ export const STAGING = {
    * `back` behind its foot to `front` beyond the route in front of it. The hold is cut into one share per thing.
    * Round each boundary between two shares the camera pans for `pan` of a share on a smooth step, and it dwells on
    * a thing for the rest. The sheet comes up bare: the first thing stands once the hold is `pop` in, each next one
-   * when the pan towards it is `arrive` of the way.
+   * when the pan towards it is `arrive` of the way. A narrow window frames a thing with `narrowSide` on each side
+   * instead: its picture fills the width first, and less room round the thing makes the thing larger.
    */
-  focus: { elevation: 20, yaw: -9, side: 0.45, back: 0.5, front: 0.3, pan: 0.48, pop: 0.06, arrive: 0.5 },
+  focus: { elevation: 20, yaw: -9, side: 0.45, back: 0.5, front: 0.3, pan: 0.48, pop: 0.06, arrive: 0.5, narrowSide: 0.12 },
   /**
    * The walker on a held station, in the station's units. He is `scale` times his size on the walk and waits
    * `sign` past the start of the route while the sheet comes up. On a station framed one thing at a time he
@@ -194,8 +195,10 @@ export function placeBox(place: Place, box: Place, width: number, viewport: numb
   const h = Math.max(1, viewport);
   const insetX = place.width * margin;
   const insetY = place.height * margin;
-  const left = place.left - box.left + insetX;
-  const right = place.left - box.left + place.width - insetX;
+  // Only the box's top counts: the picture is moved down to its box, never across. Across, the place is where
+  // the window has it, whether its box starts at the window's edge or inside the padding of a narrow page.
+  const left = place.left + insetX;
+  const right = place.left + place.width - insetX;
   const top = place.top - box.top + insetY;
   const bottom = place.top - box.top + place.height - insetY;
   return { x0: (left / w) * 2 - 1, x1: (right / w) * 2 - 1, y0: 1 - (bottom / h) * 2, y1: 1 - (top / h) * 2 };

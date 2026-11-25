@@ -131,6 +131,17 @@ describe('stops', () => {
     expect(stopState(span, 4, VIEWPORT, 5500).hold).toBeCloseTo(0.5, 5);
   });
 
+  it('forms and holds a station that pins below its copy from where it pins, not from the top of its stop', () => {
+    const whole: StopSpan = { top: 5000, box: VIEWPORT, hold: 1000 };
+    const under: StopSpan = { top: 5000 - 700, box: 3000, hold: 1000, pin: 700 };
+    for (let y = 3500; y <= 6500; y += 25) {
+      const a = stopState(whole, 4, VIEWPORT, y);
+      const b = stopState(under, 4, VIEWPORT, y);
+      expect(b).toEqual(a);
+    }
+    expect(holdRange(under, VIEWPORT)).toEqual([5000, 6000]);
+  });
+
   it('gives a stop that is not pinned a hold while it crosses the window', () => {
     const span: StopSpan = { top: 5000, box: 1600, hold: 0 };
     const [from, to] = holdRange(span, VIEWPORT);

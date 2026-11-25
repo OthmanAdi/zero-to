@@ -130,8 +130,10 @@ export function shell<K extends string>(ctx: StopContext, id: StopId, s: Say<K |
   );
   const copyEl = h('div', { class: 'zs-copy' }, tag, heading, ...copy);
   const stationEl = h('div', { class: 'zs-station' }, ...station);
-  // What follows the station in reading order stands under the copy on a wide window.
-  const box = h('div', { class: 'zs-box' }, copyEl, stationEl, after.length > 0 ? h('div', { class: 'zs-after' }, ...after) : null);
+  // What follows the station in reading order stands under the copy on a wide window. A stop that can be staged
+  // has a room beside its station: on a phone the station pins in it for the stop's hold.
+  const room = spec.staged ? h('i', { class: 'zs-room', ...HIDDEN }) : null;
+  const box = h('div', { class: 'zs-box' }, copyEl, stationEl, room, after.length > 0 ? h('div', { class: 'zs-after' }, ...after) : null);
   const section = h('section', { class: `zs-stop zs-stop-${id}${spec.centred ? ' zs-centred' : ''}`, id: anchor, 'aria-labelledby': `${anchor}-title`, 'data-stop': id }, box);
   section.style.setProperty('--zs-hold', String(spec.hold));
   return { spec, section, box, title: heading, tag, station: stationEl, ups: [], steps: [] };

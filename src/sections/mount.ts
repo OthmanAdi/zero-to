@@ -98,7 +98,10 @@ export interface SectionsOptions extends BriefOptions {
 /** A stop whose station the host draws itself, in 3D, where the flat drawing stood. */
 export interface StagedStop {
   readonly id: StopId;
-  /** The stop's box: one window tall, and pinned while the stop holds. */
+  /**
+   * The box the station is drawn in: one window tall, and pinned while the stop holds. On a wide window that is
+   * the stop's own box. On a phone it is the station's place, which pins under the copy.
+   */
   readonly box: HTMLElement;
   /** The place of the station's picture inside the box. Its flat drawing is hidden while the stop is staged. */
   readonly slot: HTMLElement;
@@ -111,9 +114,10 @@ export interface StagedStop {
 export interface Sections {
   readonly root: HTMLElement;
   /**
-   * Names the stops whose stations the host draws itself. A named stop is staged while it is pinned (a wide
-   * window, motion wanted, a box that fits the window) and has a place for a station: its flat drawing is
-   * hidden and the place is left to the host. At any other time the stop keeps its flat drawing.
+   * Names the stops whose stations the host draws itself. A named stop with a place for a station is staged
+   * while motion is wanted and it can pin: whole on a wide window whose box fits, or under its copy on a phone
+   * that is at least 480 pixels high. Its flat drawing is hidden, the place is left to the host and the stop holds
+   * longer. At any other time the stop keeps its flat drawing.
    */
   stage(ids: readonly StopId[]): void;
   /** The stops that are staged now, with their state at the last update. */
@@ -175,6 +179,9 @@ const NAV_MARGIN = 46;
 
 /** The sizes a station is tried at, largest first, until its stop fits the window. */
 const FIT = [1, 0.94, 0.88, 0.82] as const;
+
+/** A narrow window lower than this keeps its flat drawings: a station pinned under its copy needs most of one. */
+const STAGE_LOW = 480;
 
 interface Layout {
   viewport: number;
@@ -456,6 +463,11 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       }
       for (const stop of stops) {
         const staging = !still && wanted.includes(stop.spec.id) && stop.spec.staged !== undefined && slotOf(stop) !== null;
+        // On a phone the station pins under the copy, in the room the stop gives it.
+        if (staging && narrow) {
+          if (viewport >= STAGE_LOW && stop.box.querySelector('.zs-room')) stop.section.setAttribute('data-staged', '');
+          continue;
+        }
         if (!canPin || stop.spec.hold <= 0) continue;
         if (staging) stop.section.setAttribute('data-staged', '');
         // A station that is a little too tall for the window is drawn a little smaller, so the stop can pin.
@@ -486,11 +498,14 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     let from = width * 0.5;
     stops.forEach((stop, index) => {
       const pinned = stop.section.hasAttribute('data-pin');
+      // A station that pins under its copy, on a phone. Its stop is as tall as the copy and the room together.
+      const under = !pinned && narrow && stop.section.hasAttribute('data-staged');
       const sectionBox = stop.section.getBoundingClientRect();
       const top = sectionBox.top - rootBox.top;
       const boxHeight = pinned ? viewport : sectionBox.height;
-      const hold = pinned ? holdOf(stop, narrow) * viewport : 0;
-      spans.push({ top, box: boxHeight, hold });
+      const hold = pinned || under ? holdOf(stop, narrow) * viewport : 0;
+      const room = under ? stop.box.querySelector('.zs-room') : null;
+      spans.push(room ? { top, box: boxHeight, hold, pin: room.getBoundingClientRect().top - sectionBox.top } : { top, box: boxHeight, hold });
 
       const gap = gaps[index] as HTMLElement;
       const gapBox = gap.getBoundingClientRect();
@@ -514,7 +529,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       }
       const inside = createPiece(points, width, boxHeight);
       stop.box.prepend(inside.element);
-      const insideRange = pieceRange(top, boxHeight, hold, viewport);
+      // The room a phone's station holds in is part of the stop's height, so the thread crosses it with the page.
+      const insideRange = pieceRange(top, boxHeight, under ? 0 : hold, viewport);
       // The short drop to the tag of the centred stop is walked at the pace of the scroll, so the walker
       // arrives when the tag does.
       pieces.push({ from: insideRange[0], to: stop.spec.centred ? insideRange[0] + inside.line.length : insideRange[1], length: inside.line.length });
@@ -751,7 +767,8 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       const stop = stops[index];
       if (!stop) return;
       let line = stop.box.querySelector<HTMLElement>(':scope > .zs-lead');
-      const slot = stop.section.hasAttribute('data-staged') ? slotOf(stop) : null;
+      // On a phone the card stands at the foot of its station, under it, and needs no line.
+      const slot = stop.section.hasAttribute('data-staged') && stop.section.hasAttribute('data-pin') ? slotOf(stop) : null;
       const front = manual[index] ?? states[index]?.step ?? -1;
       // The card of the thing in front: the one of its elements that is not part of the station itself.
       const card = slot && front >= 0 ? (stop.steps[front]?.find((element) => !slot.contains(element)) ?? null) : null;
@@ -782,7 +799,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
         const slot = stop.section.hasAttribute('data-staged') ? slotOf(stop) : null;
         if (!slot) return;
         const state = states[index] ?? REST;
-        out.push({ id: stop.spec.id, box: stop.box, slot, state, front: manual[index] ?? state.step });
+        // A station pinned under its copy is framed by its own place, one window tall, not by the whole stop.
+        const box = stop.section.hasAttribute('data-pin') ? stop.box : stop.station;
+        out.push({ id: stop.spec.id, box, slot, state, front: manual[index] ?? state.step });
       });
       return out;
     },

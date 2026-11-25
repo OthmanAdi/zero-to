@@ -42,8 +42,8 @@ interface Entry {
   readonly id: StopId;
   readonly group: Group;
   readonly station: StationPart;
-  /** What the camera frames: each thing on its own, or the ring as one. */
-  readonly frames: readonly SpotFrame[];
+  /** What the camera frames on a wide and on a narrow window: each thing on its own, or the ring as one. */
+  readonly frames: { readonly wide: readonly SpotFrame[]; readonly narrow: readonly SpotFrame[] };
   /** The walker in ink on the sheet, and where he stood along it in the last frame. */
   readonly walker: WalkerPart;
   walkerX: number | null;
@@ -155,11 +155,14 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
 
     const cx = group.position.x;
     // Each thing with the route in front of it, as deep as the route comes anywhere across the thing.
-    const frames = station.spots.map((spot) => {
-      const half = spot.width / 2;
-      const front = Math.max(...[-half, 0, half].map((dx) => routeDepth(station.route, spot.x + dx)));
-      return spotFrame(spot, front, cx);
-    });
+    const framesFor = (side: number) =>
+      station.spots.map((spot) => {
+        const half = spot.width / 2;
+        const front = Math.max(...[-half, 0, half].map((dx) => routeDepth(station.route, spot.x + dx)));
+        return spotFrame(spot, front, cx, { ...STAGING.focus, side });
+      });
+    // The ring keeps its margin on a phone: the cards at its sides stand out past its circle.
+    const frames = { wide: framesFor(STAGING.focus.side), narrow: framesFor(station.spots.length > 1 ? STAGING.focus.narrowSide : STAGING.focus.side) };
 
     return {
       id,
@@ -216,7 +219,7 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         const { station } = entry;
         const front = stop.front >= 0 && stop.front < station.count ? stop.front : -1;
         // A station of several things is framed one at a time, and each stands when the camera comes to it.
-        const focusing = entry.frames.length > 1;
+        const focusing = entry.frames.wide.length > 1;
         const form = focusing ? formFor(standingAt(stop.state, station.count), station.count) : stop.state.form;
         // He is on the sheet while it comes up and while it holds, and has walked on once the stop is done.
         const things = focusing ? station.spots.map((spot) => spot.x) : [];
@@ -240,8 +243,9 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         if (key !== entry.poseKey && fit.x1 > fit.x0 && fit.y1 > fit.y0) {
           entry.poseKey = key;
           const shot = focusing ? STAGING.focus : STAGING.shot;
-          const fov = width < STAGING.narrow ? STAGING.shot.narrowFov : STAGING.shot.fov;
-          entry.poses = entry.frames.map((frame) => fitPose(frame.points, frame.target, shot.elevation, shot.yaw, fov, fit, width / Math.max(1, height), { startDistance: 14 }));
+          const narrow = width < STAGING.narrow;
+          const fov = narrow ? STAGING.shot.narrowFov : STAGING.shot.fov;
+          entry.poses = entry.frames[narrow ? 'narrow' : 'wide'].map((frame) => fitPose(frame.points, frame.target, shot.elevation, shot.yaw, fov, fit, width / Math.max(1, height), { startDistance: 14 }));
         }
         const at = focusing ? focusAt(stop.state.hold, entry.poses.length) : 0;
         const k = Math.max(0, Math.min(entry.poses.length - 2, Math.floor(at)));

@@ -456,6 +456,38 @@ describe('the page', () => {
     expect(staged / flat).toBeGreaterThan(1.9);
   });
 
+  it('pins a staged station under its copy on a phone, for the phone hold, with no line', () => {
+    fakeLayout();
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
+    const { root, sections } = mount();
+    sections.stage(['what', 'trail']);
+    const section = (id: string) => root.querySelector(`[data-stop="${id}"]`) as HTMLElement;
+    for (const id of ['what', 'trail']) {
+      expect(section(id).hasAttribute('data-staged'), id).toBe(true);
+      expect(section(id).hasAttribute('data-pin'), id).toBe(false);
+      expect(section(id).querySelector('.zs-room'), id).not.toBeNull();
+    }
+    expect([section('what').style.getPropertyValue('--zs-hold'), section('trail').style.getPropertyValue('--zs-hold')]).toEqual(['2.2', '3']);
+    // The host draws into the station's own place, which pins under the copy.
+    const staged = sections.staged();
+    expect(staged.map((stop) => stop.id)).toEqual(['what', 'trail']);
+    for (const stop of staged) expect(stop.box.classList.contains('zs-station')).toBe(true);
+    // It forms and brings each thing to the front in turn, and has no line from its card.
+    const fronts = new Set<number>();
+    for (let at = 0; at <= 800; at += 1) {
+      sections.update(at / 800);
+      fronts.add(sections.staged()[0]?.front ?? -2);
+      sections.lead('what', { x: 100, y: 100 });
+      expect(root.querySelector('#what-it-is .zs-lead[data-on]')).toBeNull();
+    }
+    expect([...fronts].sort((a, b) => a - b)).toEqual([-1, 0, 1, 2, 3]);
+    // A phone held on its side is too low for a station under the copy: the drawings stay.
+    vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(400);
+    sections.measure();
+    expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
+    expect(section('what').style.getPropertyValue('--zs-hold')).toBe('1.4');
+  });
+
   it('hides the walker of the page while a staged stop holds, where the host walks him on the station', () => {
     fakeLayout();
     const { root, sections } = mount();

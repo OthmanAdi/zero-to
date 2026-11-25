@@ -50,6 +50,13 @@ describe('the place of a station', () => {
     expect(scrolled.y1).toBeCloseTo(still.y1, 10);
   });
 
+  it('reads the place across from the window, for a box that starts inside the padding of a narrow page', () => {
+    const place = { left: 0, top: 100, width: 390, height: 500 };
+    const inside = placeBox(place, { left: 44, top: 0, width: 330, height: 844 }, 390, 844, 0);
+    expect(inside.x0).toBe(-1);
+    expect(inside.x1).toBe(1);
+  });
+
   it('keeps a margin inside the place and stays the right way up', () => {
     const place = { left: 700, top: 200, width: 640, height: 320 };
     const tight = placeBox(place, box, 1440, 900, 0);

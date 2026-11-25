@@ -221,10 +221,11 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         // A station of several things is framed one at a time, and each stands when the camera comes to it.
         const focusing = entry.frames.wide.length > 1;
         const form = focusing ? formFor(standingAt(stop.state, station.count), station.count) : stop.state.form;
-        // He is on the sheet while it comes up and while it holds, and has walked on once the stop is done.
+        // He is on the sheet while the stop holds, from the start of the route, and the walker of the page is not:
+        // one walker at a time. Before the hold he is still on the thread, after it he has walked on.
         const things = focusing ? station.spots.map((spot) => spot.x) : [];
         const walkerX = walkerAt(stop.state.hold, things, station.route[0]?.x ?? 0);
-        entry.walker.object.visible = stop.state.phase === 'forming' || stop.state.phase === 'active';
+        entry.walker.object.visible = stop.state.phase === 'active';
         if (!rows) {
           // Out of the window it keeps up with the stop without playing anything.
           station.setForm(form, true);

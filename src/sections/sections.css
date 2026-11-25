@@ -574,6 +574,32 @@ div.zs-band.is-on {
   visibility: hidden;
 }
 
+/*
+ * The picture of a staged station fills its box from edge to edge. The top and the foot of the box take it back
+ * into the night, so the cloth under the lamp never ends on a line while the box comes up or leaves.
+ */
+.zs-stop[data-staged] > .zs-box::before,
+.zs-stop[data-staged] > .zs-box::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.zs-stop[data-staged] > .zs-box::before {
+  top: 0;
+  height: 24vh;
+  background: linear-gradient(180deg, var(--zt-night) 0, rgb(11 15 23 / 0.6) 40%, rgb(11 15 23 / 0) 100%);
+}
+
+.zs-stop[data-staged] > .zs-box::after {
+  bottom: 0;
+  height: 12vh;
+  background: linear-gradient(0deg, var(--zt-night) 0, rgb(11 15 23 / 0) 100%);
+}
+
 .zs-theatre {
   perspective: 1500px;
   perspective-origin: 50% 12%;

@@ -1077,6 +1077,41 @@ test.describe('the gallery root', () => {
     for (const [name, before] of Object.entries(rest.tops)) expect(Math.abs(before - (back.tops[name] as number)), name).toBeLessThan(2);
   });
 
+  test('the first stop shows its paper station in 3D while it is pinned, and its flat drawing with reduced motion', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === 'phone', 'a stop pins on a wide window');
+    await open(page, testInfo, 't=6');
+    await expect(page.locator('html')).toHaveClass(/zt-staged/, { timeout: 120_000 });
+    const stop = page.locator('#what-it-is');
+    await expect(stop).toHaveAttribute('data-staged', '');
+    // Into the hold of the stop: its box is pinned and the station has formed.
+    await page.evaluate(() => {
+      const top = (document.querySelector('#what-it-is') as HTMLElement).getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, Math.round(top + window.innerHeight * 0.4));
+    });
+    await expect.poll(async () => ((await info(page)) as unknown as { stations: Record<string, number> }).stations.what ?? 0, { timeout: 120_000 }).toBeGreaterThan(0.95);
+    await settle(page, 1500);
+    const place = await page.evaluate(() => {
+      const box = (document.querySelector('#what-it-is .zs-theatre') as HTMLElement).getBoundingClientRect();
+      return { left: box.left / window.innerWidth, top: box.top / window.innerHeight, width: box.width / window.innerWidth, height: box.height / window.innerHeight };
+    });
+    // The flat drawing is not shown, and where it stood the canvas shows lit paper: the sheet of the station.
+    await expect(page.locator('#what-it-is .zs-ground')).toBeHidden();
+    const shot = await page.screenshot({ path: receipt(testInfo, 'station-what') });
+    const points: [number, number][] = [];
+    for (const dx of [0.3, 0.5, 0.7]) for (const dy of [0.6, 0.75, 0.9]) points.push([place.left + place.width * dx, place.top + place.height * dy]);
+    const read = await pixels(page, shot, points);
+    const paper = read.filter(([r = 0, g = 0, b = 0]) => r + g + b > 330 && r >= b);
+    expect(paper.length, JSON.stringify(read)).toBeGreaterThanOrEqual(3);
+
+    // With reduced motion nothing pins, nothing is staged, and the drawing is on the page.
+    await open(page, testInfo, 't=6&motion=reduced');
+    await settle(page, 1500);
+    await expect(page.locator('html')).not.toHaveClass(/zt-staged/);
+    await expect(page.locator('[data-staged]')).toHaveCount(0);
+    await page.evaluate(() => (document.querySelector('#what-it-is') as HTMLElement).scrollIntoView());
+    await expect(page.locator('#what-it-is .zs-ground')).toBeVisible();
+  });
+
   test('on a phone at rest the compass clears the whole hero copy, the lede included', async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== 'phone', 'the phone layout');
     for (const query of ['still&t=6&motion=reduced', `still&t=6&motion=reduced&road=music-theory-for-a-class`]) {

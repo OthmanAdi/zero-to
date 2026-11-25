@@ -10,6 +10,7 @@ All notable changes to zero-to are listed here. The format follows [Keep a Chang
 - The lamp lights the sheets while the table turns in, half a second after first light. Before, they stayed dark for two seconds.
 - Light falls off on the sheets away from the lamp.
 - A jump to a stop from the tabs starts at once and arrives softly.
+- On a wide window the first stop and the trail stop show their paper stations in 3D, under a lamp and with shadows, where the flat drawings stood. With reduced motion, on a phone and in a roadmap's own brief the drawings stay.
 
 ## [0.1.0] - 2026-11-13
 

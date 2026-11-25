@@ -74,6 +74,16 @@ html.zt-app:not(.map-view) :is(#zt-stage, .zt-overlays, #zt-page) {
   background: linear-gradient(180deg, rgb(11 15 23 / 0) 0, rgb(11 15 23 / 0.86) min(17vh, 160px), var(--zt-night, #0b0f17) min(30vh, 280px));
 }
 
+/*
+ * With stations drawn in 3D the canvas is the ground of the sections: it is cleared to the night, and each
+ * station is drawn where its stop is. The sections keep only the band that takes the picture of the hero into
+ * the night. `STAGING.band` in `staging.ts` is the same band.
+ */
+html.zt-staged #zt-sections {
+  background-repeat: no-repeat;
+  background-size: 100% min(30vh, 280px);
+}
+
 #zt-trek {
   display: none;
   height: calc(var(--zt-stretch, 9) * 100vh);

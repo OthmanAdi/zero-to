@@ -66,6 +66,8 @@ import {
   wipeCovered,
   wipeRadius,
 } from './timeline';
+import type { LandingStage } from './landing-stage';
+import { STAGED_STOPS, heroRows } from './staging';
 import './app.css';
 
 /**
@@ -96,6 +98,8 @@ interface Info {
   readonly lang: UiLang;
   readonly scrollY: number;
   readonly away: boolean;
+  /** How far each paper station of the landing page has formed, by stop, once it has been built. Empty while none is staged. */
+  readonly stations: Readonly<Partial<Record<string, number>>>;
   readonly walkReady: boolean;
   readonly intro: number | null;
   readonly here: { readonly stageId: string; readonly waypointId: string } | null;
@@ -944,6 +948,13 @@ export async function boot(): Promise<void> {
 
   let sections: Sections | null = null;
   let landingQueued = 0;
+  /** The paper stations of the first stops, in 3D: fetched once the sections stand, built when they come near. */
+  let landing: LandingStage | null = null;
+  let landingT = 0;
+  /** True while stops are staged: the canvas is then the ground of the sections, cleared to the night. */
+  let stagedOn = false;
+  /** True once the hero has left the window: the table is neither stepped nor drawn. */
+  let heroOut = false;
   const showLanding = (): void => {
     landingQueued = 0;
     if (machine.mode !== 'table' && machine.mode !== 'return' && machine.mode !== 'boot') return;
@@ -955,13 +966,26 @@ export async function boot(): Promise<void> {
       html.classList.toggle('zt-away', away);
     }
     sections?.update(sections.progressAt(y));
-    // Once the sections cover the table, the table is not drawn.
-    const nowCovered = isCovered(y, viewport);
+    const staged = landing && sections ? sections.staged() : [];
+    if (stagedOn !== staged.length > 0) {
+      stagedOn = staged.length > 0;
+      html.classList.toggle('zt-staged', stagedOn);
+    }
+    // Once the sections cover the table, the table is not drawn. The loop goes on while a station is in the
+    // window, and its last frame before it stops is the bare night.
+    heroOut = isCovered(y, viewport);
+    const inView = staged.some((stop) => {
+      const box = stop.box.getBoundingClientRect();
+      return box.top < viewport && box.bottom > 0;
+    });
+    const nowCovered = heroOut && !inView;
     if (nowCovered !== covered) {
       covered = nowCovered;
       if (!fixed && stage) {
-        if (covered) stage.stop();
-        else stage.start();
+        if (covered) {
+          if (stagedOn) stage.renderOnce();
+          stage.stop();
+        } else stage.start();
       }
     }
   };
@@ -1022,6 +1046,58 @@ export async function boot(): Promise<void> {
     );
   };
 
+  /**
+   * The first stops of the gallery get their paper stations in 3D, in the place of their flat drawings. The
+   * code is fetched beside the sections, and the stops are only handed over once it has arrived.
+   */
+  const stageLanding = async (token: number): Promise<void> => {
+    if (!stage) return;
+    const module = await import('./landing-stage');
+    if (token !== sectionsToken || !stage || !sections) return;
+    landing ??= module.createLandingStage(stage.environment, stage.scene);
+    sections.stage(STAGED_STOPS);
+    showLanding();
+  };
+
+  /** One frame of the stations: they form with their stops and are fitted into their places. */
+  const landingFrame = (raw: FrameTime): void => {
+    if (!landing || !sections || !stagedOn) return;
+    landingT += raw.dt;
+    const { width, height } = sizeOf();
+    landing.frame(sections.staged(), { dt: raw.dt, t: landingT, reduced: raw.reduced }, width, height, introFrom === null);
+  };
+
+  /**
+   * The draw of a frame while stops are staged: the canvas is cleared to the night, the hero is drawn in the
+   * rows it still has, and every station in the window in the rows of its box.
+   */
+  const night = new Color(THEME.night);
+  const drawFrame = (): void => {
+    if (!stage || !camera) return;
+    const renderer = stage.renderer;
+    if (!stagedOn || (machine.mode !== 'table' && machine.mode !== 'boot')) {
+      renderer.render(stage.scene, camera);
+      return;
+    }
+    const { width, height } = sizeOf();
+    renderer.setScissorTest(false);
+    renderer.setClearColor(night, 1);
+    renderer.clear();
+    renderer.setScissorTest(true);
+    const bottom = heroOut ? 0 : heroRows(height - window.scrollY, height);
+    if (bottom > 0) {
+      renderer.setScissor(0, height - bottom, width, bottom);
+      renderer.render(stage.scene, camera);
+    }
+    if (landing?.visible && table) {
+      const shown = table.object.visible;
+      table.object.visible = false;
+      landing.draw(renderer, stage.scene, width, height);
+      table.object.visible = shown;
+    }
+    renderer.setScissorTest(false);
+  };
+
   let sectionsToken = 0;
   const mountSections = async (): Promise<void> => {
     if (!stage) return;
@@ -1052,6 +1128,8 @@ export async function boot(): Promise<void> {
           }),
     });
     showLanding();
+    // The stops of a given roadmap are its trip brief and keep their drawings.
+    if (!own && !fixed) void stageLanding(token);
   };
 
   // -------------------------------------------------------------------------------------------------------
@@ -2251,7 +2329,9 @@ export async function boot(): Promise<void> {
       if (smoothFrames >= 3 || waited >= 2.2 || !playIntro) begin();
     }
     const dt = started ? raw.dt : 0;
-    sceneT += dt;
+    // The clock of the table stands still while the hero is out of the window, as it does when the loop is stopped.
+    const tableOut = heroOut && machine.mode === 'table';
+    if (!tableOut) sceneT += dt;
     const frame: FrameTime = { dt, t: sceneT, reduced: raw.reduced };
     watchFill(raw.dt);
     if (started) queue.run();
@@ -2264,7 +2344,8 @@ export async function boot(): Promise<void> {
     switch (machine.mode) {
       case 'table':
       case 'boot':
-        tickTable(frame, true);
+        if (!tableOut) tickTable(frame, true);
+        landingFrame(raw);
         break;
       case 'dive':
       case 'cut':
@@ -2321,6 +2402,7 @@ export async function boot(): Promise<void> {
       lang: uiLang(),
       scrollY: window.scrollY,
       away,
+      stations: stagedOn && landing ? landing.forms() : {},
       walkReady: walkReady(),
       intro: introFrom === null ? null : sceneT - introFrom,
       here: here ? { stageId: here.stageId, waypointId: here.waypointId } : null,
@@ -2417,6 +2499,7 @@ export async function boot(): Promise<void> {
   if (playIntro) html.dataset.ztIntro = '';
 
   stage.onFrame(tick);
+  stage.setDraw(drawFrame);
 
   if (debug.p !== null) {
     // Straight into the walk, through the fade that stands in for the dive.

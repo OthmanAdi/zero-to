@@ -1077,23 +1077,42 @@ test.describe('the gallery root', () => {
     for (const [name, before] of Object.entries(rest.tops)) expect(Math.abs(before - (back.tops[name] as number)), name).toBeLessThan(2);
   });
 
-  test('the first stop shows its paper station in 3D while it is pinned, and its flat drawing with reduced motion', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name === 'phone', 'a stop pins on a wide window');
+  test('the first stop holds its paper station in 3D beside or under its text, with one card at a time, and its flat drawing with reduced motion', async ({ page }, testInfo) => {
+    const phone = testInfo.project.name === 'phone';
     await open(page, testInfo, 't=6');
     await expect(page.locator('html')).toHaveClass(/zt-staged/, { timeout: 120_000 });
     const stop = page.locator('#what-it-is');
     await expect(stop).toHaveAttribute('data-staged', '');
-    // Into the hold of the stop: its box is pinned and the station has formed.
-    await page.evaluate(() => {
-      const top = (document.querySelector('#what-it-is') as HTMLElement).getBoundingClientRect().top + window.scrollY;
-      window.scrollTo(0, Math.round(top + window.innerHeight * 0.4));
-    });
+    // A wide window pins the whole stop. A phone reads the copy first and pins the station under it.
+    if (phone) await expect(stop).not.toHaveAttribute('data-pin', '');
+    else await expect(stop).toHaveAttribute('data-pin', '');
+    await expect(stop).toHaveAttribute('style', /--zs-hold: ?(2\.8|2\.2)/);
+    // Near the end of its hold: every peak stands and the last one is in front.
+    await page.evaluate((under) => {
+      const section = document.querySelector('#what-it-is') as HTMLElement;
+      const from = under ? (section.querySelector('.zs-room') as HTMLElement) : section;
+      const hold = Number(section.style.getPropertyValue('--zs-hold'));
+      window.scrollTo(0, Math.round(from.getBoundingClientRect().top + window.scrollY + window.innerHeight * (hold - 0.15)));
+    }, phone);
     await expect.poll(async () => ((await info(page)) as unknown as { stations: Record<string, number> }).stations.what ?? 0, { timeout: 120_000 }).toBeGreaterThan(0.95);
     await settle(page, 1500);
     const place = await page.evaluate(() => {
       const box = (document.querySelector('#what-it-is .zs-theatre') as HTMLElement).getBoundingClientRect();
       return { left: box.left / window.innerWidth, top: box.top / window.innerHeight, width: box.width / window.innerWidth, height: box.height / window.innerHeight };
     });
+    // The station has the room: most of the window beside the text, or the width of a phone over half its height.
+    expect(place.width).toBeGreaterThan(phone ? 0.95 : 0.45);
+    expect(place.height).toBeGreaterThan(phone ? 0.5 : 0.85);
+    // One card floats, the card of the peak in front: on the right of a wide window, at the foot of a phone.
+    const card = stop.locator('.zs-tiers > .zs-tier.is-on');
+    await expect(card).toHaveCount(1);
+    await expect(card.locator('h4')).toHaveText('Diamond');
+    await expect(card.locator('.zs-count')).toHaveText('04 / 04');
+    const cardBox = await card.boundingBox();
+    if (phone) expect(cardBox?.y ?? 0).toBeGreaterThan(844 * 0.7);
+    else expect(cardBox?.x ?? 0).toBeGreaterThan(1440 * 0.6);
+    // The walker of the page waits while the one on the sheet crosses it.
+    await expect(page.locator('.zs-walker')).toBeHidden();
     // The flat drawing is not shown, and where it stood the canvas shows lit paper: the sheet of the station.
     await expect(page.locator('#what-it-is .zs-ground')).toBeHidden();
     const shot = await page.screenshot({ path: receipt(testInfo, 'station-what') });

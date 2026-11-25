@@ -1,4 +1,4 @@
-import { spring, stepSpringKC, type Spring } from '../paper/motion';
+import { smooth, spring, stepSpringKC, type Spring } from '../paper/motion';
 
 /**
  * The turntable as numbers: one angle on a spring, the selected sheet, and the rule for when a mountain may
@@ -153,11 +153,15 @@ export interface SlotPose {
   readonly z: number;
   /** The sheet's `rotation.y`: its lower edge faces the rim. */
   readonly yaw: number;
-  /** How much of its light a sheet keeps: 1 in the lit slot, 0.3 from 70 degrees away. */
+  /** How much of its light a sheet keeps: 1 in the lit slot, 0.3 from 70 degrees away, eased at both ends. */
   readonly dim: number;
 }
 
-/** How far from the lamp a sheet has faded to its darkest. */
+/**
+ * How far from the lamp, in degrees, a sheet has faded to its darkest, and how much of its light it keeps there.
+ * Between the two the light falls off on a smooth step, so a sheet stays bright while it is nearly in the lit
+ * slot and the pool of light has a soft edge, not a straight ramp.
+ */
 export const DIM_OVER = 70;
 export const DIM_FLOOR = 0.3;
 
@@ -172,7 +176,7 @@ export function slotPose(index: number, phi: number, count: number): SlotPose {
     x: Math.sin(radians) * TURN.radius,
     z: Math.cos(radians) * TURN.radius,
     yaw: radians,
-    dim: 1 - (1 - DIM_FLOOR) * away,
+    dim: 1 - (1 - DIM_FLOOR) * smooth(away),
   };
 }
 

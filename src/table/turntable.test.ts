@@ -171,6 +171,11 @@ describe('slotPose', () => {
     expect(next.x).toBeLessThan(0);
     expect(next.dim).toBeCloseTo(DIM_FLOOR);
     expect(slotPose(0, 35, 5).dim).toBeCloseTo(1 - (1 - DIM_FLOOR) / 2);
+    // The fall is a smooth step: near the lamp a sheet keeps more light than a straight ramp would give it,
+    // near the dark end less, and it never brightens on the way out.
+    expect(slotPose(0, 10, 5).dim).toBeGreaterThan(1 - ((1 - DIM_FLOOR) * 10) / 70);
+    expect(slotPose(0, 60, 5).dim).toBeLessThan(1 - ((1 - DIM_FLOOR) * 60) / 70);
+    for (let angle = 1; angle <= 90; angle += 1) expect(slotPose(0, angle, 5).dim).toBeLessThanOrEqual(slotPose(0, angle - 1, 5).dim);
   });
 });
 

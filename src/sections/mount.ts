@@ -224,8 +224,11 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
   const REST: StopState = { form: 0, hold: 0, step: -1, phase: 'ahead' };
   /** The place of a station's picture in a stop: the flat drawing of the peaks or of the ring. */
   const slotOf = (stop: StopView): HTMLElement | null => stop.station.querySelector<HTMLElement>('.zs-theatre, .zs-orbit');
-  const markStaged = (): void => {
-    for (const stop of stops) stop.section.toggleAttribute('data-staged', wanted.includes(stop.spec.id) && stop.section.hasAttribute('data-pin') && slotOf(stop) !== null);
+  /** How long a stop holds, in window heights: longer while the host draws its station. */
+  const holdOf = (stop: StopView, narrow: boolean): number => {
+    const { staged } = stop.spec;
+    if (!staged || !stop.section.hasAttribute('data-staged')) return stop.spec.hold;
+    return narrow ? staged.phone : staged.wide;
   };
   const walker = createWalker();
   // The night behind the header. It stands with the index tabs, and it is shown once the sections are under them.
@@ -441,16 +444,20 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
 
     // A stop is pinned when it has a hold, motion is wanted, the window is wide and tall enough and its box
     // fits the window. That is decided once per window size, so opening a question never unpins a stop.
-    const key = `${width}/${viewport}/${still}/${lang}`;
+    // A stop the host draws is staged with it: its station's place is laid out for the picture and it holds longer.
+    const key = `${width}/${viewport}/${still}/${lang}/${wanted.join(',')}`;
     if (key !== pinKey) {
       pinKey = key;
       const canPin = !still && !narrow && viewport >= 620;
       for (const stop of stops) {
         stop.section.removeAttribute('data-pin');
+        stop.section.removeAttribute('data-staged');
         stop.station.style.removeProperty('zoom');
       }
       for (const stop of stops) {
+        const staging = !still && wanted.includes(stop.spec.id) && stop.spec.staged !== undefined && slotOf(stop) !== null;
         if (!canPin || stop.spec.hold <= 0) continue;
+        if (staging) stop.section.setAttribute('data-staged', '');
         // A station that is a little too tall for the window is drawn a little smaller, so the stop can pin.
         for (const zoom of FIT) {
           if (zoom < 1) stop.station.style.setProperty('zoom', String(zoom));
@@ -459,11 +466,13 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
             break;
           }
         }
-        if (!stop.section.hasAttribute('data-pin')) stop.station.style.removeProperty('zoom');
+        if (!stop.section.hasAttribute('data-pin')) {
+          stop.station.style.removeProperty('zoom');
+          stop.section.removeAttribute('data-staged');
+        }
       }
+      for (const stop of stops) stop.section.style.setProperty('--zs-hold', String(holdOf(stop, narrow)));
     }
-
-    markStaged();
 
     const rootBox = root.getBoundingClientRect();
     const scrollY = window.scrollY || 0;
@@ -480,7 +489,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       const sectionBox = stop.section.getBoundingClientRect();
       const top = sectionBox.top - rootBox.top;
       const boxHeight = pinned ? viewport : sectionBox.height;
-      const hold = pinned ? stop.spec.hold * viewport : 0;
+      const hold = pinned ? holdOf(stop, narrow) * viewport : 0;
       spans.push({ top, box: boxHeight, hold });
 
       const gap = gaps[index] as HTMLElement;
@@ -733,7 +742,7 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     },
     stage(ids) {
       wanted = [...ids];
-      markStaged();
+      measure();
     },
     lead(id, point) {
       const index = stops.findIndex((stop) => stop.spec.id === id);

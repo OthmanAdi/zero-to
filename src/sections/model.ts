@@ -26,6 +26,12 @@ export interface StopSpec {
   readonly gap: number;
   /** How long the stop stays pinned, in window heights. 0 for a stop that is read and used, not played. */
   readonly hold: number;
+  /**
+   * How long the stop holds while the host draws its station in 3D, in window heights: `wide` on a wide window,
+   * `phone` on a narrow one. The camera then frames one thing after another and the walker crosses the sheet,
+   * which wants more scroll than the flat drawing does. Only a stop with a station has it.
+   */
+  readonly staged?: { readonly wide: number; readonly phone: number };
   /** How many things the stop brings to the front one after another while it is pinned. */
   readonly steps: number;
   readonly leg: LegShape;
@@ -36,9 +42,11 @@ export interface StopSpec {
 }
 
 export const STOPS: readonly StopSpec[] = [
-  { id: 'what', anchor: 'what-it-is', gap: 0.26, hold: 1.4, steps: 4, leg: 'curve', exit: 0.62 },
+  // A staged first stop holds 0.7 windows for each of its four peaks. The trail stop holds about 0.63 for each of
+  // its seven things: a long hold for a ring that turns five times.
+  { id: 'what', anchor: 'what-it-is', gap: 0.26, hold: 1.4, staged: { wide: 2.8, phone: 2.2 }, steps: 4, leg: 'curve', exit: 0.62 },
   { id: 'how', anchor: 'how-it-works', gap: 0.24, hold: 1.4, steps: 4, leg: 'straight', exit: 0.72 },
-  { id: 'trail', anchor: 'on-the-trail', gap: 0.32, hold: 1.9, steps: 7, leg: 'switchbacks', exit: 0.74 },
+  { id: 'trail', anchor: 'on-the-trail', gap: 0.32, hold: 1.9, staged: { wide: 4.44, phone: 3 }, steps: 7, leg: 'switchbacks', exit: 0.74 },
   { id: 'class', anchor: 'for-a-class', gap: 0.26, hold: 1.2, steps: 4, leg: 'arc', exit: 0.48 },
   { id: 'map', anchor: 'the-map', gap: 0.3, hold: 1.1, steps: 1, leg: 'meander', exit: 0.56 },
   { id: 'install', anchor: 'install', gap: 0.26, hold: 0, steps: 1, leg: 'sweep', exit: 0.68 },

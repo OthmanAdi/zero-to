@@ -421,6 +421,32 @@ describe('the page', () => {
     expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
   });
 
+  it('holds a staged stop longer than its flat drawing, and gives the hold back with the place', () => {
+    fakeLayout();
+    const { root, sections } = mount();
+    const hold = (id: string): string => (root.querySelector(`[data-stop="${id}"]`) as HTMLElement).style.getPropertyValue('--zs-hold');
+    // How much of the page's scroll the first stop has a thing in front.
+    const span = (): number => {
+      let count = 0;
+      for (let at = 0; at <= 2000; at += 1) {
+        sections.update(at / 2000);
+        if (root.querySelector('#what-it-is')?.hasAttribute('data-focus')) count += 1;
+      }
+      return count;
+    };
+    expect([hold('what'), hold('trail'), hold('how')]).toEqual(['1.4', '1.9', '1.4']);
+    sections.stage(['what', 'trail']);
+    expect([hold('what'), hold('trail'), hold('how')]).toEqual(['2.8', '4.44', '1.4']);
+    const staged = span();
+    sections.stage([]);
+    expect([hold('what'), hold('trail')]).toEqual(['1.4', '1.9']);
+    sections.stage(['what']);
+    expect(staged / span()).toBeCloseTo(1, 5);
+    sections.stage([]);
+    const flat = span();
+    expect(staged / flat).toBeGreaterThan(1.9);
+  });
+
   it('draws a line from the card in front of a staged stop to the point the host names', () => {
     fakeLayout();
     const { root, sections } = mount();

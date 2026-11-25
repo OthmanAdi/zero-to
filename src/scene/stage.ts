@@ -30,6 +30,12 @@ export interface Stage {
   remove(part: ScenePart): void;
   /** Called every frame before the parts update, for the camera rig and the scroll. */
   onFrame(listener: (frame: FrameTime) => void): () => void;
+  /**
+   * Replaces the one draw of a frame. By default a frame is the scene seen by the camera, over the whole canvas.
+   * A host that draws several pictures a frame, each in its own part of the canvas, hands in its own draw.
+   * Null puts the default back.
+   */
+  setDraw(draw: (() => void) | null): void;
   /** Draws one frame now, for tests and still captures. */
   renderOnce(): void;
   start(): void;
@@ -82,6 +88,11 @@ export function createStage(options: StageOptions): Stage {
   const clock = createFrameClock();
   let raf = 0;
   let running = false;
+  let ownDraw: (() => void) | null = null;
+  const draw = (): void => {
+    if (ownDraw) ownDraw();
+    else renderer.render(scene, camera);
+  };
 
   const resize = () => {
     const width = canvas.clientWidth || window.innerWidth;
@@ -100,7 +111,7 @@ export function createStage(options: StageOptions): Stage {
     const time = clock.tick(now / 1000, options.reduced());
     for (const listener of listeners) listener(time);
     for (const part of parts) part.update(time);
-    renderer.render(scene, camera);
+    draw();
   };
 
   const onVisibility = () => {
@@ -134,7 +145,10 @@ export function createStage(options: StageOptions): Stage {
       const time = clock.tick(performance.now() / 1000, options.reduced());
       for (const listener of listeners) listener(time);
       for (const part of parts) part.update(time);
-      renderer.render(scene, camera);
+      draw();
+    },
+    setDraw(next) {
+      ownDraw = next;
     },
     start() {
       if (running) return;

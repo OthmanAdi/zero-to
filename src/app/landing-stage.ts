@@ -2,10 +2,10 @@ import { AmbientLight, CircleGeometry, Color, DataTexture, Group, LinearFilter, 
 import { LAMP } from '../look/lamp';
 import { THEME } from '../look/theme';
 import { fitPose, type CameraPose } from '../paper/motion';
-import { createStation, routeDepth, type StationKind, type StationPart } from '../props';
+import { STATION, createStation, createWalker, routeDepth, type StationKind, type StationPart, type WalkerPart } from '../props';
 import type { FrameTime, SceneEnvironment } from '../scene/contract';
 import type { StagedStop, StopId } from '../sections';
-import { STAGING, boxRows, clothShows, focusAt, formFor, lampCandela, lampPlace, placeBox, spotFrame, standingAt, type SpotFrame } from './staging';
+import { STAGING, boxRows, clothShows, focusAt, formFor, lampCandela, lampPlace, placeBox, spotFrame, standingAt, walkerAt, type SpotFrame } from './staging';
 import { mixPose } from './timeline';
 
 /**
@@ -44,6 +44,9 @@ interface Entry {
   readonly station: StationPart;
   /** What the camera frames: each thing on its own, or the ring as one. */
   readonly frames: readonly SpotFrame[];
+  /** The walker in ink on the sheet, and where he stood along it in the last frame. */
+  readonly walker: WalkerPart;
+  walkerX: number | null;
   readonly dispose: () => void;
   /** The camera fitted to each frame for the place the station has now. */
   poses: CameraPose[];
@@ -90,6 +93,20 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
   let visible = false;
   let alpha: DataTexture | null = null;
 
+  /**
+   * Puts the walker on the route at `x`, turned along it. `walked` says whether he walked there, which plays his
+   * steps, or was put there.
+   */
+  const placeWalker = (entry: Entry, x: number, walked: boolean): void => {
+    const { route } = entry.station;
+    const z = routeDepth(route, x);
+    const ahead = routeDepth(route, x + 0.05) - routeDepth(route, x - 0.05);
+    entry.walker.object.position.set(x, STATION.thickness, z);
+    entry.walker.object.rotation.y = -Math.atan2(ahead, 0.1);
+    if (walked && entry.walkerX !== null) entry.walker.advance((x - entry.walkerX) / STAGING.walker.scale);
+    entry.walkerX = x;
+  };
+
   const build = (id: StopId, kind: StationKind): Entry => {
     const index = entries.size;
     const group = new Group();
@@ -129,6 +146,11 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
     bounce.position.copy(lamp.position);
     const ambient = new AmbientLight(0xffffff, STAGING.ambient);
     group.add(lamp, lamp.target, bounce, ambient);
+    // The walker waits at the start of the route while the sheet comes up, and crosses it while the stop holds.
+    const walker = createWalker({ phone: environment.phone, seed: 5 });
+    walker.object.scale.setScalar(STAGING.walker.scale);
+    walker.object.visible = false;
+    group.add(walker.object);
     scene.add(group);
 
     const cx = group.position.x;
@@ -144,6 +166,8 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
       group,
       station,
       frames,
+      walker,
+      walkerX: null,
       poses: [],
       pose: null,
       poseKey: '',
@@ -153,6 +177,7 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
       dispose: () => {
         group.removeFromParent();
         station.dispose();
+        walker.dispose();
         cloth.geometry.dispose();
         clothMaterial.dispose();
         lamp.shadow.map?.dispose();
@@ -193,15 +218,22 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         // A station of several things is framed one at a time, and each stands when the camera comes to it.
         const focusing = entry.frames.length > 1;
         const form = focusing ? formFor(standingAt(stop.state, station.count), station.count) : stop.state.form;
+        // He is on the sheet while it comes up and while it holds, and has walked on once the stop is done.
+        const things = focusing ? station.spots.map((spot) => spot.x) : [];
+        const walkerX = walkerAt(stop.state.hold, things, station.route[0]?.x ?? 0);
+        entry.walker.object.visible = stop.state.phase === 'forming' || stop.state.phase === 'active';
         if (!rows) {
           // Out of the window it keeps up with the stop without playing anything.
           station.setForm(form, true);
           station.setFocus(front, true);
+          placeWalker(entry, walkerX, false);
           continue;
         }
         station.setForm(time.reduced ? 1 : form, time.reduced);
         station.setFocus(front, time.reduced);
         station.update(time);
+        placeWalker(entry, walkerX, !time.reduced);
+        entry.walker.update(time);
         const place = stop.slot.getBoundingClientRect();
         const fit = placeBox(place, box, width, height);
         const key = `${width}/${height}/${fit.x0.toFixed(4)}/${fit.x1.toFixed(4)}/${fit.y0.toFixed(4)}/${fit.y1.toFixed(4)}`;

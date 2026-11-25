@@ -601,7 +601,9 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
       const point = here.view.setDone(head.along);
       const visible = y > (pieces[0] as ThreadPiece).from - viewport * 0.4;
       here.view.setHead(visible ? point : null);
-      if (visible) walker.place(here.host, point, head.done, still);
+      // While a staged stop holds, the walker is the host's, on the station's sheet.
+      const held = stops.some((stop, index) => states[index]?.phase === 'active' && stop.section.hasAttribute('data-staged'));
+      if (visible && !held) walker.place(here.host, point, head.done, still);
       else walker.hide();
     }
   }

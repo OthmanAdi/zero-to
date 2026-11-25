@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { isUp } from '../sections/model';
-import { STAGING, boxRows, clothShows, focusAt, formFor, heroRows, lampCandela, lampPlace, placeBox, spotFrame, standingAt } from './staging';
+import { STAGING, boxRows, clothShows, focusAt, formFor, heroRows, lampCandela, lampPlace, placeBox, spotFrame, standingAt, walkerAt } from './staging';
 
 describe('the rows of a box', () => {
   it('follows a box up through the window and gives nothing once it is out of it', () => {
@@ -170,5 +170,35 @@ describe('a station framed one thing at a time', () => {
     // A deep spot reaches past the route: the frame goes to the front of the spot.
     const ring = spotFrame({ x: 0, z: 0, width: 4, depth: 4, height: 1 }, 1.2, 0, { side: 0, back: 0, front: 0.3 });
     expect(Math.max(...ring.points.map((point) => point.z))).toBeCloseTo(2.3, 9);
+  });
+});
+
+describe('the walker on a held station', () => {
+  const things = [-2.86, -0.96, 0.94, 2.84];
+  const start = -3.4;
+  const { sign, before, after, end } = STAGING.walker;
+
+  it('waits at the start of the route, and on the ring he stays there', () => {
+    expect(walkerAt(0, things, start)).toBeCloseTo(start + sign, 9);
+    for (const hold of [0, 0.3, 1]) expect(walkerAt(hold, [], start)).toBe(start + sign);
+  });
+
+  it('crosses the sheet slowly past a framed thing and quicker between two, and never turns back', () => {
+    const pan = STAGING.focus.pan / things.length;
+    // Through the dwell on the second thing he goes from short of it to past it.
+    expect(walkerAt(0.25 + pan / 2, things, start)).toBeCloseTo((things[1] as number) - before, 9);
+    expect(walkerAt(0.5 - pan / 2, things, start)).toBeCloseTo((things[1] as number) + after, 9);
+    expect(walkerAt(1, things, start)).toBeCloseTo((things[3] as number) + end, 9);
+    const dwellPace = (before + after) / (0.25 - pan);
+    const panPace = ((things[2] as number) - (things[1] as number) - before - after) / pan;
+    expect(panPace / dwellPace).toBeGreaterThan(1.5);
+    let last = -Infinity;
+    for (let step = 0; step <= 500; step += 1) {
+      const x = walkerAt(step / 500, things, start);
+      expect(x).toBeGreaterThanOrEqual(last - 1e-12);
+      last = x;
+    }
+    expect(walkerAt(-1, things, start)).toBeCloseTo(start + sign, 9);
+    expect(walkerAt(2, things, start)).toBeCloseTo((things[3] as number) + end, 9);
   });
 });

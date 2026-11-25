@@ -456,6 +456,30 @@ describe('the page', () => {
     expect(staged / flat).toBeGreaterThan(1.9);
   });
 
+  it('hides the walker of the page while a staged stop holds, where the host walks him on the station', () => {
+    fakeLayout();
+    const { root, sections } = mount();
+    const walker = () => root.querySelector<HTMLElement>('.zs-walker');
+    const phases = (staged: boolean): Set<string> => {
+      const seen = new Set<string>();
+      for (let at = 0; at <= 600; at += 1) {
+        sections.update(at / 600);
+        const phase = (root.querySelector('#what-it-is') as HTMLElement).dataset.phase ?? '';
+        const shown = walker() !== null && !walker()?.hidden;
+        if (phase === 'active' && staged) expect(shown).toBe(false);
+        seen.add(`${phase}/${shown}`);
+      }
+      return seen;
+    };
+    // Unstaged, he walks the thread through the hold.
+    expect(phases(false).has('active/true')).toBe(true);
+    sections.stage(['what']);
+    const seen = phases(true);
+    expect(seen.has('active/false')).toBe(true);
+    // Before and after the hold he is back on the thread.
+    expect(seen.has('done/true')).toBe(true);
+  });
+
   it('draws a line from the card in front of a staged stop to the point the host names', () => {
     fakeLayout();
     const { root, sections } = mount();

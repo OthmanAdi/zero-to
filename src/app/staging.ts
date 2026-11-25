@@ -29,6 +29,14 @@ export const STAGING = {
    * when the pan towards it is `arrive` of the way.
    */
   focus: { elevation: 20, yaw: -9, side: 0.45, back: 0.5, front: 0.3, pan: 0.48, pop: 0.06, arrive: 0.5 },
+  /**
+   * The walker on a held station, in the station's units. He is `scale` times his size on the walk and waits
+   * `sign` past the start of the route while the sheet comes up. On a station framed one thing at a time he
+   * crosses the sheet with the camera: while a thing is framed he walks slowly from `before` short of it to
+   * `after` past it, which is about 0.38 of the way between two peaks, and he does the rest of the way during the
+   * pan, at about twice the pace. After the last thing he walks on to `end` past it. On the ring he stands.
+   */
+  walker: { scale: 1.1, sign: 0.12, before: 0.55, after: 0.17, end: 0.3 },
   /** Room left round the station inside its place, as a share of the place on each side. */
   margin: 0.03,
   /**
@@ -97,6 +105,31 @@ export function formFor(up: number, count: number): number {
   if (up <= 0) return 0;
   if (up >= n) return 1;
   return FLOW.start + (FLOW.spread * (up - 0.5)) / n;
+}
+
+/**
+ * Where the walker is along a held station at a share of its hold, as x in the station's units. `things` are the
+ * x of the things framed one at a time, in order, and `start` the start of the route. With nothing to frame he
+ * waits at the start.
+ */
+export function walkerAt(hold: number, things: readonly number[], start: number): number {
+  const n = things.length;
+  const sign = start + STAGING.walker.sign;
+  if (n === 0) return sign;
+  const pan = STAGING.focus.pan / n;
+  const knots: [number, number][] = [[0, sign]];
+  things.forEach((x, k) => {
+    // The dwell on a thing: from the end of the pan towards it to the start of the pan away from it.
+    if (k > 0) knots.push([k / n + pan / 2, x - STAGING.walker.before]);
+    knots.push(k === n - 1 ? [1, x + STAGING.walker.end] : [(k + 1) / n - pan / 2, x + STAGING.walker.after]);
+  });
+  const at = clamp01(hold);
+  for (let index = 1; index < knots.length; index += 1) {
+    const [toShare, toX] = knots[index] as [number, number];
+    const [fromShare, fromX] = knots[index - 1] as [number, number];
+    if (at <= toShare) return fromX + (toX - fromX) * seg(at, fromShare, toShare);
+  }
+  return (knots[knots.length - 1] as [number, number])[1];
 }
 
 /** The points a camera is fitted to for one spot of a station, and where it aims first. */

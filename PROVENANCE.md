@@ -8,7 +8,13 @@ The table of maps, the dive into a map and the walk along a trail were designed 
 
 The work was split in two. One group read the site's public source and took screenshots of it in a normal browser, and wrote notes in its own words: what objects appear, how the camera and the light move, in what order, and how long each move takes. Some notes describe a motion as short pseudocode with the timings and spring values read from the source; none of them contain the site's code. The notes and the screenshots stay outside this repository. A second group built zero-to from the notes and screenshots alone and never opened the site's scripts, markup or style sheets.
 
-No code, text, artwork, model, texture, font, sound or brand element of that site is in this repository. The scene is drawn with three.js from geometry written for zero-to: the compass, the table, the paper mountains, the trail, the signposts, the walker and the props are all generated in code. The icons in `public/` were drawn for zero-to, and the other images in `public/` and `docs/media/` were recorded from zero-to itself. The site's typefaces, three.js and Vite's preload helper are listed with their licences in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+### The parity round
+
+From 2026-11-24 the experience is being brought closer to that site in staging, motion and light, on a branch of its own. For this the site was measured again from a private local copy: the same scripted input was recorded on both sides at 1440 by 900 and at 390 by 844, and the rules and numbers behind what the recordings show (timings, spring values, angles, sizes as shares of the window) were read from the site's source and checked against the recordings. The notes and recordings stay outside this repository, as before.
+
+This round is not split in two. The same worker read the site's source, wrote the notes and changed zero-to, so the second group's distance from the source does not hold for the commits of this round. What holds is the rule itself: a change may carry a number or a rule restated in zero-to's own words, and nothing else. Each such number is a named, documented value in zero-to's code, applied to geometry, drawings and text that zero-to generates itself.
+
+No code, text, artwork, model, texture, font, sound or brand element of that site is in this repository. That includes its photographs and its map and elevation data. The scene is drawn with three.js from geometry written for zero-to: the compass, the table, the paper mountains, the trail, the signposts, the walker and the props are all generated in code. The icons in `public/` were drawn for zero-to, and the other images in `public/` and `docs/media/` were recorded from zero-to itself. The site's typefaces, three.js and Vite's preload helper are listed with their licences in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Learning resources in the examples
 

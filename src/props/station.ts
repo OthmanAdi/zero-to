@@ -34,6 +34,8 @@ export const STATION = {
   orbit: { radius: 1.4, step: (72 * Math.PI) / 180, front: 1.32, height: 0.62, spring: { k: 15, c: 7.4 } },
   /** The peaks are drawn at prop size and stood up larger: a station is seen from further away than a panel. */
   peakScale: 1.35,
+  /** Where the peaks stand: the foot of the first this far from the middle, each next one `step` to its right, `z` deep. */
+  row: { first: -2.86, step: 1.9, z: -0.62 },
   /** How much of its place on the ring a card turns with. The rest it keeps facing the viewer. */
   cardTurn: 0.38,
   /** A peak that is not in focus leans back this far and dims to this. */
@@ -48,6 +50,61 @@ export type CarryKind = (typeof CARRIES)[number];
 
 // ---------------------------------------------------------------------------------------------------------
 // The sheet every station stands on: map paper with a few contours, the dashed route and its start dot.
+
+/**
+ * The route across the front of a station's sheet, where the cut-outs leave it clear: two cubic curves, the end of
+ * the first being the start of the second. Each point is `[x, y]` in shares of the sheet, x from its left edge and
+ * y from its far edge, as the print is drawn. The print draws this route and the walker walks it.
+ */
+export const STATION_ROUTE: readonly (readonly [number, number])[] = [
+  [0.06, 0.8],
+  [0.28, 0.7],
+  [0.4, 0.9],
+  [0.56, 0.78],
+  [0.72, 0.66],
+  [0.84, 0.86],
+  [0.95, 0.74],
+];
+
+const cubic = (a: number, b: number, c: number, d: number, t: number): number => {
+  const u = 1 - t;
+  return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+};
+
+/** The route on a sheet of this width and depth, in its own units from its middle, as points from start to end. */
+export function routePoints(width: number, depth: number, samples = 48): { readonly x: number; readonly z: number }[] {
+  const out: { x: number; z: number }[] = [];
+  for (let from = 0; from + 3 < STATION_ROUTE.length; from += 3) {
+    const [p0, p1, p2, p3] = [0, 1, 2, 3].map((k) => STATION_ROUTE[from + k] as readonly [number, number]) as [readonly [number, number], readonly [number, number], readonly [number, number], readonly [number, number]];
+    for (let step = from === 0 ? 0 : 1; step <= samples; step += 1) {
+      const t = step / samples;
+      out.push({ x: (cubic(p0[0], p1[0], p2[0], p3[0], t) - 0.5) * width, z: (cubic(p0[1], p1[1], p2[1], p3[1], t) - 0.5) * depth });
+    }
+  }
+  return out;
+}
+
+/**
+ * Where the route crosses the line `x` across a sheet, as its depth `z`, in the sheet's own units. The route runs
+ * from left to right without turning back, so there is one crossing; outside its ends it keeps its end's depth.
+ */
+export function routeDepth(points: readonly { readonly x: number; readonly z: number }[], x: number): number {
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (!first || !last) return 0;
+  if (x <= first.x) return first.z;
+  if (x >= last.x) return last.z;
+  let low = 0;
+  let high = points.length - 1;
+  while (high - low > 1) {
+    const middle = (low + high) >> 1;
+    if ((points[middle] as { x: number }).x <= x) low = middle;
+    else high = middle;
+  }
+  const a = points[low] as { x: number; z: number };
+  const b = points[high] as { x: number; z: number };
+  return a.z + ((b.z - a.z) * (x - a.x)) / Math.max(1e-9, b.x - a.x);
+}
 
 export function stationPrint(kind: StationKind, seed: number): Draw2D {
   return (ctx, w, h) => {
@@ -64,20 +121,22 @@ export function stationPrint(kind: StationKind, seed: number): Draw2D {
       }
     }
     // The route crosses the front of the sheet, where the cut-outs leave it clear.
-    const y = h * 0.8;
+    const at = (index: number): [number, number] => {
+      const [x, y] = STATION_ROUTE[index] as readonly [number, number];
+      return [x * w, y * h];
+    };
     ctx.strokeStyle = T.signal;
     ctx.lineWidth = Math.max(2, w * 0.0042);
     ctx.setLineDash([w * 0.014, w * 0.0095]);
     ctx.lineCap = 'butt';
     ctx.beginPath();
-    ctx.moveTo(w * 0.06, y);
-    ctx.bezierCurveTo(w * 0.28, y - h * 0.1, w * 0.4, y + h * 0.1, w * 0.56, y - h * 0.02);
-    ctx.bezierCurveTo(w * 0.72, y - h * 0.14, w * 0.84, y + h * 0.06, w * 0.95, y - h * 0.06);
+    ctx.moveTo(...at(0));
+    for (let from = 1; from + 2 < STATION_ROUTE.length; from += 3) ctx.bezierCurveTo(...at(from), ...at(from + 1), ...at(from + 2));
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = T.signal;
     ctx.beginPath();
-    ctx.arc(w * 0.06, y, w * 0.0075, 0, Math.PI * 2);
+    ctx.arc(...at(0), w * 0.0075, 0, Math.PI * 2);
     ctx.fill();
   };
 }
@@ -280,6 +339,14 @@ export function stationPieces(): NamedDrawing[] {
   ];
 }
 
+export interface StationSpot {
+  readonly x: number;
+  readonly z: number;
+  readonly width: number;
+  readonly depth: number;
+  readonly height: number;
+}
+
 export interface StationOptions {
   readonly environment?: SceneEnvironment;
   readonly seed?: number;
@@ -305,6 +372,13 @@ export interface StationPart extends ScenePart<Group> {
   upOf(index: number): number;
   /** The point above each cut-out where its floating card is anchored, in world space. */
   anchors(): Vector3[];
+  /**
+   * What a camera can frame on the sheet, in the station's own units: for each thing, the middle of its foot
+   * (`x`, `z`), how wide and deep it is and how high it stands. The peaks one by one, or the ring as one.
+   */
+  readonly spots: readonly StationSpot[];
+  /** The route printed on the sheet, from its start to its end, in the station's own units. */
+  readonly route: readonly { readonly x: number; readonly z: number }[];
   /** The compass of stop 02. Null on stop 01. */
   readonly compass: CompassPart | null;
 }
@@ -338,6 +412,7 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
   let focus = -1;
   const sheets: Sheet[] = [ground];
   const scratch = new Vector3();
+  const route = routePoints(width, depth);
 
   if (kind === 'altitudes') {
     const peaks = TIER_NAMES.map((tier, index) => {
@@ -358,7 +433,7 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
       stand.hinge.add(lean);
       lean.add(sheet.object);
       const holder = new Group();
-      holder.position.set(-2.86 + index * 1.9, STATION.thickness, -0.62);
+      holder.position.set(STATION.row.first + index * STATION.row.step, STATION.thickness, STATION.row.z);
       holder.add(stand.hinge);
       object.add(holder);
       sheets.push(sheet);
@@ -374,7 +449,7 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
         const back = Math.max(0, peak.state.x);
         const fore = Math.max(0, -peak.state.x);
         peak.lean.rotation.x = -STATION.lean * back;
-        peak.holder.position.z = -0.62 + 0.32 * fore;
+        peak.holder.position.z = STATION.row.z + 0.32 * fore;
         peak.sheet.material.color.setScalar(1 - (1 - STATION.dim) * back);
       });
     };
@@ -411,6 +486,14 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
         object.updateWorldMatrix(true, true);
         return peaks.map((peak) => peak.lean.localToWorld(scratch.set(-0.1, (peak.spec.height / DESIGN) * STATION.peakScale + STATION.anchorLift, 0)).clone());
       },
+      spots: peaks.map((peak, index) => ({
+        x: STATION.row.first + index * STATION.row.step,
+        z: STATION.row.z,
+        width: (peak.spec.width / DESIGN) * STATION.peakScale,
+        depth: 0,
+        height: (peak.spec.height / DESIGN) * STATION.peakScale,
+      })),
+      route,
       compass: null,
       update(frame: FrameTime) {
         peaks.forEach((peak, index) => {
@@ -512,6 +595,17 @@ export function createStation(kind: StationKind, options: StationOptions = {}): 
       object.updateWorldMatrix(true, true);
       return cards.map((card) => card.holder.localToWorld(scratch.set(0, CARD.height / DESIGN / 2 + STATION.anchorLift, 0)).clone());
     },
+    // The ring as one thing: as wide as its circle with a card in front, as high as that card's top.
+    spots: [
+      {
+        x: 0,
+        z: 0,
+        width: 2 * (STATION.orbit.radius + (CARD.width / DESIGN / 2) * STATION.orbit.front),
+        depth: 2 * (STATION.orbit.radius + (CARD.width / DESIGN / 2) * STATION.orbit.front),
+        height: STATION.thickness + STATION.orbit.height + (CARD.height / DESIGN / 2) * STATION.orbit.front,
+      },
+    ],
+    route,
     compass,
     update(frame: FrameTime) {
       const dt = Math.min(frame.dt, STAND.maxStep);

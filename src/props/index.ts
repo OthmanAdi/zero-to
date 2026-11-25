@@ -80,10 +80,14 @@ export { WALKER, createWalker, walkCycle, type WalkPose, type WalkerOptions, typ
 export {
   CARRIES,
   STATION,
+  STATION_ROUTE,
   createStation,
+  routeDepth,
+  routePoints,
   type CarryKind,
   type StationKind,
   type StationOptions,
   type StationPart,
+  type StationSpot,
 } from './station';
 export { PROPS_STRINGS } from './strings';

@@ -421,6 +421,38 @@ describe('the page', () => {
     expect(root.querySelectorAll('[data-staged]')).toHaveLength(0);
   });
 
+  it('draws a line from the card in front of a staged stop to the point the host names', () => {
+    fakeLayout();
+    const { root, sections } = mount();
+    sections.stage(['what']);
+    const box = root.querySelector('#what-it-is .zs-box') as HTMLElement;
+    // Nothing is in front above the stop: no line, whatever the host says.
+    sections.update(0);
+    sections.lead('what', { x: 900, y: 120 });
+    expect(box.querySelector('.zs-lead[data-on]')).toBeNull();
+    // In the hold a card is in front and the line leads from it.
+    let step = 0;
+    while (step <= 600 && (sections.staged()[0]?.front ?? -1) < 0) {
+      step += 1;
+      sections.update(step / 600);
+    }
+    expect(sections.staged()[0]?.front).toBeGreaterThanOrEqual(0);
+    sections.lead('what', { x: 900, y: 120 });
+    const line = box.querySelector<HTMLElement>(':scope > .zs-lead');
+    expect(line?.hasAttribute('data-on')).toBe(true);
+    expect(line?.getAttribute('aria-hidden')).toBe('true');
+    expect(Number.parseFloat(line?.style.width ?? '')).toBeGreaterThan(0);
+    expect(line?.style.transform).toMatch(/^translate\(.+\) rotate\(.+rad\)$/);
+    // One line a stop, and it goes when the host has no point.
+    sections.lead('what', { x: 700, y: 90 });
+    expect(box.querySelectorAll('.zs-lead')).toHaveLength(1);
+    sections.lead('what', null);
+    expect(box.querySelector('.zs-lead[data-on]')).toBeNull();
+    // A stop that is not staged never gets one.
+    sections.lead('how', { x: 700, y: 90 });
+    expect(root.querySelector('#how-it-works .zs-lead')).toBeNull();
+  });
+
   it('stages nothing with reduced motion: every stop keeps its flat drawing', () => {
     const { root, sections } = mount({ reduced: () => true });
     sections.stage(['what', 'trail']);

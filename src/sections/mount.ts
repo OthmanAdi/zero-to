@@ -119,6 +119,11 @@ export interface Sections {
   /** The stops that are staged now, with their state at the last update. */
   staged(): readonly StagedStop[];
   /**
+   * Draws the thin line from the card in front of a staged stop to a point of the window, where the host shows
+   * the cut-out that card belongs to. Null, or a stop with nothing in front, takes the line away.
+   */
+  lead(id: StopId, point: { readonly x: number; readonly y: number } | null): void;
+  /**
    * Shows the sections at a scroll progress: 0 when the top of the root reaches the bottom of the window, 1
    * when the bottom of the root does. `progressAt` turns a scroll position into this number.
    */
@@ -729,6 +734,36 @@ export function mountSections(root: HTMLElement, options: SectionsOptions = {}):
     stage(ids) {
       wanted = [...ids];
       markStaged();
+    },
+    lead(id, point) {
+      const index = stops.findIndex((stop) => stop.spec.id === id);
+      const stop = stops[index];
+      if (!stop) return;
+      let line = stop.box.querySelector<HTMLElement>(':scope > .zs-lead');
+      const slot = stop.section.hasAttribute('data-staged') ? slotOf(stop) : null;
+      const front = manual[index] ?? states[index]?.step ?? -1;
+      // The card of the thing in front: the one of its elements that is not part of the station itself.
+      const card = slot && front >= 0 ? (stop.steps[front]?.find((element) => !slot.contains(element)) ?? null) : null;
+      if (!point || !card) {
+        line?.removeAttribute('data-on');
+        return;
+      }
+      if (!line) {
+        line = h('i', { class: 'zs-lead', ...HIDDEN });
+        stop.box.append(line);
+      }
+      const box = stop.box.getBoundingClientRect();
+      // A row of a list leads from the edge of the sheet it is written on.
+      const rect = (card.closest('.zs-sheet') ?? card).getBoundingClientRect();
+      // From the edge of the card that faces the point, as near to the point as the edge allows.
+      const inset = Math.min(14, rect.width / 2);
+      const fromX = Math.min(rect.right - inset, Math.max(rect.left + inset, point.x));
+      const fromY = point.y <= rect.top ? rect.top : point.y >= rect.bottom ? rect.bottom : point.y;
+      const dx = point.x - fromX;
+      const dy = point.y - fromY;
+      line.style.width = `${Math.hypot(dx, dy).toFixed(1)}px`;
+      line.style.transform = `translate(${(fromX - box.left).toFixed(1)}px, ${(fromY - box.top).toFixed(1)}px) rotate(${Math.atan2(dy, dx).toFixed(4)}rad)`;
+      line.setAttribute('data-on', '');
     },
     staged() {
       const out: StagedStop[] = [];

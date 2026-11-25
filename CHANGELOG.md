@@ -11,6 +11,7 @@ All notable changes to zero-to are listed here. The format follows [Keep a Chang
 - Light falls off on the sheets away from the lamp.
 - A jump to a stop from the tabs starts at once and arrives softly.
 - On a wide window the first stop and the trail stop show their paper stations in 3D, under a lamp and with shadows, where the flat drawings stood. With reduced motion, on a phone and in a roadmap's own brief the drawings stay.
+- A thin line leads from the card in front of a 3D station to the peak or card it belongs to.
 
 ## [0.1.0] - 2026-11-13
 

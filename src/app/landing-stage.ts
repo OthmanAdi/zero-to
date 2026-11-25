@@ -30,6 +30,11 @@ export interface LandingStage {
   draw(renderer: WebGLRenderer, scene: Scene, width: number, height: number): void;
   /** True when the last `frame` had a station in the window. */
   readonly visible: boolean;
+  /**
+   * Where the cut-out in front of each station in the window is on the screen, in pixels: the point just above
+   * it that a line from its card leads to. A station with nothing in front is not in the list.
+   */
+  leads(): readonly { readonly id: StopId; readonly x: number; readonly y: number }[];
   /** How far each station that has been built has formed, by stop, for checks. */
   forms(): Partial<Record<StopId, number>>;
   dispose(): void;
@@ -47,6 +52,8 @@ interface Entry {
   /** Where the stop's box is on the screen this frame, or null when it is out of the window. */
   rows: { from: number; to: number } | null;
   boxTop: number;
+  /** The point above the cut-out in front, on the screen, or null. */
+  lead: { x: number; y: number } | null;
 }
 
 /** A round texture whose alpha falls to nothing at the rim, for a cloth with no edge. */
@@ -69,6 +76,16 @@ function clothAlpha(size = 128): DataTexture {
 export function createLandingStage(environment: SceneEnvironment, scene: Scene): LandingStage {
   const entries = new Map<StopId, Entry>();
   const camera = new PerspectiveCamera(STAGING.shot.fov, 1, 0.1, 200);
+  /** Puts the one camera on a station, moved down to where the box of its stop is. */
+  const aim = (entry: Entry, pose: CameraPose, width: number, height: number): void => {
+    camera.fov = pose.fov;
+    camera.aspect = width / Math.max(1, height);
+    camera.position.set(pose.position.x, pose.position.y, pose.position.z);
+    camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
+    // The picture is fitted for a box at the top of the window and moved down to where the box is.
+    camera.setViewOffset(width, height, 0, -entry.boxTop, width, height);
+    camera.updateMatrixWorld();
+  };
   let visible = false;
   let alpha: DataTexture | null = null;
 
@@ -128,6 +145,7 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
       poseKey: '',
       rows: null,
       boxTop: 0,
+      lead: null,
       dispose: () => {
         group.removeFromParent();
         station.dispose();
@@ -148,7 +166,10 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
     frame(staged, time, width, height, calm) {
       visible = false;
       let built = false;
-      for (const entry of entries.values()) entry.rows = null;
+      for (const entry of entries.values()) {
+        entry.rows = null;
+        entry.lead = null;
+      }
       for (const stop of staged) {
         const kind = KINDS[stop.id];
         if (!kind) continue;
@@ -183,7 +204,14 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         }
         entry.rows = rows;
         entry.boxTop = Math.round(box.top);
-        if (entry.pose) visible = true;
+        if (!entry.pose) continue;
+        visible = true;
+        const anchor = front >= 0 && station.upOf(front) > 0.6 ? station.anchors()[front] : undefined;
+        if (anchor) {
+          aim(entry, entry.pose, width, height);
+          anchor.project(camera);
+          entry.lead = { x: ((anchor.x + 1) / 2) * width, y: ((1 - anchor.y) / 2) * height };
+        }
       }
       return visible;
     },
@@ -192,17 +220,16 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         const { rows, pose } = entry;
         if (!rows || !pose) continue;
         entry.group.visible = true;
-        camera.fov = pose.fov;
-        camera.aspect = width / Math.max(1, height);
-        camera.position.set(pose.position.x, pose.position.y, pose.position.z);
-        camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
-        // The picture is fitted for a box at the top of the window and moved down to where the box is.
-        camera.setViewOffset(width, height, 0, -entry.boxTop, width, height);
-        camera.updateMatrixWorld();
+        aim(entry, pose, width, height);
         renderer.setScissor(0, height - rows.to, width, rows.to - rows.from);
         renderer.render(scene, camera);
         entry.group.visible = false;
       }
+    },
+    leads() {
+      const out: { id: StopId; x: number; y: number }[] = [];
+      for (const entry of entries.values()) if (entry.lead) out.push({ id: entry.id, x: entry.lead.x, y: entry.lead.y });
+      return out;
     },
     forms() {
       const out: Partial<Record<StopId, number>> = {};

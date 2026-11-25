@@ -588,6 +588,38 @@ div.zs-band.is-on {
   pointer-events: none;
 }
 
+/*
+ * The leader line of a staged stop: from the card in front to the cut-out it belongs to, with a dot where it
+ * arrives. The host says where that is, frame by frame.
+ */
+.zs-box > .zs-lead {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 1;
+  height: 1px;
+  background: rgb(238 240 242 / 0.5);
+  transform-origin: 0 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.zs-box > .zs-lead[data-on] {
+  opacity: 1;
+}
+
+.zs-box > .zs-lead::after {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--zt-signal);
+}
+
 .zs-stop[data-staged] > .zs-box::before {
   top: 0;
   height: 24vh;

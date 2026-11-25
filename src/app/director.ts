@@ -1065,6 +1065,9 @@ export async function boot(): Promise<void> {
     landingT += raw.dt;
     const { width, height } = sizeOf();
     landing.frame(sections.staged(), { dt: raw.dt, t: landingT, reduced: raw.reduced }, width, height, introFrom === null);
+    // The line from the card in front to its cut-out, for every staged stop.
+    const leads = landing.leads();
+    for (const id of STAGED_STOPS) sections.lead(id, leads.find((lead) => lead.id === id) ?? null);
   };
 
   /**

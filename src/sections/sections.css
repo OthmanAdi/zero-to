@@ -581,10 +581,11 @@ div.zs-band.is-on {
 
 /*
  * The room of a staged station on a wide window. The picture is drawn across the whole box, and its camera is
- * fitted into the station's place: x 33 to 80 % and y 8 to 98 % of the window for the peaks, x 34 to 78 % and
- * y 9 to 98 % for the ring. The copy keeps its column, and a scrim on that side takes the sheet under the text
- * back into the night: the night at the edge, 0.92 of it at 22 vw, none at 46 vw. The cards leave the flow and
- * float on the right, one at a time: the card of the thing in front.
+ * fitted into the station's place: x 33 to 80 % and y 8 to 98 % of the window for the peaks, x 38 to 80 % and
+ * y 9 to 98 % for the ring, which starts right of the copy column. The copy keeps its column, and a scrim on that
+ * side takes the sheet under the text back into the night: the night at the edge, 0.92 of it at 22 vw, still
+ * 0.86 where the column ends near 36 vw, and none at 50 vw, on an eased ramp so its end leaves no edge on the
+ * paper. The cards leave the flow and float on the right, one at a time: the card of the thing in front.
  */
 .zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-station {
   /* Out of the grid, so the whole box and not a grid area is what it fills. */
@@ -602,8 +603,18 @@ div.zs-band.is-on {
   top: 0;
   bottom: 0;
   left: 0;
-  width: 46vw;
-  background: linear-gradient(90deg, var(--zt-night) 0, rgb(11 15 23 / 0.92) 22vw, rgb(11 15 23 / 0) 100%);
+  width: 50vw;
+  background: linear-gradient(
+    90deg,
+    var(--zt-night) 0,
+    rgb(11 15 23 / 0.92) 22vw,
+    rgb(11 15 23 / 0.86) 36vw,
+    rgb(11 15 23 / 0.6) 40vw,
+    rgb(11 15 23 / 0.3) 43.5vw,
+    rgb(11 15 23 / 0.1) 46.5vw,
+    rgb(11 15 23 / 0.02) 48.5vw,
+    rgb(11 15 23 / 0) 50vw
+  );
 }
 
 .zs-stop[data-staged] > .zs-box > .zs-thread {
@@ -621,8 +632,8 @@ div.zs-band.is-on {
 
 .zs-root:not(.zs-narrow) .zs-stop[data-staged] .zs-orbit {
   top: 9%;
-  left: 34%;
-  width: 44%;
+  left: 38%;
+  width: 42%;
   height: 89%;
 }
 

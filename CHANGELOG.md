@@ -2,6 +2,15 @@
 
 All notable changes to zero-to are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### The site
+
+- The table and its interface leave the window with the page when you scroll to the sections. Before, they faded out in place.
+- The lamp lights the sheets while the table turns in, half a second after first light. Before, they stayed dark for two seconds.
+- Light falls off on the sheets away from the lamp.
+- A jump to a stop from the tabs starts at once and arrives softly.
+
 ## [0.1.0] - 2026-11-13
 
 The first release.

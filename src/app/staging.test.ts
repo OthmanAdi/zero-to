@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { STAGING, boxRows, clothShows, heroRows, lampCandela, lampPlace, placeBox } from './staging';
+import { isUp } from '../sections/model';
+import { STAGING, boxRows, clothShows, focusAt, formFor, heroRows, lampCandela, lampPlace, placeBox, spotFrame, standingAt } from './staging';
 
 describe('the rows of a box', () => {
   it('follows a box up through the window and gives nothing once it is out of it', () => {
@@ -97,5 +98,77 @@ describe('the cloth under a station', () => {
       expect(now).toBeLessThanOrEqual(last);
       last = now;
     }
+  });
+});
+
+describe('a station framed one thing at a time', () => {
+  it('dwells on each thing and pans between two round the boundary of their shares', () => {
+    // Three things: dwell windows and pans as the shares of the hold.
+    expect(focusAt(0, 3)).toBe(0);
+    expect(focusAt(0.24, 3)).toBe(0);
+    expect(focusAt(1 / 3, 3)).toBeCloseTo(0.5, 9);
+    expect(focusAt(0.42, 3)).toBe(1);
+    expect(focusAt(0.58, 3)).toBe(1);
+    expect(focusAt(0.76, 3)).toBe(2);
+    expect(focusAt(1, 3)).toBe(2);
+    // The pan of three things is 0.16 of the hold, centred on the boundary.
+    const pan = STAGING.focus.pan / 3;
+    expect(focusAt(1 / 3 - pan / 2 - 1e-6, 3)).toBe(0);
+    expect(focusAt(1 / 3 + pan / 2 + 1e-6, 3)).toBe(1);
+    // It never goes back while the hold grows, and one thing has nothing to pan to.
+    let last = 0;
+    for (let step = 0; step <= 400; step += 1) {
+      const now = focusAt(step / 400, 4);
+      expect(now).toBeGreaterThanOrEqual(last);
+      last = now;
+    }
+    expect(last).toBe(3);
+    expect(focusAt(0.5, 1)).toBe(0);
+  });
+
+  it('comes up bare and stands each thing when the camera comes to it', () => {
+    expect(standingAt({ phase: 'ahead', hold: 0 }, 4)).toBe(0);
+    expect(standingAt({ phase: 'forming', hold: 0 }, 4)).toBe(0);
+    expect(standingAt({ phase: 'active', hold: STAGING.focus.pop / 2 }, 4)).toBe(0);
+    expect(standingAt({ phase: 'active', hold: STAGING.focus.pop }, 4)).toBe(1);
+    expect(standingAt({ phase: 'active', hold: 0.24 }, 4)).toBe(1);
+    expect(standingAt({ phase: 'active', hold: 0.26 }, 4)).toBe(2);
+    expect(standingAt({ phase: 'active', hold: 0.99 }, 4)).toBe(4);
+    expect(standingAt({ phase: 'done', hold: 1 }, 4)).toBe(4);
+    // The second stands at the middle of the pan towards it.
+    let first = -1;
+    for (let step = 0; step <= 1000; step += 1) {
+      if (standingAt({ phase: 'active', hold: step / 1000 }, 4) >= 2) {
+        first = step / 1000;
+        break;
+      }
+    }
+    expect(focusAt(first, 4)).toBeGreaterThanOrEqual(STAGING.focus.arrive);
+    expect(focusAt(first - 0.001, 4)).toBeLessThan(STAGING.focus.arrive);
+  });
+
+  it('turns a number of things standing into a form that stands exactly those', () => {
+    for (const count of [1, 3, 4, 5]) {
+      for (let up = 0; up <= count; up += 1) {
+        const form = formFor(up, count);
+        const standing = Array.from({ length: count }, (_unused, index) => isUp(form, index, count)).filter(Boolean).length;
+        expect(standing, `${up} of ${count}`).toBe(up);
+      }
+    }
+  });
+
+  it('frames a spot with the route in front of it, and aims a little up its height', () => {
+    const frame = spotFrame({ x: 1, z: -0.6, width: 2, depth: 0, height: 2 }, 1.2, 400, { side: 0.5, back: 0.4, front: 0.3 });
+    const xs = frame.points.map((point) => point.x);
+    const zs = frame.points.map((point) => point.z);
+    expect(Math.min(...xs)).toBeCloseTo(400 + 1 - 1.5, 9);
+    expect(Math.max(...xs)).toBeCloseTo(400 + 1 + 1.5, 9);
+    expect(Math.min(...zs)).toBeCloseTo(-1, 9);
+    expect(Math.max(...zs)).toBeCloseTo(1.5, 9);
+    expect(Math.max(...frame.points.map((point) => point.y))).toBe(2);
+    expect(frame.target).toEqual({ x: 401, y: 0.64, z: 0.25 });
+    // A deep spot reaches past the route: the frame goes to the front of the spot.
+    const ring = spotFrame({ x: 0, z: 0, width: 4, depth: 4, height: 1 }, 1.2, 0, { side: 0, back: 0, front: 0.3 });
+    expect(Math.max(...ring.points.map((point) => point.z))).toBeCloseTo(2.3, 9);
   });
 });

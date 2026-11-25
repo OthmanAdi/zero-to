@@ -1,5 +1,6 @@
-import type { ScreenBox } from '../paper/motion';
-import type { StopId } from '../sections/model';
+import type { ScreenBox, Vec3 } from '../paper/motion';
+import type { StationSpot } from '../props/station';
+import { FLOW, type StopId, type StopState } from '../sections/model';
 
 /** The stops whose stations the page draws in 3D: the four altitudes and what a roadmap carries. */
 export const STAGED_STOPS: readonly StopId[] = ['what', 'trail'];
@@ -16,7 +17,18 @@ export const STAGING = {
    * and the lens in degrees. It is fitted, not placed: it is moved along that direction until the sheet and what
    * stands on it fill the station's place.
    */
-  shot: { elevation: 27, yaw: -10, fov: 32 },
+  shot: { elevation: 27, yaw: -10, fov: 32, narrowFov: 40 },
+  /** A window narrower than this, in CSS pixels, is narrow, as the sections count it: the lens is `narrowFov`. */
+  narrow: 900,
+  /**
+   * A station with more than one thing on it is framed one thing at a time. The camera of a thing is `elevation`
+   * degrees up and `yaw` degrees round, fitted to the thing and `side` sheet units on either side of it, from
+   * `back` behind its foot to `front` beyond the route in front of it. The hold is cut into one share per thing.
+   * Round each boundary between two shares the camera pans for `pan` of a share on a smooth step, and it dwells on
+   * a thing for the rest. The sheet comes up bare: the first thing stands once the hold is `pop` in, each next one
+   * when the pan towards it is `arrive` of the way.
+   */
+  focus: { elevation: 20, yaw: -9, side: 0.45, back: 0.5, front: 0.3, pan: 0.48, pop: 0.06, arrive: 0.5 },
   /** Room left round the station inside its place, as a share of the place on each side. */
   margin: 0.03,
   /**
@@ -47,6 +59,66 @@ export const STAGING = {
    */
   band: { share: 0.3, most: 280 },
 } as const;
+
+const clamp01 = (value: number): number => (value < 0 ? 0 : value > 1 ? 1 : value);
+const smooth = (t: number): number => t * t * (3 - 2 * t);
+const seg = (value: number, from: number, to: number): number => clamp01((value - from) / (to - from));
+
+/**
+ * Which thing the camera frames at a share of the hold, as a number: 0 on the first, 1.5 half way from the second
+ * to the third. It dwells on each thing and pans between two round the boundary of their shares (`STAGING.focus`).
+ * Before the hold it is on the first, after it on the last.
+ */
+export function focusAt(hold: number, count: number): number {
+  const n = Math.max(1, Math.round(count));
+  const pan = STAGING.focus.pan / n;
+  let at = 0;
+  for (let k = 1; k < n; k += 1) at += smooth(seg(hold, k / n - pan / 2, k / n + pan / 2));
+  return at;
+}
+
+/** How many of a station's things stand at a state of its stop, when it is framed one thing at a time. */
+export function standingAt(state: Pick<StopState, 'phase' | 'hold'>, count: number): number {
+  const n = Math.max(0, Math.round(count));
+  if (state.phase === 'done') return n;
+  if (state.phase !== 'active' || state.hold < STAGING.focus.pop) return 0;
+  const at = focusAt(state.hold, n);
+  let up = Math.min(1, n);
+  for (let k = 1; k < n; k += 1) if (at >= k - 1 + STAGING.focus.arrive) up += 1;
+  return up;
+}
+
+/**
+ * The form to give a station so that its first `up` things stand and no more. A station stands thing `k` of `n`
+ * once its form passes `FLOW.start + FLOW.spread * k / n`: this is half way between two of those steps.
+ */
+export function formFor(up: number, count: number): number {
+  const n = Math.max(1, Math.round(count));
+  if (up <= 0) return 0;
+  if (up >= n) return 1;
+  return FLOW.start + (FLOW.spread * (up - 0.5)) / n;
+}
+
+/** The points a camera is fitted to for one spot of a station, and where it aims first. */
+export interface SpotFrame {
+  readonly points: readonly Vec3[];
+  readonly target: Vec3;
+}
+
+/**
+ * What the camera of one spot frames: the spot's foot widened by `side` on each side, from `back` behind it to
+ * `front` beyond the route in front of it, and its top. `routeFront` is the depth of the route in front of the
+ * spot, and `cx` where the station stands in the scene along x.
+ */
+export function spotFrame(spot: StationSpot, routeFront: number, cx: number, margin: { readonly side: number; readonly back: number; readonly front: number } = STAGING.focus): SpotFrame {
+  const half = spot.width / 2 + margin.side;
+  const far = spot.z - spot.depth / 2 - margin.back;
+  const near = Math.max(spot.z + spot.depth / 2, routeFront) + margin.front;
+  const points: Vec3[] = [];
+  for (const x of [spot.x - half, spot.x + half]) for (const z of [far, near]) points.push({ x: cx + x, y: 0, z });
+  points.push({ x: cx + spot.x, y: spot.height, z: spot.z });
+  return { points, target: { x: cx + spot.x, y: spot.height * 0.32, z: (far + near) / 2 } };
+}
 
 /** A box on the screen in pixels, as `getBoundingClientRect` gives it. */
 export interface Rows {

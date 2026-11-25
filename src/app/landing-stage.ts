@@ -1,11 +1,12 @@
 import { AmbientLight, CircleGeometry, Color, DataTexture, Group, LinearFilter, Mesh, MeshStandardMaterial, PerspectiveCamera, PointLight, RGBAFormat, SpotLight, type Scene, type WebGLRenderer } from 'three';
 import { LAMP } from '../look/lamp';
 import { THEME } from '../look/theme';
-import { fitPose, type CameraPose, type Vec3 } from '../paper/motion';
-import { createStation, type StationKind, type StationPart } from '../props';
+import { fitPose, type CameraPose } from '../paper/motion';
+import { createStation, routeDepth, type StationKind, type StationPart } from '../props';
 import type { FrameTime, SceneEnvironment } from '../scene/contract';
 import type { StagedStop, StopId } from '../sections';
-import { STAGING, boxRows, clothShows, lampCandela, lampPlace, placeBox } from './staging';
+import { STAGING, boxRows, clothShows, focusAt, formFor, lampCandela, lampPlace, placeBox, spotFrame, standingAt, type SpotFrame } from './staging';
+import { mixPose } from './timeline';
 
 /**
  * The paper stations of the landing page, in 3D. Each one stands on its own cloth under its own lamp, far from
@@ -15,9 +16,6 @@ import { STAGING, boxRows, clothShows, lampCandela, lampPlace, placeBox } from '
 
 /** Which station stands at which stop. */
 const KINDS: Partial<Record<StopId, StationKind>> = { what: 'altitudes', trail: 'carries' };
-
-/** The highest thing on a station, for the camera's fit. */
-const TALLEST: Record<StationKind, number> = { altitudes: 2.5, carries: 1.5 };
 
 export interface LandingStage {
   /**
@@ -44,9 +42,12 @@ interface Entry {
   readonly id: StopId;
   readonly group: Group;
   readonly station: StationPart;
-  readonly points: readonly Vec3[];
-  readonly target: Vec3;
+  /** What the camera frames: each thing on its own, or the ring as one. */
+  readonly frames: readonly SpotFrame[];
   readonly dispose: () => void;
+  /** The camera fitted to each frame for the place the station has now. */
+  poses: CameraPose[];
+  /** The camera of this frame: between two of `poses` while it pans. */
   pose: CameraPose | null;
   poseKey: string;
   /** Where the stop's box is on the screen this frame, or null when it is out of the window. */
@@ -98,7 +99,7 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
 
     const station = createStation(kind, { environment, seed: 2 });
     group.add(station.object);
-    const { width, depth } = station.size;
+    const { width } = station.size;
 
     // The cloth: dark, lit only where the lamp falls, and gone into the night at its rim.
     alpha ??= clothAlpha();
@@ -131,16 +132,19 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
     scene.add(group);
 
     const cx = group.position.x;
-    const points: Vec3[] = [];
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) points.push({ x: cx + (sx * width) / 2, y: 0, z: (sz * depth) / 2 });
-    points.push({ x: cx, y: TALLEST[kind], z: -0.5 });
+    // Each thing with the route in front of it, as deep as the route comes anywhere across the thing.
+    const frames = station.spots.map((spot) => {
+      const half = spot.width / 2;
+      const front = Math.max(...[-half, 0, half].map((dx) => routeDepth(station.route, spot.x + dx)));
+      return spotFrame(spot, front, cx);
+    });
 
     return {
       id,
       group,
       station,
-      points,
-      target: { x: cx, y: 0.4, z: 0 },
+      frames,
+      poses: [],
       pose: null,
       poseKey: '',
       rows: null,
@@ -186,13 +190,16 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         if (!entry) continue;
         const { station } = entry;
         const front = stop.front >= 0 && stop.front < station.count ? stop.front : -1;
+        // A station of several things is framed one at a time, and each stands when the camera comes to it.
+        const focusing = entry.frames.length > 1;
+        const form = focusing ? formFor(standingAt(stop.state, station.count), station.count) : stop.state.form;
         if (!rows) {
           // Out of the window it keeps up with the stop without playing anything.
-          station.setForm(stop.state.form, true);
+          station.setForm(form, true);
           station.setFocus(front, true);
           continue;
         }
-        station.setForm(time.reduced ? 1 : stop.state.form, time.reduced);
+        station.setForm(time.reduced ? 1 : form, time.reduced);
         station.setFocus(front, time.reduced);
         station.update(time);
         const place = stop.slot.getBoundingClientRect();
@@ -200,8 +207,15 @@ export function createLandingStage(environment: SceneEnvironment, scene: Scene):
         const key = `${width}/${height}/${fit.x0.toFixed(4)}/${fit.x1.toFixed(4)}/${fit.y0.toFixed(4)}/${fit.y1.toFixed(4)}`;
         if (key !== entry.poseKey && fit.x1 > fit.x0 && fit.y1 > fit.y0) {
           entry.poseKey = key;
-          entry.pose = fitPose(entry.points, entry.target, STAGING.shot.elevation, STAGING.shot.yaw, STAGING.shot.fov, fit, width / Math.max(1, height), { startDistance: 14 });
+          const shot = focusing ? STAGING.focus : STAGING.shot;
+          const fov = width < STAGING.narrow ? STAGING.shot.narrowFov : STAGING.shot.fov;
+          entry.poses = entry.frames.map((frame) => fitPose(frame.points, frame.target, shot.elevation, shot.yaw, fov, fit, width / Math.max(1, height), { startDistance: 14 }));
         }
+        const at = focusing ? focusAt(stop.state.hold, entry.poses.length) : 0;
+        const k = Math.max(0, Math.min(entry.poses.length - 2, Math.floor(at)));
+        const from = entry.poses[k];
+        const to = entry.poses[k + 1];
+        entry.pose = from && to ? mixPose(from, to, at - k) : (from ?? null);
         entry.rows = rows;
         entry.boxTop = Math.round(box.top);
         if (!entry.pose) continue;
